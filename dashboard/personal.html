@@ -87,10 +87,15 @@ function renderNoteList() {
     const isVoice = n.message_type === 'voice' || n.type === 'voice' || n.duration;
     const text = n.transcription || n.text || n.message_text || n.content || '';
     const starred = n.starred || n.is_starred;
+    const sender = n.sender_name || n.sender || n.chat_id?.replace(/@.*/, '') || '';
     return `
       <div class="panel-list-item${selectedNoteId === id ? ' selected' : ''}" onclick="selectNote('${id}')">
         <div style="display:flex;align-items:flex-start;gap:10px">
+          ${renderAvatar(sender || 'Unknown', 'sm')}
           <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+              <span style="font-weight:600;font-size:13px">${sender || 'Unknown'}</span>
+            </div>
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
               ${isVoice ? `<span class="pill pill-voice">🎤 ${formatDuration(n.duration || n.voice_duration_sec || 0)}</span>` : '<span class="pill pill-text">💬 Text</span>'}
               <span class="pill pill-personal">Personal</span>

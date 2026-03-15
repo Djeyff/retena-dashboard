@@ -50,10 +50,11 @@ function renderSidebar(activeId) {
     <div class="sidebar-logo">${RT_LOGO}<span>Retena</span></div>
     <nav class="sidebar-nav">${navHtml}</nav>
     <div class="sidebar-bottom">
+      <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px;padding:0 4px">PRO PLAN</div>
       <div class="sidebar-meters" id="sidebar-meters">
-        ${usageMeter('Voice min', '🎙', 0, 100)}
-        ${usageMeter('AI queries', '🤖', 0, 50)}
-        ${usageMeter('Groups', '👥', 0, 5)}
+        ${usageMeter('Voice min', '🎙', 0, 500)}
+        ${usageMeter('AI queries', '🤖', 0, 300)}
+        ${usageMeter('Groups', '👥', 0, 15)}
       </div>
       <a class="sidebar-crosssell" href="https://voz-clara.com" target="_blank">🎤 Personal use → VozClara</a>
     </div>
