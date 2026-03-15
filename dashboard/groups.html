@@ -124,10 +124,12 @@ async function selectGroup(chatId) {
         ${sorted.map(m => {
           const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
           const text = m.transcription || m.text_content || m.body || '';
+          const summaryHtml = m.summary ? `<div style="background:rgba(230,126,34,0.08);padding:8px 12px;border-radius:8px;margin-bottom:8px;font-size:12px;line-height:1.6">${esc(m.summary).replace(/\n/g,'<br>')}</div>` : '';
           return `
             <div class="msg-bubble ${isVoice ? 'msg-voice' : ''}">
               <div class="msg-sender">${esc(m.sender_name || 'Unknown')} ${isVoice ? '🎙 '+formatDuration(m.duration_seconds) : ''} ${m.language ? langFlag(m.language) : ''}</div>
-              <div class="msg-text">${esc(text)}</div>
+              ${summaryHtml}
+              <div class="msg-text">${esc(text).replace(/\n\n/g,'<br><br>').replace(/\n/g,'<br>')}</div>
               <div class="msg-time">${timeAgo(m.timestamp)}</div>
             </div>`;
         }).join('')}
