@@ -8,69 +8,265 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
 <link rel="stylesheet" href="/dashboard/styles.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  .inbox-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .filter-bar { display:flex; gap:6px; }
+  .filter-btn { padding:6px 14px; border-radius:16px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:12px; cursor:pointer; transition:all .2s; }
+  .filter-btn.active { background:rgba(230,126,34,0.15); color:#E67E22; border-color:rgba(230,126,34,0.3); }
+
+  .msg-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:10px; transition:border-color .2s; }
+  .msg-card:hover { border-color:rgba(230,126,34,0.3); }
+  .msg-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+  .msg-avatar { width:36px; height:36px; border-radius:50%; background:var(--bg-hover); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; color:var(--text-muted); flex-shrink:0; }
+  .msg-avatar.voice { background:rgba(230,126,34,0.12); color:#E67E22; }
+  .msg-info { flex:1; min-width:0; }
+  .msg-sender { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .msg-meta { font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .msg-time { font-size:11px; color:var(--text-dim); white-space:nowrap; }
+  .badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:500; }
+  .badge-voice { background:rgba(230,126,34,0.12); color:#E67E22; }
+  .badge-text { background:rgba(99,102,241,0.12); color:#818cf8; }
+  .badge-lang { background:rgba(255,255,255,0.06); color:var(--text-muted); }
+
+  .msg-summary { background:rgba(230,126,34,0.06); border-left:3px solid rgba(230,126,34,0.4); padding:8px 12px; border-radius:0 8px 8px 0; margin-bottom:8px; font-size:12px; line-height:1.7; color:var(--text-secondary); }
+  .msg-summary .bullet { display:block; margin-bottom:2px; }
+
+  .msg-body { font-size:13px; line-height:1.65; color:var(--text-primary); position:relative; }
+  .msg-body.collapsed { max-height:80px; overflow:hidden; }
+  .msg-body.collapsed::after { content:''; position:absolute; bottom:0; left:0; right:0; height:40px; background:linear-gradient(transparent, var(--bg-card)); pointer-events:none; }
+  .msg-expand { font-size:12px; color:#E67E22; cursor:pointer; margin-top:4px; display:inline-block; border:none; background:none; padding:0; }
+  .msg-expand:hover { text-decoration:underline; }
+
+  .msg-actions { display:flex; gap:6px; margin-top:10px; padding-top:8px; border-top:1px solid var(--border); }
+  .action-btn { padding:4px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:11px; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:4px; }
+  .action-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
+  .action-btn.active { background:rgba(230,126,34,0.12); color:#E67E22; border-color:rgba(230,126,34,0.3); }
+
+  .translate-result { background:rgba(99,102,241,0.08); border-left:3px solid rgba(99,102,241,0.4); padding:8px 12px; border-radius:0 8px 8px 0; margin-top:8px; font-size:12px; line-height:1.65; color:var(--text-secondary); }
+  .translate-result .t-label { font-size:10px; font-weight:600; color:#818cf8; text-transform:uppercase; margin-bottom:4px; }
+
+  .toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#22c55e; color:#fff; padding:8px 20px; border-radius:20px; font-size:13px; z-index:999; opacity:0; transition:opacity .3s; pointer-events:none; }
+  .toast.show { opacity:1; }
+
+  @media(max-width:640px) {
+    .msg-card { padding:12px; }
+    .msg-avatar { width:32px; height:32px; font-size:12px; }
+    .msg-sender { font-size:12px; }
+    .msg-body { font-size:12px; }
+  }
+</style>
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar" id="sidebar"></aside>
   <main class="main">
-    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+    <div class="inbox-header">
       <div>
-        <h1>📥 Personal Inbox</h1>
-        <p>Private messages from your WhatsApp contacts</p>
+        <h1 style="font-size:20px;margin:0">📥 Personal Inbox</h1>
+        <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0">Private messages from your WhatsApp contacts</p>
       </div>
-      <div style="display:flex;gap:6px" id="type-filters">
-        <button class="filter-btn active" onclick="filterType('all')">All</button>
-        <button class="filter-btn" onclick="filterType('voice')">🎙 Voice</button>
-        <button class="filter-btn" onclick="filterType('text')">💬 Text</button>
+      <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterType('all',this)">All</button>
+        <button class="filter-btn" onclick="filterType('voice',this)">🎙 Voice</button>
+        <button class="filter-btn" onclick="filterType('text',this)">💬 Text</button>
       </div>
     </div>
-    <style>.filter-btn{padding:6px 14px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;transition:all .2s}.filter-btn.active{background:rgba(230,126,34,0.15);color:#E67E22;border-color:rgba(230,126,34,0.3)}</style>
-    <div class="card" id="personal-list"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
+    <div id="msg-count" style="font-size:11px;color:var(--text-dim);margin-bottom:12px"></div>
+    <div id="personal-list"></div>
   </main>
   <div id="mobile-tabs"></div>
 </div>
+<div class="toast" id="toast"></div>
 
 <script src="/dashboard/shared.js"></script>
 <script>
+let allMessages = [];
+let currentFilter = 'all';
+let expandedIds = new Set();
+let translatedCache = {};
+
 async function init() {
   const ok = await initAuth();
   if (!ok) return;
   renderNav('personal');
-  loadPersonal();
+  await loadPersonal();
 }
 
-let currentFilter = 'all';
-
-function filterType(type) {
+function filterType(type, btn) {
   currentFilter = type;
   document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  loadPersonal();
+  btn.classList.add('active');
+  renderMessages();
 }
 
 async function loadPersonal() {
+  document.getElementById('personal-list').innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
   try {
-    const typeParam = currentFilter !== 'all' ? `&type=${currentFilter}` : '';
-    const notes = await api(`/api/personal?limit=50${typeParam}`);
-    if (!notes?.length) { showEmpty('personal-list','📥','No messages yet'); return; }
-    document.getElementById('personal-list').innerHTML = notes.map(n => {
-      const isVoice = n.message_type === 'voice' || n.message_type === 'audio';
-      const content = n.transcription || n.text_content || n.body || '';
-      return `
-      <div class="list-item">
-        <span class="item-icon">${isVoice ? '🎙️' : '💬'}</span>
-        <div class="item-body">
-          <div class="item-title">
-            ${esc(n.sender_name || 'Unknown')}
-            ${isVoice ? `<span class="badge badge-voice">🎙 ${formatDuration(n.duration_seconds)}</span>` : ''}
-            ${n.language ? langFlag(n.language) : ''}
-          </div>
-          <div class="item-preview" style="white-space:normal">${esc(content)}</div>
-        </div>
-        <span class="item-time">${timeAgo(n.timestamp)}</span>
-      </div>`;
+    const data = await api('/api/personal?limit=100');
+    allMessages = (data || []).filter(m => {
+      // Filter out status broadcasts and stories
+      if (!m.chat_id) return false;
+      if (m.chat_id === 'status@broadcast') return false;
+      if (m.chat_id.includes('broadcast')) return false;
+      return true;
+    });
+    renderMessages();
+  } catch (e) {
+    showEmpty('personal-list', '⚠️', 'Failed to load messages');
+  }
+}
+
+function renderMessages() {
+  const filtered = currentFilter === 'all' ? allMessages
+    : currentFilter === 'voice' ? allMessages.filter(m => m.message_type === 'voice' || m.message_type === 'audio')
+    : allMessages.filter(m => m.message_type === 'text');
+
+  document.getElementById('msg-count').textContent = `${filtered.length} message${filtered.length !== 1 ? 's' : ''}`;
+
+  if (!filtered.length) {
+    document.getElementById('personal-list').innerHTML = `<div style="text-align:center;padding:60px 20px;color:#666"><div style="font-size:40px;margin-bottom:12px">${currentFilter === 'voice' ? '🎙' : currentFilter === 'text' ? '💬' : '📥'}</div><p>No ${currentFilter === 'all' ? '' : currentFilter + ' '}messages yet</p></div>`;
+    return;
+  }
+
+  document.getElementById('personal-list').innerHTML = filtered.map(m => renderCard(m)).join('');
+}
+
+function renderCard(m) {
+  const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
+  const content = m.transcription || m.text_content || m.body || '';
+  const isExpanded = expandedIds.has(m.id);
+  const isLong = content.length > 200;
+  const initials = getInitials(m.sender_name);
+  const lang = m.language ? langFlag(m.language) : '';
+  const translated = translatedCache[m.id];
+
+  // Summary bullets
+  let summaryHtml = '';
+  if (m.summary) {
+    const bullets = m.summary.split('\n').filter(l => l.trim()).map(l => {
+      const clean = l.replace(/^[•\-\*]\s*/, '').trim();
+      return clean ? `<span class="bullet">• ${esc(clean)}</span>` : '';
     }).join('');
-  } catch (e) { showEmpty('personal-list','⚠️','Failed to load'); }
+    summaryHtml = `<div class="msg-summary">${bullets}</div>`;
+  }
+
+  // Body with paragraphs
+  const bodyText = esc(content).replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+  const bodyClass = (isLong && !isExpanded) ? 'msg-body collapsed' : 'msg-body';
+
+  return `
+    <div class="msg-card" id="card-${m.id}">
+      <div class="msg-header">
+        <div class="msg-avatar ${isVoice ? 'voice' : ''}">${isVoice ? '🎙' : initials}</div>
+        <div class="msg-info">
+          <div class="msg-sender">${esc(m.sender_name || 'Unknown')}</div>
+          <div class="msg-meta">
+            ${isVoice ? `<span class="badge badge-voice">🎙 ${formatDuration(m.duration_seconds)}</span>` : `<span class="badge badge-text">💬 Text</span>`}
+            ${lang ? `<span class="badge badge-lang">${lang}</span>` : ''}
+            ${m.from_me ? '<span class="badge" style="background:rgba(34,197,94,0.12);color:#22c55e">You</span>' : ''}
+          </div>
+        </div>
+        <span class="msg-time">${formatTime(m.timestamp)}</span>
+      </div>
+      ${summaryHtml}
+      <div class="${bodyClass}">${bodyText}</div>
+      ${isLong ? `<button class="msg-expand" onclick="toggleExpand('${m.id}')">${isExpanded ? '▲ Show less' : '▼ Show full transcript'}</button>` : ''}
+      ${translated ? `<div class="translate-result"><div class="t-label">🌐 Translation</div>${esc(translated).replace(/\n/g,'<br>')}</div>` : ''}
+      <div class="msg-actions">
+        <button class="action-btn" onclick="copyText('${m.id}')">📋 Copy</button>
+        <button class="action-btn" onclick="translateMsg('${m.id}')" id="tr-${m.id}">🌐 Translate</button>
+        ${isVoice && !m.summary ? `<button class="action-btn" onclick="generateSummary('${m.id}')">💡 Summarize</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+function formatTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const diff = (now - d) / 1000;
+  const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  if (diff < 86400) return timeStr;
+  if (diff < 172800) return `Yesterday ${timeStr}`;
+  if (diff < 604800) return d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + timeStr;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + timeStr;
+}
+
+function toggleExpand(id) {
+  if (expandedIds.has(id)) expandedIds.delete(id);
+  else expandedIds.add(id);
+  renderMessages();
+}
+
+function copyText(id) {
+  const m = allMessages.find(x => x.id === id);
+  if (!m) return;
+  const text = m.transcription || m.text_content || m.body || '';
+  navigator.clipboard.writeText(text).then(() => showToast('Copied!')).catch(() => {});
+}
+
+async function translateMsg(id) {
+  if (translatedCache[id]) {
+    delete translatedCache[id];
+    renderMessages();
+    return;
+  }
+  const m = allMessages.find(x => x.id === id);
+  if (!m) return;
+  const text = m.transcription || m.text_content || m.body || '';
+  if (!text) return;
+
+  const btn = document.getElementById('tr-' + id);
+  if (btn) { btn.textContent = '⏳ Translating...'; btn.disabled = true; }
+
+  try {
+    const result = await api('/api/translate', {
+      method: 'POST',
+      body: JSON.stringify({ text: text.slice(0, 3000) }),
+    });
+    if (result?.translation) {
+      translatedCache[id] = result.translation;
+      renderMessages();
+    } else {
+      showToast('Translation failed');
+    }
+  } catch (e) {
+    showToast('Translation failed');
+  }
+  if (btn) { btn.textContent = '🌐 Translate'; btn.disabled = false; }
+}
+
+async function generateSummary(id) {
+  const m = allMessages.find(x => x.id === id);
+  if (!m) return;
+  const text = m.transcription || m.text_content || m.body || '';
+  if (!text || text.length < 50) { showToast('Text too short'); return; }
+
+  try {
+    const result = await api('/api/summarize', {
+      method: 'POST',
+      body: JSON.stringify({ text: text.slice(0, 5000), message_id: id }),
+    });
+    if (result?.summary) {
+      m.summary = result.summary;
+      renderMessages();
+    }
+  } catch (e) { showToast('Summarize failed'); }
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
 }
 
 document.addEventListener('DOMContentLoaded', init);
