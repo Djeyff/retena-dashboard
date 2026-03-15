@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Home — Retena</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://mfhdoiddbgpjqjukacnc.supabase.co" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/dashboard/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="page-header">
+      <h1>Dashboard</h1>
+      <p>Overview of your WhatsApp capture</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="card-grid" id="stats">
+      <div class="card"><div class="spinner"></div></div>
+      <div class="card"><div class="spinner"></div></div>
+      <div class="card"><div class="spinner"></div></div>
+    </div>
+
+    <!-- Groups -->
+    <div style="margin-bottom:24px">
+      <h2 style="font-size:16px;font-weight:600;margin-bottom:12px">📡 Active Groups</h2>
+      <div class="card" id="groups-list"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div>
+      <h2 style="font-size:16px;font-weight:600;margin-bottom:12px">🕐 Recent Activity</h2>
+      <div class="card" id="activity-feed"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
+    </div>
+  </main>
+  <div id="mobile-tabs"></div>
+</div>
+
+<script src="/dashboard/shared.js"></script>
+<script>
+async function init() {
+  const ok = await initAuth();
+  if (!ok) return;
+  renderNav('home');
+  loadStats();
+  loadGroups();
+  loadActivity();
+}
+
+async function loadStats() {
+  try {
+    const [groups, activity] = await Promise.all([
+      api('/api/groups'),
+      api('/api/activity?limit=1'),
+    ]);
+    const totalGroups = groups?.length || 0;
+    const lastMsg = activity?.[0]?.timestamp;
+    document.getElementById('stats').innerHTML = `
+      <div class="card"><div class="stat-value">${totalGroups}</div><div class="stat-label">Groups tracked</div></div>
+      <div class="card"><div class="stat-value">${groups?.reduce((s,g)=>s+(g.total_messages||0),0) || 0}</div><div class="stat-label">Messages captured</div></div>
+      <div class="card"><div class="stat-value">${groups?.reduce((s,g)=>s+(g.voice_notes||0),0) || 0}</div><div class="stat-label">Voice notes</div></div>
+    `;
+  } catch (e) {
+    document.getElementById('stats').innerHTML = '<div class="card" style="grid-column:1/-1;color:#888;text-align:center;padding:20px">Could not load stats</div>';
+  }
+}
+
+async function loadGroups() {
+  try {
+    const groups = await api('/api/groups');
+    if (!groups?.length) { showEmpty('groups-list','👥','No groups captured yet'); return; }
+    document.getElementById('groups-list').innerHTML = groups.map(g => `
+      <div class="list-item" onclick="location.href='/dashboard/groups.html?id=${encodeURIComponent(g.chat_id)}'">
+        <span class="item-icon">${groupIcon(g.chat_name)}</span>
+        <div class="item-body">
+          <div class="item-title">${esc(g.chat_name || g.chat_id)}</div>
+          <div class="item-meta">${g.total_messages} messages · ${g.voice_notes} voice · ${g.unique_senders} members</div>
+        </div>
+        <span class="item-time">${timeAgo(g.last_message)}</span>
+      </div>
+    `).join('');
+  } catch (e) { showEmpty('groups-list','⚠️','Failed to load groups'); }
+}
+
+async function loadActivity() {
+  try {
+    const msgs = await api('/api/activity?limit=15');
+    if (!msgs?.length) { showEmpty('activity-feed','📋','No activity yet'); return; }
+    document.getElementById('activity-feed').innerHTML = msgs.map(m => {
+      const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
+      const text = m.transcription || m.text_content || m.body || '';
+      return `
+        <div class="list-item">
+          <span class="item-icon">${isVoice ? '🎙️' : '💬'}</span>
+          <div class="item-body">
+            <div class="item-title">
+              ${esc(m.sender_name || 'Unknown')}
+              ${m.chat_name ? `<span class="badge badge-group">${esc(m.chat_name)}</span>` : ''}
+              ${isVoice ? `<span class="badge badge-voice">🎙 ${formatDuration(m.duration_seconds)}</span>` : ''}
+            </div>
+            <div class="item-preview">${esc(text.slice(0,150))}</div>
+          </div>
+          <span class="item-time">${timeAgo(m.timestamp)}</span>
+        </div>`;
+    }).join('');
+  } catch (e) { showEmpty('activity-feed','⚠️','Failed to load activity'); }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

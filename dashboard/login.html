@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In — Retena</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter',system-ui,-apple-system,sans-serif; background:#0a0a0f; color:#e5e5e5; min-height:100vh; display:flex; align-items:center; justify-content:center; }
+  .card { background:#16161f; border:1px solid #2a2a3a; border-radius:16px; padding:40px; max-width:400px; width:100%; margin:20px; }
+  .logo { text-align:center; margin-bottom:32px; }
+  .logo-mark { display:inline-flex; align-items:center; justify-content:center; width:48px; height:48px; background:#E67E22; border-radius:12px; font-size:22px; font-weight:700; color:#fff; margin-bottom:12px; }
+  .logo h1 { font-size:24px; font-weight:700; }
+  .title { font-size:18px; font-weight:600; text-align:center; margin-bottom:8px; }
+  .subtitle { font-size:13px; color:#888; text-align:center; margin-bottom:24px; }
+  .tabs { display:flex; gap:4px; margin-bottom:20px; background:#1a1a28; border-radius:10px; padding:4px; }
+  .tab { flex:1; padding:8px; border:none; border-radius:8px; background:transparent; color:#888; font-size:13px; cursor:pointer; font-family:inherit; text-align:center; transition:all .2s; }
+  .tab.active { background:#222233; color:#fff; font-weight:600; }
+  input { width:100%; padding:12px 16px; border:1px solid #2a2a3a; border-radius:10px; background:#0a0a0f; color:#e5e5e5; font-size:14px; font-family:inherit; margin-bottom:12px; }
+  input:focus { outline:none; border-color:#E67E22; }
+  .hint { font-size:11px; color:#666; margin:-8px 0 12px 4px; }
+  .btn { width:100%; padding:12px; border:none; border-radius:10px; background:#E67E22; color:#fff; font-size:14px; font-weight:600; cursor:pointer; font-family:inherit; transition:opacity .2s; }
+  .btn:hover { opacity:0.9; }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .error { color:#ef4444; font-size:13px; text-align:center; margin-bottom:12px; display:none; }
+  .success { color:#22c55e; font-size:13px; text-align:center; margin-bottom:12px; }
+  .back { font-size:12px; color:#666; text-align:center; margin-top:16px; cursor:pointer; }
+  .back:hover { color:#E67E22; }
+  .spinner { display:inline-block; width:24px; height:24px; border:3px solid rgba(230,126,34,0.3); border-top-color:#E67E22; border-radius:50%; animation:spin .6s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg) } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">
+    <div class="logo-mark">R</div>
+    <h1>Retena</h1>
+  </div>
+
+  <!-- Step: Choose method -->
+  <div id="step-method">
+    <div class="title">Welcome back</div>
+    <div class="subtitle">Sign in to your dashboard</div>
+    <div class="tabs">
+      <button class="tab active" onclick="setMethod('email')">✉️ Email</button>
+      <button class="tab" onclick="setMethod('phone')">📱 Phone</button>
+    </div>
+    <div id="email-form">
+      <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+      <div class="error" id="email-error"></div>
+      <button class="btn" id="email-btn" onclick="sendEmail()">Send magic link</button>
+    </div>
+    <div id="phone-form" style="display:none">
+      <input type="tel" id="phone" placeholder="+1 809 555 1234" autocomplete="tel">
+      <div class="hint">Include country code (e.g. +1, +33)</div>
+      <div class="error" id="phone-error"></div>
+      <button class="btn" id="phone-btn" onclick="sendSMS()">Send code</button>
+    </div>
+  </div>
+
+  <!-- Step: OTP -->
+  <div id="step-otp" style="display:none">
+    <div class="title">Enter code</div>
+    <div class="subtitle" id="otp-sub">6-digit code sent</div>
+    <input type="text" id="otp-code" placeholder="000000" maxlength="6" inputmode="numeric" style="text-align:center;font-size:20px;letter-spacing:4px">
+    <div class="error" id="otp-error"></div>
+    <button class="btn" onclick="verifyOTP()">Verify</button>
+    <div class="back" onclick="show('step-method')">← Back</div>
+  </div>
+
+  <!-- Step: Email sent -->
+  <div id="step-sent" style="display:none">
+    <div class="title">Check your email</div>
+    <div class="subtitle" id="sent-sub"></div>
+    <div class="success">✓ Magic link sent! Check your inbox.</div>
+    <div class="back" onclick="show('step-method')">← Try another method</div>
+  </div>
+
+  <!-- Step: Loading -->
+  <div id="step-loading" style="display:none;text-align:center;padding:20px">
+    <div class="spinner"></div>
+    <div class="subtitle" style="margin-top:12px">Signing you in…</div>
+  </div>
+</div>
+
+<script>
+const SB_URL = 'https://mfhdoiddbgpjqjukacnc.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1maGRvaWRkYmdwanFqdWthY25jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NjEyNTIsImV4cCI6MjA4ODQzNzI1Mn0.fSL2d0gFjqyFLEPwCrzFI-r49oqCZNJiq4LJS3C0m50';
+const sb = window.supabase.createClient(SB_URL, SB_KEY);
+
+let otpPhone = '';
+
+function show(id) {
+  ['step-method','step-otp','step-sent','step-loading'].forEach(s =>
+    document.getElementById(s).style.display = s === id ? 'block' : 'none'
+  );
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 5000);
+}
+
+function setMethod(m) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.tab:nth-child(${m==='email'?1:2})`).classList.add('active');
+  document.getElementById('email-form').style.display = m==='email'?'block':'none';
+  document.getElementById('phone-form').style.display = m==='phone'?'block':'none';
+}
+
+async function sendEmail() {
+  const email = document.getElementById('email').value.trim();
+  if (!email.includes('@')) { showErr('email-error','Enter a valid email'); return; }
+  const btn = document.getElementById('email-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin + '/dashboard/' }
+  });
+  btn.disabled = false; btn.textContent = 'Send magic link';
+  if (error) { showErr('email-error', error.message); return; }
+  document.getElementById('sent-sub').textContent = `Link sent to ${email}`;
+  show('step-sent');
+}
+
+async function sendSMS() {
+  const raw = document.getElementById('phone').value.trim().replace(/[^\d+]/g,'');
+  const phone = raw.startsWith('+') ? raw : '+' + raw;
+  if (phone.length < 9) { showErr('phone-error','Enter valid phone with country code'); return; }
+  const btn = document.getElementById('phone-btn');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  const { error } = await sb.auth.signInWithOtp({ phone });
+  btn.disabled = false; btn.textContent = 'Send code';
+  if (error) { showErr('phone-error', error.message); return; }
+  otpPhone = phone;
+  document.getElementById('otp-sub').textContent = `Code sent to ${phone.slice(0,4)}…${phone.slice(-4)}`;
+  show('step-otp');
+  document.getElementById('otp-code').focus();
+}
+
+async function verifyOTP() {
+  const code = document.getElementById('otp-code').value.trim();
+  if (code.length < 6) { showErr('otp-error','Enter 6-digit code'); return; }
+  const { error } = await sb.auth.verifyOtp({ phone: otpPhone, token: code, type: 'sms' });
+  if (error) { showErr('otp-error', error.message); return; }
+  window.location.href = '/dashboard/';
+}
+
+// ── Init: check session / handle callback ──
+(async () => {
+  const hash = window.location.hash;
+  if (hash && hash.includes('access_token')) {
+    show('step-loading');
+    await sb.auth.getSession();
+    window.location.href = '/dashboard/';
+    return;
+  }
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) { window.location.href = '/dashboard/'; return; }
+})();
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN' && session) window.location.href = '/dashboard/';
+});
+</script>
+</body>
+</html>

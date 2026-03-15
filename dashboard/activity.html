@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Activity — Retena</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/dashboard/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="page-header">
+      <h1>📋 Activity Feed</h1>
+      <p>All messages across your WhatsApp groups and contacts</p>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="badge" style="cursor:pointer;padding:6px 12px" onclick="filterActivity('all')" id="f-all">All</button>
+      <button class="badge badge-voice" style="cursor:pointer;padding:6px 12px" onclick="filterActivity('voice')" id="f-voice">🎙 Voice</button>
+      <button class="badge badge-text" style="cursor:pointer;padding:6px 12px" onclick="filterActivity('text')" id="f-text">💬 Text</button>
+      <button class="badge badge-group" style="cursor:pointer;padding:6px 12px" onclick="filterActivity('group')" id="f-group">👥 Groups</button>
+    </div>
+    <div class="card" id="activity-list"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
+  </main>
+  <div id="mobile-tabs"></div>
+</div>
+
+<script src="/dashboard/shared.js"></script>
+<script>
+let allActivity = [];
+let currentFilter = 'all';
+
+async function init() {
+  const ok = await initAuth();
+  if (!ok) return;
+  renderNav('activity');
+  loadActivity();
+}
+
+async function loadActivity() {
+  try {
+    allActivity = await api('/api/activity?limit=100') || [];
+    renderActivity();
+  } catch (e) { showEmpty('activity-list','⚠️','Failed to load'); }
+}
+
+function filterActivity(f) {
+  currentFilter = f;
+  document.querySelectorAll('[id^=f-]').forEach(b => b.style.opacity = '0.5');
+  document.getElementById('f-'+f).style.opacity = '1';
+  renderActivity();
+}
+
+function renderActivity() {
+  let filtered = allActivity;
+  if (currentFilter === 'voice') filtered = allActivity.filter(m => m.message_type === 'voice' || m.message_type === 'audio');
+  if (currentFilter === 'text') filtered = allActivity.filter(m => m.message_type === 'text');
+  if (currentFilter === 'group') filtered = allActivity.filter(m => m.is_group);
+
+  if (!filtered.length) { showEmpty('activity-list','📋','No messages match this filter'); return; }
+
+  document.getElementById('activity-list').innerHTML = filtered.map(m => {
+    const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
+    const text = m.transcription || m.text_content || m.body || '';
+    return `
+      <div class="list-item">
+        <span class="item-icon">${isVoice ? '🎙️' : '💬'}</span>
+        <div class="item-body">
+          <div class="item-title">
+            ${esc(m.sender_name || 'Unknown')}
+            ${m.is_group && m.chat_name ? `<span class="badge badge-group">${esc(m.chat_name)}</span>` : ''}
+            ${isVoice ? `<span class="badge badge-voice">🎙 ${formatDuration(m.duration_seconds)}</span>` : ''}
+            ${m.language ? langFlag(m.language) : ''}
+          </div>
+          <div class="item-preview" style="white-space:normal">${esc(text.slice(0,200))}</div>
+        </div>
+        <span class="item-time">${timeAgo(m.timestamp)}</span>
+      </div>`;
+  }).join('');
+}
+
+// Init filter opacity
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('f-all').style.opacity = '1';
+  ['f-voice','f-text','f-group'].forEach(id => document.getElementById(id).style.opacity = '0.5');
+  init();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Groups — Retena</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/dashboard/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  .two-panel { display:flex; gap:1px; height:calc(100vh - 48px); }
+  .panel-left { width:320px; background:var(--bg-card); border-right:1px solid var(--border); overflow-y:auto; flex-shrink:0; }
+  .panel-right { flex:1; overflow-y:auto; padding:20px; }
+  .group-card { padding:14px 16px; border-bottom:1px solid var(--border); cursor:pointer; transition:background .15s; }
+  .group-card:hover, .group-card.active { background:var(--bg-hover); }
+  .group-name { font-size:14px; font-weight:600; margin-bottom:2px; }
+  .group-meta { font-size:12px; color:var(--text-muted); }
+  .msg-bubble { padding:12px 16px; margin-bottom:8px; border-radius:12px; background:var(--bg-card); border:1px solid var(--border); }
+  .msg-sender { font-size:12px; font-weight:600; color:var(--accent); margin-bottom:4px; }
+  .msg-text { font-size:13px; line-height:1.5; }
+  .msg-time { font-size:10px; color:var(--text-dim); margin-top:4px; text-align:right; }
+  .msg-voice { background:rgba(230,126,34,0.08); border-color:rgba(230,126,34,0.2); }
+  @media(max-width:768px) { .panel-left { width:100%; } .panel-right { display:none; } .panel-right.active { display:block; position:fixed; inset:0; z-index:200; background:var(--bg-page); } }
+</style>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main" style="padding:0">
+    <div class="two-panel">
+      <div class="panel-left" id="group-list"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
+      <div class="panel-right" id="group-detail">
+        <div style="text-align:center;padding:60px;color:var(--text-dim)">
+          <div style="font-size:40px;margin-bottom:12px">👥</div>
+          <p>Select a group to view messages</p>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div id="mobile-tabs"></div>
+</div>
+
+<script src="/dashboard/shared.js"></script>
+<script>
+let allGroups = [];
+
+async function init() {
+  const ok = await initAuth();
+  if (!ok) return;
+  renderNav('groups');
+  await loadGroups();
+  // Check URL param
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if (id) selectGroup(id);
+}
+
+async function loadGroups() {
+  try {
+    allGroups = await api('/api/groups') || [];
+    if (!allGroups.length) { showEmpty('group-list','👥','No groups yet'); return; }
+    renderGroupList();
+  } catch (e) { showEmpty('group-list','⚠️','Failed to load'); }
+}
+
+function renderGroupList() {
+  document.getElementById('group-list').innerHTML = allGroups.map(g => `
+    <div class="group-card" onclick="selectGroup('${esc(g.chat_id)}')" id="gc-${g.chat_id.replace(/[^a-zA-Z0-9]/g,'_')}">
+      <div class="group-name">${groupIcon(g.chat_name)} ${esc(g.chat_name || g.chat_id)}</div>
+      <div class="group-meta">${g.total_messages} msgs · ${g.voice_notes} voice · ${timeAgo(g.last_message)}</div>
+    </div>
+  `).join('');
+}
+
+async function selectGroup(chatId) {
+  // Highlight
+  document.querySelectorAll('.group-card').forEach(c => c.classList.remove('active'));
+  const card = document.getElementById('gc-' + chatId.replace(/[^a-zA-Z0-9]/g,'_'));
+  if (card) card.classList.add('active');
+
+  const panel = document.getElementById('group-detail');
+  panel.classList.add('active');
+  panel.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+
+  try {
+    const msgs = await api(`/api/groups/${encodeURIComponent(chatId)}/messages?limit=100`);
+    const group = allGroups.find(g => g.chat_id === chatId);
+    const name = group?.chat_name || chatId;
+
+    if (!msgs?.length) {
+      panel.innerHTML = `<h2 style="margin-bottom:12px">${groupIcon(name)} ${esc(name)}</h2><p style="color:var(--text-muted)">No messages yet</p>`;
+      return;
+    }
+
+    // Show newest at bottom
+    const sorted = [...msgs].reverse();
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <h2 style="font-size:16px">${groupIcon(name)} ${esc(name)}</h2>
+        <span style="font-size:12px;color:var(--text-muted)">${msgs.length} messages</span>
+      </div>
+      <div id="messages">
+        ${sorted.map(m => {
+          const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
+          const text = m.transcription || m.text_content || m.body || '';
+          return `
+            <div class="msg-bubble ${isVoice ? 'msg-voice' : ''}">
+              <div class="msg-sender">${esc(m.sender_name || 'Unknown')} ${isVoice ? '🎙 '+formatDuration(m.duration_seconds) : ''} ${m.language ? langFlag(m.language) : ''}</div>
+              <div class="msg-text">${esc(text)}</div>
+              <div class="msg-time">${timeAgo(m.timestamp)}</div>
+            </div>`;
+        }).join('')}
+      </div>
+    `;
+    // Scroll to bottom
+    panel.scrollTop = panel.scrollHeight;
+  } catch (e) {
+    panel.innerHTML = '<div style="padding:40px;text-align:center;color:#888">Failed to load messages</div>';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

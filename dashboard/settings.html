@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Retena</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/dashboard/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="page-header">
+      <h1>⚙️ Settings</h1>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Account</h3>
+      <div style="font-size:13px;color:var(--text-muted)">
+        <p>Email: <span class="user-email" style="color:var(--text)"></span></p>
+        <p style="margin-top:4px">User ID: <span class="user-id" style="color:var(--text-dim);font-size:11px"></span></p>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">WhatsApp Connection</h3>
+      <div style="font-size:13px;color:var(--text-muted)">
+        <p>Status: <span style="color:#22c55e">● Connected</span> (via QR pairing)</p>
+        <p style="margin-top:4px">Messages are captured automatically from linked WhatsApp groups.</p>
+      </div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Danger Zone</h3>
+      <button onclick="signOut()" style="padding:8px 16px;border:1px solid #ef4444;border-radius:8px;background:transparent;color:#ef4444;cursor:pointer;font-size:13px;font-family:inherit">Sign Out</button>
+    </div>
+  </main>
+  <div id="mobile-tabs"></div>
+</div>
+
+<script src="/dashboard/shared.js"></script>
+<script>
+async function init() {
+  const ok = await initAuth();
+  if (!ok) return;
+  renderNav('settings');
+  document.querySelectorAll('.user-id').forEach(el => el.textContent = CURRENT_USER.id);
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

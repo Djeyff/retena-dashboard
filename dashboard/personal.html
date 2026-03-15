@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Inbox — Retena</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/dashboard/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="page-header">
+      <h1>📥 Personal Inbox</h1>
+      <p>Private voice notes from your WhatsApp contacts</p>
+    </div>
+    <div class="card" id="personal-list"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
+  </main>
+  <div id="mobile-tabs"></div>
+</div>
+
+<script src="/dashboard/shared.js"></script>
+<script>
+async function init() {
+  const ok = await initAuth();
+  if (!ok) return;
+  renderNav('personal');
+  loadPersonal();
+}
+
+async function loadPersonal() {
+  try {
+    const notes = await api('/api/personal?limit=50');
+    if (!notes?.length) { showEmpty('personal-list','📥','No personal voice notes yet'); return; }
+    document.getElementById('personal-list').innerHTML = notes.map(n => `
+      <div class="list-item">
+        <span class="item-icon">🎙️</span>
+        <div class="item-body">
+          <div class="item-title">
+            ${esc(n.sender_name || 'Unknown')}
+            <span class="badge badge-voice">🎙 ${formatDuration(n.duration_seconds)}</span>
+            ${n.language ? langFlag(n.language) : ''}
+          </div>
+          <div class="item-preview" style="white-space:normal">${esc(n.transcription || '')}</div>
+        </div>
+        <span class="item-time">${timeAgo(n.timestamp)}</span>
+      </div>
+    `).join('');
+  } catch (e) { showEmpty('personal-list','⚠️','Failed to load'); }
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

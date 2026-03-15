@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Search — Retena</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="/dashboard/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main">
+    <div class="page-header">
+      <h1>🔍 Search</h1>
+      <p>Search across all messages and voice notes</p>
+    </div>
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="search-input" id="search-input" placeholder="Search messages, voice transcriptions…" autocomplete="off">
+    </div>
+    <div id="search-results"></div>
+    <div id="search-hint" style="text-align:center;padding:40px;color:var(--text-dim)">
+      <p>Try searching for a topic, person, or keyword</p>
+      <p style="margin-top:8px;font-size:12px">Searches across text messages and voice transcriptions</p>
+    </div>
+  </main>
+  <div id="mobile-tabs"></div>
+</div>
+
+<script src="/dashboard/shared.js"></script>
+<script>
+let searchTimeout;
+
+async function init() {
+  const ok = await initAuth();
+  if (!ok) return;
+  renderNav('search');
+  document.getElementById('search-input').addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => doSearch(e.target.value), 400);
+  });
+  // Auto-search from URL param
+  const q = new URLSearchParams(location.search).get('q');
+  if (q) { document.getElementById('search-input').value = q; doSearch(q); }
+}
+
+async function doSearch(q) {
+  q = q.trim();
+  if (q.length < 2) { document.getElementById('search-results').innerHTML = ''; document.getElementById('search-hint').style.display = 'block'; return; }
+  document.getElementById('search-hint').style.display = 'none';
+  document.getElementById('search-results').innerHTML = '<div style="text-align:center;padding:30px"><div class="spinner"></div></div>';
+
+  try {
+    const results = await api(`/api/search?q=${encodeURIComponent(q)}`);
+    if (!results?.length) {
+      document.getElementById('search-results').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">No results found</div>';
+      return;
+    }
+    document.getElementById('search-results').innerHTML = `
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${results.length} result${results.length===1?'':'s'}</div>
+      <div class="card">
+        ${results.map(m => {
+          const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
+          const text = m.transcription || m.text_content || m.body || '';
+          return `
+            <div class="list-item">
+              <span class="item-icon">${isVoice ? '🎙️' : '💬'}</span>
+              <div class="item-body">
+                <div class="item-title">
+                  ${esc(m.sender_name || 'Unknown')}
+                  ${m.chat_name ? `<span class="badge badge-group">${esc(m.chat_name)}</span>` : `<span class="badge badge-text">Private</span>`}
+                </div>
+                <div class="item-preview" style="white-space:normal">${highlightMatch(text, q)}</div>
+              </div>
+              <span class="item-time">${timeAgo(m.timestamp)}</span>
+            </div>`;
+        }).join('')}
+      </div>`;
+  } catch (e) {
+    document.getElementById('search-results').innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444">Search failed</div>';
+  }
+}
+
+function highlightMatch(text, q) {
+  const safe = esc(text.slice(0, 300));
+  const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
+  return safe.replace(re, '<mark style="background:#E67E22;color:#fff;border-radius:2px;padding:0 2px">$1</mark>');
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
