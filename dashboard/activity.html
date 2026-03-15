@@ -1,93 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Activity — Retena</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="/dashboard/styles.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity — Retena</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/styles.css">
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar" id="sidebar"></aside>
-  <main class="main">
-    <div class="page-header">
-      <h1>📋 Activity Feed</h1>
-      <p>All messages across your WhatsApp groups and contacts</p>
+  <div class="main">
+    <div class="page-content">
+
+      <div class="page-header animate-in">
+        <h1 class="page-title">Activity</h1>
+        <button class="btn btn-secondary btn-sm" onclick="loadActivity()">↻ Refresh</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar animate-in animate-in-d1" id="filter-bar">
+        <span class="filter-pill active" data-filter="all" onclick="setActFilter('all')">All</span>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" class="animate-in animate-in-d1">
+        <select class="input" id="type-filter" onchange="applyFilters()" style="width:auto;font-size:13px;padding:6px 12px">
+          <option value="all">All types</option>
+          <option value="text">Text only</option>
+          <option value="voice">Voice only</option>
+        </select>
+      </div>
+
+      <div id="activity-content"></div>
+
+      <div style="text-align:center;margin-top:16px" id="load-more-wrap" style="display:none">
+        <button class="btn btn-secondary" id="load-more-btn" onclick="loadMore()" style="display:none">Load more</button>
+      </div>
+
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button class="badge" style="cursor:pointer;padding:6px 12px" onclick="filterActivity('all')" id="f-all">All</button>
-      <button class="badge badge-voice" style="cursor:pointer;padding:6px 12px" onclick="filterActivity('voice')" id="f-voice">🎙 Voice</button>
-      <button class="badge badge-text" style="cursor:pointer;padding:6px 12px" onclick="filterActivity('text')" id="f-text">💬 Text</button>
-      <button class="badge badge-group" style="cursor:pointer;padding:6px 12px" onclick="filterActivity('group')" id="f-group">👥 Groups</button>
-    </div>
-    <div class="card" id="activity-list"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
-  </main>
-  <div id="mobile-tabs"></div>
+  </div>
 </div>
+<nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
 
-<script src="/dashboard/shared.js"></script>
+<script src="/dashboard/js/shared.js"></script>
 <script>
-let allActivity = [];
-let currentFilter = 'all';
+let allMessages = [];
+let actFilter = 'all';
+let typeFilter = 'all';
+let page = 1;
+let groupNames = new Set();
 
-async function init() {
-  const ok = await initAuth();
-  if (!ok) return;
-  renderNav('activity');
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebar('activity');
+  renderMobileTabs('home');
   loadActivity();
-}
+});
 
 async function loadActivity() {
+  page = 1;
+  const el = document.getElementById('activity-content');
+  showLoading(el);
   try {
-    allActivity = await api('/api/activity?limit=100') || [];
+    const data = await api(`/api/rt/activity?page=1&type=all`);
+    allMessages = data.items || data || [];
+    allMessages.forEach(m => { if (m.group_name) groupNames.add(m.group_name); });
+    buildGroupFilters();
     renderActivity();
-  } catch (e) { showEmpty('activity-list','⚠️','Failed to load'); }
+    document.getElementById('load-more-btn').style.display = (data.pages && data.pages > 1) ? 'inline-flex' : 'none';
+  } catch (e) {
+    showError(el);
+  }
 }
 
-function filterActivity(f) {
-  currentFilter = f;
-  document.querySelectorAll('[id^=f-]').forEach(b => b.style.opacity = '0.5');
-  document.getElementById('f-'+f).style.opacity = '1';
+function buildGroupFilters() {
+  const bar = document.getElementById('filter-bar');
+  let pills = `<span class="filter-pill active" data-filter="all" onclick="setActFilter('all')">All</span>`;
+  groupNames.forEach(name => {
+    pills += `<span class="filter-pill" data-filter="${name}" onclick="setActFilter('${name}')">${name}</span>`;
+  });
+  bar.innerHTML = pills;
+}
+
+function setActFilter(f) {
+  actFilter = f;
+  document.querySelectorAll('#filter-bar .filter-pill').forEach(el => el.classList.toggle('active', el.dataset.filter === f));
+  applyFilters();
+}
+
+function applyFilters() {
+  typeFilter = document.getElementById('type-filter').value;
   renderActivity();
 }
 
 function renderActivity() {
-  let filtered = allActivity;
-  if (currentFilter === 'voice') filtered = allActivity.filter(m => m.message_type === 'voice' || m.message_type === 'audio');
-  if (currentFilter === 'text') filtered = allActivity.filter(m => m.message_type === 'text');
-  if (currentFilter === 'group') filtered = allActivity.filter(m => m.is_group);
+  const el = document.getElementById('activity-content');
+  let items = allMessages;
 
-  if (!filtered.length) { showEmpty('activity-list','📋','No messages match this filter'); return; }
+  if (actFilter !== 'all') {
+    items = items.filter(m => m.group_name === actFilter);
+  }
+  if (typeFilter === 'text') {
+    items = items.filter(m => m.message_type !== 'voice' && m.type !== 'voice');
+  } else if (typeFilter === 'voice') {
+    items = items.filter(m => m.message_type === 'voice' || m.type === 'voice');
+  }
 
-  document.getElementById('activity-list').innerHTML = filtered.map(m => {
-    const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
-    const text = m.transcription || m.text_content || m.body || '';
+  if (!items.length) {
+    showEmpty(el, 'No activity yet', 'Messages from your groups will appear here in real time.');
+    return;
+  }
+
+  el.innerHTML = items.map(m => {
+    const isVoice = m.message_type === 'voice' || m.type === 'voice';
+    const text = m.text || m.message_text || m.content || m.transcription || '';
+    const expanded = isVoice && text.length > 150;
+    const id = m.id || Math.random().toString(36).slice(2);
+
     return `
-      <div class="list-item">
-        <span class="item-icon">${isVoice ? '🎙️' : '💬'}</span>
-        <div class="item-body">
-          <div class="item-title">
-            ${esc(m.sender_name || 'Unknown')}
-            ${m.is_group && m.chat_name ? `<span class="badge badge-group">${esc(m.chat_name)}</span>` : ''}
-            ${isVoice ? `<span class="badge badge-voice">🎙 ${formatDuration(m.duration_seconds)}</span>` : ''}
-            ${m.language ? langFlag(m.language) : ''}
+      <div class="activity-item">
+        ${renderAvatar(m.sender || m.sender_name || 'Unknown')}
+        <div class="activity-content">
+          <div class="activity-meta">
+            <span class="activity-sender">${m.sender || m.sender_name || 'Unknown'}</span>
+            ${m.group_name ? groupPill(m.group_name) : ''}
+            <span class="activity-time">${timeAgo(m.timestamp || m.created_at)}</span>
           </div>
-          <div class="item-preview" style="white-space:normal">${esc(text.slice(0,200))}</div>
+          <div class="activity-text">
+            ${isVoice ? `<span class="voice-badge">🎤 ${formatDuration(m.duration || m.voice_duration_sec || 0)}</span> ` : ''}
+            <span id="text-${id}">${expanded ? truncate(text, 150) : text}</span>
+            ${expanded ? `<button class="btn-sm" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="expandText('${id}', \`${text.replace(/`/g,'\\`').replace(/\\/g,'\\\\')}\`)">Show more</button>` : ''}
+          </div>
         </div>
-        <span class="item-time">${timeAgo(m.timestamp)}</span>
       </div>`;
   }).join('');
 }
 
-// Init filter opacity
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('f-all').style.opacity = '1';
-  ['f-voice','f-text','f-group'].forEach(id => document.getElementById(id).style.opacity = '0.5');
-  init();
-});
+function expandText(id, fullText) {
+  document.getElementById(`text-${id}`).textContent = fullText;
+}
+
+async function loadMore() {
+  page++;
+  try {
+    const data = await api(`/api/rt/activity?page=${page}&type=all`);
+    const items = data.items || data || [];
+    allMessages = allMessages.concat(items);
+    renderActivity();
+    if (!data.pages || page >= data.pages) {
+      document.getElementById('load-more-btn').style.display = 'none';
+    }
+  } catch (e) {
+    showToast('Failed to load more');
+  }
+}
 </script>
 </body>
 </html>

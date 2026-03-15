@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Transcripts — Retena</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <div class="page-content">
+
+      <div class="page-header animate-in">
+        <h1 class="page-title">Transcripts</h1>
+      </div>
+
+      <!-- Filters -->
+      <div class="filter-bar animate-in animate-in-d1" id="filter-bar">
+        <span class="filter-pill active" data-filter="all" onclick="setTransFilter('all')">All</span>
+        <span class="filter-pill" data-filter="personal" onclick="setTransFilter('personal')">Personal</span>
+      </div>
+
+      <div id="transcripts-content"></div>
+
+    </div>
+  </div>
+</div>
+<nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
+
+<script src="/dashboard/js/shared.js"></script>
+<script>
+let allTranscripts = [];
+let transFilter = 'all';
+let allGroupNames = new Set();
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebar('transcripts');
+  renderMobileTabs('home');
+  loadTranscripts();
+});
+
+async function loadTranscripts() {
+  const el = document.getElementById('transcripts-content');
+  showLoading(el);
+  try {
+    const data = await api('/api/rt/transcripts');
+    allTranscripts = data.items || data || [];
+    allTranscripts.forEach(t => { if (t.group_name) allGroupNames.add(t.group_name); });
+    buildFilterPills();
+    renderTranscripts();
+  } catch (e) {
+    showError(el);
+  }
+}
+
+function buildFilterPills() {
+  const bar = document.getElementById('filter-bar');
+  let pills = `<span class="filter-pill active" data-filter="all" onclick="setTransFilter('all')">All</span>`;
+  allGroupNames.forEach(name => {
+    pills += `<span class="filter-pill" data-filter="${name}" onclick="setTransFilter('${name}')">${name}</span>`;
+  });
+  pills += `<span class="filter-pill" data-filter="personal" onclick="setTransFilter('personal')">Personal</span>`;
+  bar.innerHTML = pills;
+}
+
+function setTransFilter(f) {
+  transFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(el => el.classList.toggle('active', el.dataset.filter === f));
+  renderTranscripts();
+}
+
+function renderTranscripts() {
+  const el = document.getElementById('transcripts-content');
+  let items = allTranscripts;
+
+  if (transFilter === 'personal') {
+    items = items.filter(t => !t.group_name && !t.chat_id);
+  } else if (transFilter !== 'all') {
+    items = items.filter(t => t.group_name === transFilter);
+  }
+
+  if (!items.length) {
+    showEmpty(el, 'No transcripts yet', 'Voice notes from your groups and personal inbox will appear here once transcribed.');
+    return;
+  }
+
+  el.innerHTML = items.map((t, i) => {
+    const isPersonal = !t.group_name && !t.chat_id;
+    const text = t.transcription || t.text || t.message_text || t.content || '';
+    const summary = t.summary || t.summary_json;
+    return `
+      <div class="card animate-in" style="margin-bottom:10px">
+        <div style="display:flex;align-items:flex-start;gap:10px;cursor:pointer" onclick="toggleTranscript(${i})">
+          ${t.sender || t.sender_name ? renderAvatar(t.sender || t.sender_name, 'sm') : ''}
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+              ${t.sender || t.sender_name ? `<span style="font-weight:600;font-size:13px">${t.sender || t.sender_name}</span>` : ''}
+              ${isPersonal ? personalPill() : groupPill(t.group_name || 'Group')}
+              <span class="pill pill-voice">🎤 ${formatDuration(t.duration || t.voice_duration_sec || 0)}</span>
+              ${t.language ? `<span style="font-size:11px">${langFlag(t.language)}</span>` : ''}
+            </div>
+            <div style="font-size:13px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="preview-${i}">${truncate(text, 120)}</div>
+          </div>
+          <span class="activity-time">${timeAgo(t.created_at || t.timestamp)}</span>
+        </div>
+        <div id="expanded-${i}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+          ${summary ? `<div class="summary-card${isPersonal ? ' personal-summary' : ''}" style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Summary</div><div style="font-size:13px;color:var(--text-secondary);line-height:1.6">${typeof summary === 'object' ? formatSummaryObj(summary) : summary}</div></div>` : ''}
+          <div style="font-size:13px;line-height:1.7;color:var(--text-primary);white-space:pre-wrap">${text}</div>
+          <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();navigator.clipboard.writeText(\`${text.replace(/`/g,'\\`').replace(/\\/g,'\\\\')}\`);showToast('Copied!')">📋 Copy</button></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleTranscript(i) {
+  const el = document.getElementById(`expanded-${i}`);
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function formatSummaryObj(s) {
+  let html = '';
+  if (s.keyPoints || s.key_points) {
+    const pts = s.keyPoints || s.key_points;
+    html += Array.isArray(pts) ? pts.map(p => '• ' + p).join('<br>') : pts;
+  }
+  if (s.actionItems || s.action_items) {
+    const items = s.actionItems || s.action_items;
+    html += '<br><strong>Action items:</strong><br>';
+    html += Array.isArray(items) ? items.map(a => '☐ ' + a).join('<br>') : items;
+  }
+  return html || JSON.stringify(s);
+}
+
+function langFlag(lang) {
+  const flags = { en:'🇬🇧', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', ja:'🇯🇵', zh:'🇨🇳', ar:'🇸🇦', ru:'🇷🇺' };
+  if (!lang) return '';
+  return flags[lang.slice(0,2).toLowerCase()] || '🌐';
+}
+</script>
+</body>
+</html>

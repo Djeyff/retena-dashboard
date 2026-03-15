@@ -1,52 +1,393 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Settings — Retena</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="/dashboard/styles.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings — Retena</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/styles.css">
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar" id="sidebar"></aside>
-  <main class="main">
-    <div class="page-header">
-      <h1>⚙️ Settings</h1>
-    </div>
-    <div class="card" style="margin-bottom:16px">
-      <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Account</h3>
-      <div style="font-size:13px;color:var(--text-muted)">
-        <p>Email: <span class="user-email" style="color:var(--text)"></span></p>
-        <p style="margin-top:4px">User ID: <span class="user-id" style="color:var(--text-dim);font-size:11px"></span></p>
+  <div class="main">
+    <div class="page-content">
+
+      <div class="page-header animate-in">
+        <h1 class="page-title">Settings</h1>
       </div>
-    </div>
-    <div class="card" style="margin-bottom:16px">
-      <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">WhatsApp Connection</h3>
-      <div style="font-size:13px;color:var(--text-muted)">
-        <p>Status: <span style="color:#22c55e">● Connected</span> (via QR pairing)</p>
-        <p style="margin-top:4px">Messages are captured automatically from linked WhatsApp groups.</p>
+
+      <!-- Tabs -->
+      <div class="settings-tabs animate-in animate-in-d1">
+        <div class="settings-tab active" data-tab="workspace" onclick="showTab('workspace')">Workspace</div>
+        <div class="settings-tab" data-tab="groups" onclick="showTab('groups')">Groups</div>
+        <div class="settings-tab" data-tab="team" onclick="showTab('team')">Team</div>
+        <div class="settings-tab" data-tab="billing" onclick="showTab('billing')">Billing</div>
+        <div class="settings-tab" data-tab="api" onclick="showTab('api')">API Keys</div>
+        <div class="settings-tab" data-tab="notifications" onclick="showTab('notifications')">Notifications</div>
+        <div class="settings-tab" data-tab="security" onclick="showTab('security')">Security</div>
+        <div class="settings-tab" data-tab="data" onclick="showTab('data')">Data & Privacy</div>
+        <div class="settings-tab" data-tab="vozclara" onclick="showTab('vozclara')">VozClara Perk</div>
       </div>
+
+      <!-- Workspace -->
+      <div class="settings-section active" id="tab-workspace">
+        <div class="card animate-in">
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Workspace name</label>
+            <input class="input" id="ws-name" placeholder="My Workspace">
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Timezone</label>
+            <select class="input" id="ws-timezone">
+              <option value="America/Santo_Domingo">America/Santo_Domingo (UTC-4)</option>
+              <option value="America/New_York">America/New York (UTC-5)</option>
+              <option value="America/Chicago">America/Chicago (UTC-6)</option>
+              <option value="America/Los_Angeles">America/Los Angeles (UTC-8)</option>
+              <option value="Europe/London">Europe/London (UTC+0)</option>
+              <option value="Europe/Paris">Europe/Paris (UTC+1)</option>
+              <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
+            </select>
+          </div>
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Workspace ID</label>
+            <input class="input" id="ws-id" readonly style="opacity:0.6">
+          </div>
+          <button class="btn btn-primary" onclick="saveWorkspace()">Save changes</button>
+        </div>
+      </div>
+
+      <!-- Groups -->
+      <div class="settings-section" id="tab-groups">
+        <div class="card animate-in">
+          <div class="section-title">Connected Groups</div>
+          <div id="settings-groups"></div>
+        </div>
+      </div>
+
+      <!-- Team -->
+      <div class="settings-section" id="tab-team">
+        <div class="card animate-in">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div class="section-title" style="margin:0">Team Members</div>
+            <button class="btn btn-primary btn-sm" onclick="openModal('invite-modal')">+ Invite</button>
+          </div>
+          <div id="team-members"></div>
+          <div style="margin-top:12px;padding:12px;background:var(--bg-input);border-radius:8px;font-size:12px;color:var(--text-muted)">
+            <strong>Roles:</strong> <span style="color:var(--accent)">Admin</span> — full access, manage team & billing. <span style="color:var(--blue)">Member</span> — view all groups, search, export. <span style="color:var(--text-muted)">Viewer</span> — read-only, no exports.
+          </div>
+        </div>
+      </div>
+
+      <!-- Billing -->
+      <div class="settings-section" id="tab-billing">
+        <div class="card animate-in" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div>
+              <div style="font-size:18px;font-weight:700" id="plan-name">Starter</div>
+              <div style="font-size:14px;color:var(--text-muted)" id="plan-price">$39/mo</div>
+            </div>
+            <button class="btn btn-primary" onclick="showToast('Billing portal coming soon')">Change plan</button>
+          </div>
+        </div>
+
+        <div class="card animate-in animate-in-d1">
+          <div class="section-title">Usage</div>
+          <div id="billing-meters"></div>
+        </div>
+
+        <div class="card animate-in animate-in-d2" style="margin-top:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="section-title" style="margin:0">Payment method</div>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('Payment portal coming soon')">Manage</button>
+          </div>
+          <div id="payment-info" style="font-size:13px;color:var(--text-muted)">No payment method on file</div>
+        </div>
+      </div>
+
+      <!-- API Keys -->
+      <div class="settings-section" id="tab-api">
+        <div class="card animate-in">
+          <div id="api-keys-content">
+            <div class="empty-state" style="padding:30px">
+              <h3>API Access — Business Plan</h3>
+              <p>API keys are available on the Business plan. Upgrade to access the Retena API for custom integrations.</p>
+              <button class="btn btn-primary" onclick="showToast('Upgrade coming soon')">Upgrade to Business</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="settings-section" id="tab-notifications">
+        <div class="card animate-in">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-weight:600;font-size:14px">Daily briefing email</div>
+              <div style="font-size:12px;color:var(--text-muted)">Receive a morning summary of all group activity</div>
+            </div>
+            <div class="toggle" id="notif-daily" onclick="toggleNotif('notif-daily')"></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-weight:600;font-size:14px">Weekly summary</div>
+              <div style="font-size:12px;color:var(--text-muted)">A weekly recap with key metrics and insights</div>
+            </div>
+            <div class="toggle" id="notif-weekly" onclick="toggleNotif('notif-weekly')"></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0">
+            <div>
+              <div style="font-weight:600;font-size:14px">New group detected</div>
+              <div style="font-size:12px;color:var(--text-muted)">Get notified when Retena detects a new WhatsApp group</div>
+            </div>
+            <div class="toggle on" id="notif-newgroup" onclick="toggleNotif('notif-newgroup')"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Security -->
+      <div class="settings-section" id="tab-security">
+        <div class="card animate-in">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
+            <div>
+              <div style="font-weight:600;font-size:14px">Two-factor authentication</div>
+              <div style="font-size:12px;color:var(--text-muted)">Add an extra layer of security to your account</div>
+            </div>
+            <div class="toggle" id="sec-2fa" onclick="showToast('2FA coming soon')"></div>
+          </div>
+          <div style="padding:16px 0">
+            <div class="section-title">Active Sessions</div>
+            <div id="active-sessions" style="font-size:13px;color:var(--text-muted)">This device — active now</div>
+          </div>
+          <button class="btn btn-danger btn-sm" onclick="if(confirm('Log out of all other sessions?'))showToast('Logged out all sessions')">Log out all other sessions</button>
+        </div>
+      </div>
+
+      <!-- Data & Privacy -->
+      <div class="settings-section" id="tab-data">
+        <div class="card animate-in" style="margin-bottom:16px">
+          <div style="margin-bottom:16px">
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">Export all data</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Download all your messages, transcripts, and settings as a ZIP file.</div>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('Export feature coming soon')">⬇ Export data</button>
+          </div>
+          <div style="margin-bottom:16px">
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">Data retention</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">How long should Retena keep your captured messages?</div>
+            <select class="input" style="width:auto">
+              <option value="6">6 months</option>
+              <option value="12" selected>1 year</option>
+              <option value="24">2 years</option>
+              <option value="0">Forever</option>
+            </select>
+          </div>
+        </div>
+        <div class="danger-zone">
+          <div style="font-weight:600;font-size:14px;color:var(--red);margin-bottom:8px">Delete workspace</div>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">This will permanently delete your workspace, all groups, messages, and transcripts. This action cannot be undone.</p>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input class="input" id="delete-confirm" placeholder='Type "DELETE" to confirm' style="width:200px;font-size:13px">
+            <button class="btn btn-danger btn-sm" onclick="confirmDelete()">Delete workspace</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VozClara Perk -->
+      <div class="settings-section" id="tab-vozclara">
+        <div class="card animate-in" style="text-align:center;padding:32px">
+          <div style="font-size:40px;margin-bottom:12px">🎤</div>
+          <h3 style="font-size:18px;font-weight:700;margin-bottom:8px">Free VozClara Basic!</h3>
+          <p style="font-size:14px;color:var(--text-secondary);margin-bottom:20px;max-width:400px;margin-left:auto;margin-right:auto">
+            As a Retena subscriber, you get VozClara Basic for free ($4.99/mo value). Transcribe personal voice notes from WhatsApp and Telegram.
+          </p>
+          <a class="btn btn-primary" href="https://voz-clara.com" target="_blank">Activate VozClara →</a>
+        </div>
+      </div>
+
     </div>
-    <div class="card">
-      <h3 style="font-size:14px;font-weight:600;margin-bottom:12px">Danger Zone</h3>
-      <button onclick="signOut()" style="padding:8px 16px;border:1px solid #ef4444;border-radius:8px;background:transparent;color:#ef4444;cursor:pointer;font-size:13px;font-family:inherit">Sign Out</button>
-    </div>
-  </main>
-  <div id="mobile-tabs"></div>
+  </div>
 </div>
 
-<script src="/dashboard/shared.js"></script>
+<!-- Invite Modal -->
+<div class="modal-overlay" id="invite-modal" onclick="if(event.target===this)closeModal('invite-modal')">
+  <div class="modal">
+    <h3>Invite team member</h3>
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Email address</label>
+      <input class="input" id="invite-email" placeholder="colleague@company.com" type="email">
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Role</label>
+      <select class="input" id="invite-role">
+        <option value="member">Member</option>
+        <option value="viewer">Viewer</option>
+        <option value="admin">Admin</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('invite-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="sendInvite()">Send invite</button>
+    </div>
+  </div>
+</div>
+
+<nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
+
+<script src="/dashboard/js/shared.js"></script>
 <script>
-async function init() {
-  const ok = await initAuth();
-  if (!ok) return;
-  renderNav('settings');
-  document.querySelectorAll('.user-id').forEach(el => el.textContent = CURRENT_USER.id);
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebar('settings');
+  renderMobileTabs('settings');
+  loadSettings();
+});
+
+function showTab(tabId) {
+  document.querySelectorAll('.settings-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+  document.querySelectorAll('.settings-section').forEach(s => s.classList.toggle('active', s.id === `tab-${tabId}`));
+  if (tabId === 'groups') loadSettingsGroups();
+  if (tabId === 'team') loadTeam();
+  if (tabId === 'billing') loadBilling();
 }
-document.addEventListener('DOMContentLoaded', init);
+
+async function loadSettings() {
+  try {
+    const data = await api('/api/rt/settings');
+    if (data.name) document.getElementById('ws-name').value = data.name;
+    if (data.timezone) document.getElementById('ws-timezone').value = data.timezone;
+    if (data.id) document.getElementById('ws-id').value = data.id;
+  } catch (e) {}
+}
+
+async function saveWorkspace() {
+  try {
+    await api('/api/rt/settings', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: document.getElementById('ws-name').value,
+        timezone: document.getElementById('ws-timezone').value
+      })
+    });
+    showToast('Settings saved');
+  } catch (e) { showToast('Failed to save'); }
+}
+
+async function loadSettingsGroups() {
+  const el = document.getElementById('settings-groups');
+  showLoading(el);
+  try {
+    const data = await api('/api/rt/groups');
+    const groups = data.items || data || [];
+    if (!groups.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:16px 0">No groups connected yet</div>';
+      return;
+    }
+    el.innerHTML = groups.map(g => {
+      const isOn = g.capture_enabled !== false;
+      return `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:16px">${g.emoji || '💬'}</span>
+            <span style="font-size:13px;font-weight:500">${g.name || g.group_name}</span>
+          </div>
+          <div class="toggle ${isOn ? 'on' : ''}" onclick="settingsToggle('${g.id || g.chat_id}', ${!isOn}, this)"></div>
+        </div>`;
+    }).join('');
+  } catch (e) { showError(el); }
+}
+
+async function settingsToggle(id, enable, el) {
+  try {
+    await api(`/api/rt/groups/${id}/toggle`, { method: 'POST', body: JSON.stringify({ capture_enabled: enable }) });
+    el.classList.toggle('on', enable);
+    showToast(enable ? 'Capture enabled' : 'Capture paused');
+  } catch (e) { showToast('Failed'); }
+}
+
+async function loadTeam() {
+  const el = document.getElementById('team-members');
+  try {
+    const data = await api('/api/rt/team');
+    const members = data.items || data.members || data || [];
+    if (!members.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:16px 0">No team members yet. Invite someone to get started.</div>';
+      return;
+    }
+    el.innerHTML = members.map(m => {
+      const roleColors = { admin: 'var(--accent)', member: 'var(--blue)', viewer: 'var(--text-muted)' };
+      const role = m.role || 'member';
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+          ${renderAvatar(m.name || m.email || 'Unknown')}
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:600">${m.name || 'Unknown'}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${m.email || ''} · Last active ${timeAgo(m.last_active || m.last_login_at)}</div>
+          </div>
+          <span class="pill" style="background:rgba(0,0,0,0.2);color:${roleColors[role]};border:1px solid ${roleColors[role]}30;font-weight:600">${role.charAt(0).toUpperCase() + role.slice(1)}</span>
+        </div>`;
+    }).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);padding:16px 0">Could not load team members</div>';
+  }
+}
+
+async function loadBilling() {
+  const el = document.getElementById('billing-meters');
+  try {
+    const data = await api('/api/rt/usage');
+    const plan = PLAN_LIMITS[data.plan || 'starter'];
+    const planNames = { starter: 'Starter — $39/mo', pro: 'Pro — $79/mo', business: 'Business — $199/mo' };
+    document.getElementById('plan-name').textContent = (data.plan || 'starter').charAt(0).toUpperCase() + (data.plan || 'starter').slice(1);
+    document.getElementById('plan-price').textContent = planNames[data.plan || 'starter']?.split('—')[1]?.trim() || '$39/mo';
+
+    el.innerHTML = `
+      ${largeMeter('Voice minutes', data.voice_minutes || 0, plan.voice_min)}
+      ${largeMeter('AI queries', data.ai_queries || 0, plan.ai_queries)}
+      ${largeMeter('Groups', data.groups || 0, plan.groups)}
+      ${largeMeter('Storage', data.storage_gb || 0, plan.storage_gb, 'GB')}
+      ${largeMeter('Seats', data.seats || 1, plan.seats)}
+    `;
+  } catch (e) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">Could not load usage data</div>';
+  }
+}
+
+function largeMeter(label, used, total, unit = '') {
+  const isInf = total === Infinity;
+  const pct = isInf ? 0 : (total > 0 ? Math.min((used / total) * 100, 100) : 0);
+  const color = pct > 80 ? 'var(--red)' : pct > 50 ? '#f59e0b' : 'var(--green)';
+  const totalStr = isInf ? '∞' : total;
+  return `
+    <div class="usage-meter-lg">
+      <div class="meter-header">
+        <span style="color:var(--text-secondary)">${label}</span>
+        <span style="font-weight:600">${used}${unit ? ' ' + unit : ''} / ${totalStr}${unit && !isInf ? ' ' + unit : ''}</span>
+      </div>
+      <div class="meter-bar-lg"><div class="meter-fill-lg" style="width:${isInf ? 0 : pct}%;background:${color}"></div></div>
+    </div>`;
+}
+
+function toggleNotif(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('on');
+  showToast('Notification preference updated');
+}
+
+async function sendInvite() {
+  const email = document.getElementById('invite-email').value;
+  const role = document.getElementById('invite-role').value;
+  if (!email) { showToast('Enter an email'); return; }
+  showToast(`Invite sent to ${email}`);
+  closeModal('invite-modal');
+  document.getElementById('invite-email').value = '';
+}
+
+function confirmDelete() {
+  if (document.getElementById('delete-confirm').value !== 'DELETE') {
+    showToast('Type DELETE to confirm');
+    return;
+  }
+  showToast('Workspace deletion is not yet available');
+}
 </script>
 </body>
 </html>

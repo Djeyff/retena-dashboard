@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exports — Retena</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/styles.css">
+</head>
+<body>
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <div class="page-content">
+
+      <div class="page-header animate-in">
+        <h1 class="page-title">Exports</h1>
+        <button class="btn btn-primary" onclick="openModal('export-modal')">+ Generate new export</button>
+      </div>
+
+      <div id="exports-content" class="animate-in animate-in-d1"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="export-modal" onclick="if(event.target===this)closeModal('export-modal')">
+  <div class="modal">
+    <h3>Generate Export</h3>
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Date range</label>
+      <div style="display:flex;gap:8px">
+        <input type="date" class="input" id="export-from" style="flex:1">
+        <input type="date" class="input" id="export-to" style="flex:1">
+      </div>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Groups</label>
+      <div id="export-groups"></div>
+    </div>
+    <div style="margin-bottom:20px">
+      <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Format</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary btn-sm export-format active" data-format="pdf" onclick="selectFormat('pdf')" style="border:2px solid var(--accent)">📄 PDF</button>
+        <button class="btn btn-secondary btn-sm export-format" data-format="csv" onclick="selectFormat('csv')">📊 CSV</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-secondary" onclick="closeModal('export-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="generateExport()">Generate</button>
+    </div>
+  </div>
+</div>
+
+<nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
+
+<script src="/dashboard/js/shared.js"></script>
+<script>
+let exportFormat = 'pdf';
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebar('exports');
+  renderMobileTabs('home');
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(Date.now() - 7*86400000).toISOString().split('T')[0];
+  document.getElementById('export-from').value = weekAgo;
+  document.getElementById('export-to').value = today;
+  loadExports();
+  loadGroupsForExport();
+});
+
+async function loadExports() {
+  const el = document.getElementById('exports-content');
+  showLoading(el);
+  try {
+    const data = await api('/api/rt/exports');
+    const items = data.items || data || [];
+    if (!items.length) {
+      showEmpty(el, 'No exports yet', 'Export your group transcripts and summaries as PDF or CSV.', { label: 'Generate your first export', href: '#' });
+      // Make the CTA open modal instead
+      const btn = el.querySelector('.btn-primary');
+      if (btn) { btn.removeAttribute('href'); btn.onclick = () => openModal('export-modal'); }
+      return;
+    }
+    el.innerHTML = `<div class="card" style="padding:0;overflow:hidden">
+      ${items.map(e => `
+        <div class="export-item">
+          <span class="export-badge ${e.format || 'pdf'}">${(e.format || 'PDF').toUpperCase()}</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:13px">${e.name || 'Export'}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${formatDate(e.created_at)} · ${e.file_size || ''}</div>
+          </div>
+          <span style="font-size:12px;color:var(--text-muted)">${e.status || 'Ready'}</span>
+          ${e.download_url ? `<a class="btn btn-secondary btn-sm" href="${e.download_url}" download>⬇ Download</a>` : ''}
+        </div>`).join('')}
+    </div>`;
+  } catch (e) {
+    showEmpty(document.getElementById('exports-content'), 'No exports yet', 'Export your group transcripts and summaries as PDF or CSV.');
+  }
+}
+
+async function loadGroupsForExport() {
+  try {
+    const data = await api('/api/rt/groups');
+    const groups = data.items || data || [];
+    const el = document.getElementById('export-groups');
+    if (!groups.length) {
+      el.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">No groups available</div>';
+      return;
+    }
+    el.innerHTML = groups.map(g => `
+      <label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:13px;color:var(--text-secondary);cursor:pointer">
+        <input type="checkbox" value="${g.id || g.chat_id}" checked style="accent-color:var(--accent)">
+        ${g.name || g.group_name || 'Group'}
+      </label>
+    `).join('');
+  } catch (e) {}
+}
+
+function selectFormat(f) {
+  exportFormat = f;
+  document.querySelectorAll('.export-format').forEach(el => {
+    const isActive = el.dataset.format === f;
+    el.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)';
+    el.classList.toggle('active', isActive);
+  });
+}
+
+async function generateExport() {
+  const from = document.getElementById('export-from').value;
+  const to = document.getElementById('export-to').value;
+  const groupEls = document.querySelectorAll('#export-groups input:checked');
+  const groups = Array.from(groupEls).map(el => el.value);
+
+  try {
+    await api('/api/rt/exports/generate', {
+      method: 'POST',
+      body: JSON.stringify({ date_from: from, date_to: to, groups, format: exportFormat })
+    });
+    closeModal('export-modal');
+    showToast('Export generated!');
+    loadExports();
+  } catch (e) {
+    showToast('Export feature coming soon');
+    closeModal('export-modal');
+  }
+}
+</script>
+</body>
+</html>

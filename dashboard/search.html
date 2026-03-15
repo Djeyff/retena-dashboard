@@ -1,96 +1,162 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Search — Retena</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="/dashboard/styles.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Search — Retena</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/styles.css">
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar" id="sidebar"></aside>
-  <main class="main">
-    <div class="page-header">
-      <h1>🔍 Search</h1>
-      <p>Search across all messages and voice notes</p>
+  <div class="main">
+    <div class="page-content" style="max-width:700px">
+
+      <div class="page-header animate-in">
+        <h1 class="page-title">AI Search</h1>
+      </div>
+
+      <!-- Search Input -->
+      <div class="search-input-wrapper animate-in animate-in-d1">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="input" id="search-input" placeholder="What did we decide about the bathroom tiles budget?" onkeydown="if(event.key==='Enter')doSearch()">
+      </div>
+
+      <div style="text-align:center;font-size:12px;color:var(--text-muted);margin:8px 0 16px" class="animate-in animate-in-d1">
+        Search in any language — finds messages in groups AND personal notes
+      </div>
+
+      <!-- Usage Counter -->
+      <div style="text-align:center;margin-bottom:24px" class="animate-in animate-in-d2">
+        <span id="usage-counter" style="font-size:12px;color:var(--text-muted)"></span>
+      </div>
+
+      <!-- Example Queries -->
+      <div id="examples" class="animate-in animate-in-d2">
+        <div class="section-title" style="text-align:center">Try searching</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center">
+          <button class="btn btn-secondary btn-sm" onclick="setQuery('What did we decide about the bathroom tiles budget?')">Bathroom tiles budget</button>
+          <button class="btn btn-secondary btn-sm" onclick="setQuery('Budget discussions from last week')">Budget last week</button>
+          <button class="btn btn-secondary btn-sm" onclick="setQuery('mom medical')">mom medical</button>
+          <button class="btn btn-secondary btn-sm" onclick="setQuery('When is the client meeting?')">Client meeting</button>
+        </div>
+      </div>
+
+      <!-- Results -->
+      <div id="search-results" style="display:none">
+        <div id="ai-answer"></div>
+        <div class="section-title" style="margin-top:24px">Sources</div>
+        <div id="sources"></div>
+      </div>
+
+      <!-- Loading -->
+      <div id="search-loading" style="display:none;text-align:center;padding:40px">
+        <div class="skeleton-line w-80" style="margin:0 auto"></div>
+        <div class="skeleton-line w-60" style="margin:8px auto 0"></div>
+        <div class="skeleton-line w-40" style="margin:8px auto 0"></div>
+        <div style="margin-top:16px;font-size:13px;color:var(--text-muted)">Searching across all your groups and notes…</div>
+      </div>
+
+      <!-- Error -->
+      <div id="search-error" style="display:none"></div>
+
     </div>
-    <div class="search-box">
-      <span class="search-icon">🔍</span>
-      <input type="text" class="search-input" id="search-input" placeholder="Search messages, voice transcriptions…" autocomplete="off">
-    </div>
-    <div id="search-results"></div>
-    <div id="search-hint" style="text-align:center;padding:40px;color:var(--text-dim)">
-      <p>Try searching for a topic, person, or keyword</p>
-      <p style="margin-top:8px;font-size:12px">Searches across text messages and voice transcriptions</p>
-    </div>
-  </main>
-  <div id="mobile-tabs"></div>
+  </div>
 </div>
+<nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
 
-<script src="/dashboard/shared.js"></script>
+<script src="/dashboard/js/shared.js"></script>
 <script>
-let searchTimeout;
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebar('search');
+  renderMobileTabs('search');
+  loadUsageCounter();
 
-async function init() {
-  const ok = await initAuth();
-  if (!ok) return;
-  renderNav('search');
-  document.getElementById('search-input').addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => doSearch(e.target.value), 400);
-  });
   // Auto-search from URL param
-  const q = new URLSearchParams(location.search).get('q');
-  if (q) { document.getElementById('search-input').value = q; doSearch(q); }
+  const params = new URLSearchParams(location.search);
+  if (params.get('q')) {
+    document.getElementById('search-input').value = params.get('q');
+    doSearch();
+  }
+});
+
+async function loadUsageCounter() {
+  try {
+    const data = await api('/api/rt/usage');
+    const plan = PLAN_LIMITS[data.plan || 'starter'];
+    const used = data.ai_queries || 0;
+    const total = plan.ai_queries === Infinity ? '∞' : plan.ai_queries;
+    document.getElementById('usage-counter').textContent = `${used} of ${total} AI queries this month`;
+  } catch (e) {}
 }
 
-async function doSearch(q) {
-  q = q.trim();
-  if (q.length < 2) { document.getElementById('search-results').innerHTML = ''; document.getElementById('search-hint').style.display = 'block'; return; }
-  document.getElementById('search-hint').style.display = 'none';
-  document.getElementById('search-results').innerHTML = '<div style="text-align:center;padding:30px"><div class="spinner"></div></div>';
+function setQuery(q) {
+  document.getElementById('search-input').value = q;
+  doSearch();
+}
+
+async function doSearch() {
+  const query = document.getElementById('search-input').value.trim();
+  if (!query) return;
+
+  document.getElementById('examples').style.display = 'none';
+  document.getElementById('search-results').style.display = 'none';
+  document.getElementById('search-error').style.display = 'none';
+  document.getElementById('search-loading').style.display = 'block';
 
   try {
-    const results = await api(`/api/search?q=${encodeURIComponent(q)}`);
-    if (!results?.length) {
-      document.getElementById('search-results').innerHTML = '<div style="text-align:center;padding:40px;color:var(--text-muted)">No results found</div>';
+    const data = await api('/api/rt/search', {
+      method: 'POST',
+      body: JSON.stringify({ query })
+    });
+
+    document.getElementById('search-loading').style.display = 'none';
+
+    if (!data.answer && (!data.sources || !data.sources.length)) {
+      document.getElementById('search-error').style.display = 'block';
+      document.getElementById('search-error').innerHTML = `<div class="empty-state"><h3>No results found</h3><p>Try a different query or check your spelling.</p></div>`;
       return;
     }
-    document.getElementById('search-results').innerHTML = `
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">${results.length} result${results.length===1?'':'s'}</div>
-      <div class="card">
-        ${results.map(m => {
-          const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
-          const text = m.transcription || m.text_content || m.body || '';
-          return `
-            <div class="list-item">
-              <span class="item-icon">${isVoice ? '🎙️' : '💬'}</span>
-              <div class="item-body">
-                <div class="item-title">
-                  ${esc(m.sender_name || 'Unknown')}
-                  ${m.chat_name ? `<span class="badge badge-group">${esc(m.chat_name)}</span>` : `<span class="badge badge-text">Private</span>`}
-                </div>
-                <div class="item-preview" style="white-space:normal">${highlightMatch(text, q)}</div>
-              </div>
-              <span class="item-time">${timeAgo(m.timestamp)}</span>
-            </div>`;
-        }).join('')}
-      </div>`;
+
+    document.getElementById('search-results').style.display = 'block';
+
+    // AI Answer
+    const answerEl = document.getElementById('ai-answer');
+    if (data.answer) {
+      answerEl.innerHTML = `<div class="ai-answer"><p>${data.answer}</p></div>`;
+    } else {
+      answerEl.innerHTML = '';
+    }
+
+    // Sources
+    const sourcesEl = document.getElementById('sources');
+    const sources = data.sources || [];
+    if (sources.length) {
+      sourcesEl.innerHTML = sources.map(s => {
+        const isPersonal = !s.group_name && !s.chat_id;
+        return `
+          <div class="card" style="margin-bottom:10px;cursor:pointer" onclick="${isPersonal ? `location.href='/dashboard/personal.html'` : `location.href='/dashboard/groups.html'`}">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+              ${renderAvatar(s.sender || s.sender_name || 'Unknown', 'sm')}
+              <span style="font-weight:600;font-size:13px">${s.sender || s.sender_name || 'Unknown'}</span>
+              ${isPersonal ? personalPill() : groupPill(s.group_name || 'Group')}
+              <span class="activity-time">${timeAgo(s.timestamp || s.created_at)}</span>
+            </div>
+            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5">${truncate(s.text || s.message_text || s.content || s.transcription || '', 250)}</div>
+          </div>`;
+      }).join('');
+    } else {
+      sourcesEl.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">No specific sources found</div>';
+    }
+
+    loadUsageCounter();
   } catch (e) {
-    document.getElementById('search-results').innerHTML = '<div style="text-align:center;padding:40px;color:#ef4444">Search failed</div>';
+    document.getElementById('search-loading').style.display = 'none';
+    document.getElementById('search-error').style.display = 'block';
+    document.getElementById('search-error').innerHTML = `<div class="error-state"><p>Something went wrong. Try refreshing.</p><button class="btn btn-secondary" onclick="doSearch()">Retry</button></div>`;
   }
 }
-
-function highlightMatch(text, q) {
-  const safe = esc(text.slice(0, 300));
-  const re = new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi');
-  return safe.replace(re, '<mark style="background:#E67E22;color:#fff;border-radius:2px;padding:0 2px">$1</mark>');
-}
-
-document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>

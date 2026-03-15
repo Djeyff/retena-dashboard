@@ -1,275 +1,252 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Personal Inbox — Retena</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="/dashboard/styles.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<style>
-  .inbox-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
-  .filter-bar { display:flex; gap:6px; }
-  .filter-btn { padding:6px 14px; border-radius:16px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:12px; cursor:pointer; transition:all .2s; }
-  .filter-btn.active { background:rgba(230,126,34,0.15); color:#E67E22; border-color:rgba(230,126,34,0.3); }
-
-  .msg-card { background:var(--bg-card); border:1px solid var(--border); border-radius:12px; padding:14px 16px; margin-bottom:10px; transition:border-color .2s; }
-  .msg-card:hover { border-color:rgba(230,126,34,0.3); }
-  .msg-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-  .msg-avatar { width:36px; height:36px; border-radius:50%; background:var(--bg-hover); display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; color:var(--text-muted); flex-shrink:0; }
-  .msg-avatar.voice { background:rgba(230,126,34,0.12); color:#E67E22; }
-  .msg-info { flex:1; min-width:0; }
-  .msg-sender { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .msg-meta { font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
-  .msg-time { font-size:11px; color:var(--text-dim); white-space:nowrap; }
-  .badge { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:500; }
-  .badge-voice { background:rgba(230,126,34,0.12); color:#E67E22; }
-  .badge-text { background:rgba(99,102,241,0.12); color:#818cf8; }
-  .badge-lang { background:rgba(255,255,255,0.06); color:var(--text-muted); }
-
-  .msg-summary { background:rgba(230,126,34,0.06); border-left:3px solid rgba(230,126,34,0.4); padding:8px 12px; border-radius:0 8px 8px 0; margin-bottom:8px; font-size:12px; line-height:1.7; color:var(--text-secondary); }
-  .msg-summary .bullet { display:block; margin-bottom:2px; }
-
-  .msg-body { font-size:13px; line-height:1.65; color:var(--text-primary); position:relative; }
-  .msg-body.collapsed { max-height:80px; overflow:hidden; }
-  .msg-body.collapsed::after { content:''; position:absolute; bottom:0; left:0; right:0; height:40px; background:linear-gradient(transparent, var(--bg-card)); pointer-events:none; }
-  .msg-expand { font-size:12px; color:#E67E22; cursor:pointer; margin-top:4px; display:inline-block; border:none; background:none; padding:0; }
-  .msg-expand:hover { text-decoration:underline; }
-
-  .msg-actions { display:flex; gap:6px; margin-top:10px; padding-top:8px; border-top:1px solid var(--border); }
-  .action-btn { padding:4px 10px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--text-muted); font-size:11px; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:4px; }
-  .action-btn:hover { background:var(--bg-hover); color:var(--text-primary); }
-  .action-btn.active { background:rgba(230,126,34,0.12); color:#E67E22; border-color:rgba(230,126,34,0.3); }
-
-  .translate-result { background:rgba(99,102,241,0.08); border-left:3px solid rgba(99,102,241,0.4); padding:8px 12px; border-radius:0 8px 8px 0; margin-top:8px; font-size:12px; line-height:1.65; color:var(--text-secondary); }
-  .translate-result .t-label { font-size:10px; font-weight:600; color:#818cf8; text-transform:uppercase; margin-bottom:4px; }
-
-  .toast { position:fixed; bottom:80px; left:50%; transform:translateX(-50%); background:#22c55e; color:#fff; padding:8px 20px; border-radius:20px; font-size:13px; z-index:999; opacity:0; transition:opacity .3s; pointer-events:none; }
-  .toast.show { opacity:1; }
-
-  @media(max-width:640px) {
-    .msg-card { padding:12px; }
-    .msg-avatar { width:32px; height:32px; font-size:12px; }
-    .msg-sender { font-size:12px; }
-    .msg-body { font-size:12px; }
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Inbox — Retena</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/styles.css">
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar" id="sidebar"></aside>
-  <main class="main">
-    <div class="inbox-header">
-      <div>
-        <h1 style="font-size:20px;margin:0">📥 Personal Inbox</h1>
-        <p style="font-size:12px;color:var(--text-muted);margin:4px 0 0">Private messages from your WhatsApp contacts</p>
+  <div class="main">
+    <div class="page-content two-panel">
+
+      <!-- Left: Note List -->
+      <div class="panel-left" id="panel-left">
+        <div class="panel-left-header">
+          <h2>Personal Inbox</h2>
+        </div>
+        <div class="filter-bar" style="padding:8px 8px 0">
+          <span class="filter-pill active" data-filter="all" onclick="setFilter('all')">All</span>
+          <span class="filter-pill" data-filter="voice" onclick="setFilter('voice')">🎤 Voice</span>
+          <span class="filter-pill" data-filter="text" onclick="setFilter('text')">💬 Text</span>
+          <span class="filter-pill" data-filter="starred" onclick="setFilter('starred')">⭐ Starred</span>
+        </div>
+        <div class="panel-list" id="note-list"></div>
       </div>
-      <div class="filter-bar">
-        <button class="filter-btn active" onclick="filterType('all',this)">All</button>
-        <button class="filter-btn" onclick="filterType('voice',this)">🎙 Voice</button>
-        <button class="filter-btn" onclick="filterType('text',this)">💬 Text</button>
+
+      <!-- Right: Note Detail -->
+      <div class="panel-right" id="panel-right">
+        <div class="panel-empty" id="note-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
+          <p>Select a note to see details</p>
+        </div>
+        <div id="note-detail" style="display:none;padding:24px"></div>
       </div>
+
     </div>
-    <div id="msg-count" style="font-size:11px;color:var(--text-dim);margin-bottom:12px"></div>
-    <div id="personal-list"></div>
-  </main>
-  <div id="mobile-tabs"></div>
+  </div>
 </div>
-<div class="toast" id="toast"></div>
+<nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
 
-<script src="/dashboard/shared.js"></script>
+<script src="/dashboard/js/shared.js"></script>
 <script>
-let allMessages = [];
+let allNotes = [];
+let selectedNoteId = null;
 let currentFilter = 'all';
-let expandedIds = new Set();
-let translatedCache = {};
 
-async function init() {
-  const ok = await initAuth();
-  if (!ok) return;
-  renderNav('personal');
-  await loadPersonal();
-}
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebar('personal');
+  renderMobileTabs('home');
+  loadNotes();
+});
 
-function filterType(type, btn) {
-  currentFilter = type;
-  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderMessages();
-}
-
-async function loadPersonal() {
-  document.getElementById('personal-list').innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div></div>';
+async function loadNotes() {
+  showLoading(document.getElementById('note-list'));
   try {
-    const data = await api('/api/personal?limit=100');
-    allMessages = (data || []).filter(m => {
-      // Filter out status broadcasts and stories
-      if (!m.chat_id) return false;
-      if (m.chat_id === 'status@broadcast') return false;
-      if (m.chat_id.includes('broadcast')) return false;
-      return true;
-    });
-    renderMessages();
+    const data = await api('/api/rt/personal');
+    allNotes = data.items || data || [];
+    renderNoteList();
   } catch (e) {
-    showEmpty('personal-list', '⚠️', 'Failed to load messages');
+    renderEmptyInbox();
   }
 }
 
-function renderMessages() {
-  const filtered = currentFilter === 'all' ? allMessages
-    : currentFilter === 'voice' ? allMessages.filter(m => m.message_type === 'voice' || m.message_type === 'audio')
-    : allMessages.filter(m => m.message_type === 'text');
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(el => el.classList.toggle('active', el.dataset.filter === f));
+  renderNoteList();
+}
 
-  document.getElementById('msg-count').textContent = `${filtered.length} message${filtered.length !== 1 ? 's' : ''}`;
+function renderNoteList() {
+  const el = document.getElementById('note-list');
+  let notes = allNotes;
+  if (currentFilter === 'voice') notes = notes.filter(n => n.message_type === 'voice' || n.type === 'voice');
+  else if (currentFilter === 'text') notes = notes.filter(n => n.message_type === 'text' || n.type === 'text' || (!n.message_type && !n.duration));
+  else if (currentFilter === 'starred') notes = notes.filter(n => n.starred || n.is_starred);
 
-  if (!filtered.length) {
-    document.getElementById('personal-list').innerHTML = `<div style="text-align:center;padding:60px 20px;color:#666"><div style="font-size:40px;margin-bottom:12px">${currentFilter === 'voice' ? '🎙' : currentFilter === 'text' ? '💬' : '📥'}</div><p>No ${currentFilter === 'all' ? '' : currentFilter + ' '}messages yet</p></div>`;
+  if (!notes.length) {
+    renderEmptyInbox();
     return;
   }
 
-  document.getElementById('personal-list').innerHTML = filtered.map(m => renderCard(m)).join('');
+  el.innerHTML = notes.map(n => {
+    const id = n.id;
+    const isVoice = n.message_type === 'voice' || n.type === 'voice' || n.duration;
+    const text = n.transcription || n.text || n.message_text || n.content || '';
+    const starred = n.starred || n.is_starred;
+    return `
+      <div class="panel-list-item${selectedNoteId === id ? ' selected' : ''}" onclick="selectNote('${id}')">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              ${isVoice ? `<span class="pill pill-voice">🎤 ${formatDuration(n.duration || n.voice_duration_sec || 0)}</span>` : '<span class="pill pill-text">💬 Text</span>'}
+              <span class="pill pill-personal">Personal</span>
+              ${n.language ? `<span style="font-size:11px">${langFlag(n.language)}</span>` : ''}
+            </div>
+            <div style="font-size:13px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${truncate(text, 80)}</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${timeAgo(n.created_at || n.timestamp)}</div>
+          </div>
+          <span style="cursor:pointer;font-size:16px" onclick="event.stopPropagation();toggleStar('${id}')">${starred ? '⭐' : '☆'}</span>
+        </div>
+      </div>`;
+  }).join('');
 }
 
-function renderCard(m) {
-  const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
-  const content = m.transcription || m.text_content || m.body || '';
-  const isExpanded = expandedIds.has(m.id);
-  const isLong = content.length > 200;
-  const initials = getInitials(m.sender_name);
-  const lang = m.language ? langFlag(m.language) : '';
-  const translated = translatedCache[m.id];
-
-  // Summary bullets
-  let summaryHtml = '';
-  if (m.summary) {
-    const bullets = m.summary.split('\n').filter(l => l.trim()).map(l => {
-      const clean = l.replace(/^[•\-\*]\s*/, '').trim();
-      return clean ? `<span class="bullet">• ${esc(clean)}</span>` : '';
-    }).join('');
-    summaryHtml = `<div class="msg-summary">${bullets}</div>`;
-  }
-
-  // Body with paragraphs
-  const bodyText = esc(content).replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
-  const bodyClass = (isLong && !isExpanded) ? 'msg-body collapsed' : 'msg-body';
-
-  return `
-    <div class="msg-card" id="card-${m.id}">
-      <div class="msg-header">
-        <div class="msg-avatar ${isVoice ? 'voice' : ''}">${isVoice ? '🎙' : initials}</div>
-        <div class="msg-info">
-          <div class="msg-sender">${esc(m.sender_name || 'Unknown')}</div>
-          <div class="msg-meta">
-            ${isVoice ? `<span class="badge badge-voice">🎙 ${formatDuration(m.duration_seconds)}</span>` : `<span class="badge badge-text">💬 Text</span>`}
-            ${lang ? `<span class="badge badge-lang">${lang}</span>` : ''}
-            ${m.from_me ? '<span class="badge" style="background:rgba(34,197,94,0.12);color:#22c55e">You</span>' : ''}
-          </div>
+function renderEmptyInbox() {
+  const el = document.getElementById('note-list');
+  el.innerHTML = `
+    <div class="empty-state" style="padding:40px 20px">
+      <h3>No personal notes yet</h3>
+      <p>Forward a voice note from any chat to Retena's number to transcribe it.</p>
+      <div class="card" style="text-align:left;margin-top:16px">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Send voice notes to:</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px;font-weight:700;color:var(--text-primary)">+1 (350) 223-9900</span>
+          <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('+13502239900');showToast('Copied!')">Copy</button>
         </div>
-        <span class="msg-time">${formatTime(m.timestamp)}</span>
-      </div>
-      ${summaryHtml}
-      <div class="${bodyClass}">${bodyText}</div>
-      ${isLong ? `<button class="msg-expand" onclick="toggleExpand('${m.id}')">${isExpanded ? '▲ Show less' : '▼ Show full transcript'}</button>` : ''}
-      ${translated ? `<div class="translate-result"><div class="t-label">🌐 Translation</div>${esc(translated).replace(/\n/g,'<br>')}</div>` : ''}
-      <div class="msg-actions">
-        <button class="action-btn" onclick="copyText('${m.id}')">📋 Copy</button>
-        <button class="action-btn" onclick="translateMsg('${m.id}')" id="tr-${m.id}">🌐 Translate</button>
-        ${isVoice && !m.summary ? `<button class="action-btn" onclick="generateSummary('${m.id}')">💡 Summarize</button>` : ''}
       </div>
     </div>`;
 }
 
-function getInitials(name) {
-  if (!name) return '?';
-  const parts = name.trim().split(/\s+/);
-  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return name.slice(0, 2).toUpperCase();
-}
+async function selectNote(id) {
+  selectedNoteId = id;
+  renderNoteList();
 
-function formatTime(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const now = new Date();
-  const diff = (now - d) / 1000;
-  const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  document.getElementById('panel-left').classList.add('hidden-mobile');
+  document.getElementById('panel-right').classList.remove('hidden-mobile');
+  document.getElementById('note-empty').style.display = 'none';
 
-  if (diff < 86400) return timeStr;
-  if (diff < 172800) return `Yesterday ${timeStr}`;
-  if (diff < 604800) return d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + timeStr;
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + timeStr;
-}
-
-function toggleExpand(id) {
-  if (expandedIds.has(id)) expandedIds.delete(id);
-  else expandedIds.add(id);
-  renderMessages();
-}
-
-function copyText(id) {
-  const m = allMessages.find(x => x.id === id);
-  if (!m) return;
-  const text = m.transcription || m.text_content || m.body || '';
-  navigator.clipboard.writeText(text).then(() => showToast('Copied!')).catch(() => {});
-}
-
-async function translateMsg(id) {
-  if (translatedCache[id]) {
-    delete translatedCache[id];
-    renderMessages();
-    return;
-  }
-  const m = allMessages.find(x => x.id === id);
-  if (!m) return;
-  const text = m.transcription || m.text_content || m.body || '';
-  if (!text) return;
-
-  const btn = document.getElementById('tr-' + id);
-  if (btn) { btn.textContent = '⏳ Translating...'; btn.disabled = true; }
+  const detail = document.getElementById('note-detail');
+  detail.style.display = 'block';
+  showLoading(detail);
 
   try {
-    const result = await api('/api/translate', {
-      method: 'POST',
-      body: JSON.stringify({ text: text.slice(0, 3000) }),
-    });
-    if (result?.translation) {
-      translatedCache[id] = result.translation;
-      renderMessages();
-    } else {
-      showToast('Translation failed');
-    }
+    const n = await api(`/api/rt/personal/${id}`);
+    renderNoteDetail(n);
   } catch (e) {
-    showToast('Translation failed');
+    // Try from cache
+    const cached = allNotes.find(n => n.id === id);
+    if (cached) renderNoteDetail(cached);
+    else showError(detail);
   }
-  if (btn) { btn.textContent = '🌐 Translate'; btn.disabled = false; }
 }
 
-async function generateSummary(id) {
-  const m = allMessages.find(x => x.id === id);
-  if (!m) return;
-  const text = m.transcription || m.text_content || m.body || '';
-  if (!text || text.length < 50) { showToast('Text too short'); return; }
+function renderNoteDetail(n) {
+  const detail = document.getElementById('note-detail');
+  const isVoice = n.message_type === 'voice' || n.type === 'voice' || n.duration;
+  const text = n.transcription || n.text || n.message_text || n.content || '';
+  const summary = n.summary || n.summary_json;
+  const starred = n.starred || n.is_starred;
 
+  detail.innerHTML = `
+    <button class="btn btn-secondary btn-sm" onclick="backToList()" style="display:none;margin-bottom:16px" id="back-btn">← Back</button>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
+      ${isVoice ? `<span class="pill pill-voice">🎤 ${formatDuration(n.duration || n.voice_duration_sec || 0)}</span>` : '<span class="pill pill-text">💬 Text</span>'}
+      <span class="pill pill-personal">Personal</span>
+      ${n.language ? `<span style="font-size:12px">${langFlag(n.language)} ${n.language}</span>` : ''}
+      <span style="font-size:12px;color:var(--text-muted)">${formatDate(n.created_at || n.timestamp)}</span>
+    </div>
+
+    ${summary ? `
+    <div class="card" style="margin-bottom:16px;border-left:3px solid var(--purple-text);padding-left:16px">
+      <div class="section-title" style="margin-bottom:8px">Summary</div>
+      <div style="font-size:13px;color:var(--text-secondary);line-height:1.6">${typeof summary === 'object' ? formatSummary(summary) : summary}</div>
+    </div>` : ''}
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title" style="margin-bottom:8px">Transcript</div>
+      <div style="font-size:14px;line-height:1.7;color:var(--text-primary);white-space:pre-wrap">${text || 'No transcript available'}</div>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-secondary btn-sm" onclick="copyText(\`${text.replace(/`/g,'\\`').replace(/\\/g,'\\\\')}\`)">📋 Copy</button>
+      <button class="btn btn-secondary btn-sm" onclick="downloadNote('${n.id}')">⬇ Download .txt</button>
+      <button class="btn btn-secondary btn-sm" onclick="toggleStar('${n.id}')">${starred ? '⭐ Starred' : '☆ Star'}</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteNote('${n.id}')">🗑 Delete</button>
+    </div>
+  `;
+
+  if (window.innerWidth <= 768) document.getElementById('back-btn').style.display = 'inline-flex';
+}
+
+function formatSummary(s) {
+  let html = '';
+  if (s.keyPoints || s.key_points) {
+    const pts = s.keyPoints || s.key_points;
+    html += Array.isArray(pts) ? pts.map(p => '• ' + p).join('<br>') : pts;
+  }
+  if (s.actionItems || s.action_items) {
+    const items = s.actionItems || s.action_items;
+    html += '<br><br><strong>Action items:</strong><br>';
+    html += Array.isArray(items) ? items.map(a => '☐ ' + a).join('<br>') : items;
+  }
+  return html || JSON.stringify(s);
+}
+
+function backToList() {
+  document.getElementById('panel-left').classList.remove('hidden-mobile');
+  document.getElementById('panel-right').classList.add('hidden-mobile');
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'));
+}
+
+function downloadNote(id) {
+  const n = allNotes.find(n => n.id === id);
+  if (!n) return;
+  const text = n.transcription || n.text || n.message_text || n.content || '';
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `retena-note-${id}.txt`;
+  a.click();
+}
+
+async function toggleStar(id) {
   try {
-    const result = await api('/api/summarize', {
-      method: 'POST',
-      body: JSON.stringify({ text: text.slice(0, 5000), message_id: id }),
-    });
-    if (result?.summary) {
-      m.summary = result.summary;
-      renderMessages();
-    }
-  } catch (e) { showToast('Summarize failed'); }
+    await api(`/api/rt/personal/${id}/star`, { method: 'POST' });
+    const n = allNotes.find(n => n.id === id);
+    if (n) { n.starred = !n.starred; n.is_starred = n.starred; }
+    renderNoteList();
+    if (selectedNoteId === id) selectNote(id);
+    showToast('Updated');
+  } catch (e) { showToast('Failed to update'); }
 }
 
-function showToast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
-  setTimeout(() => el.classList.remove('show'), 2000);
+async function deleteNote(id) {
+  if (!confirm('Delete this note? This cannot be undone.')) return;
+  try {
+    await api(`/api/rt/personal/${id}`, { method: 'DELETE' });
+    allNotes = allNotes.filter(n => n.id !== id);
+    renderNoteList();
+    document.getElementById('note-detail').style.display = 'none';
+    document.getElementById('note-empty').style.display = 'flex';
+    backToList();
+    showToast('Note deleted');
+  } catch (e) { showToast('Failed to delete'); }
 }
 
-document.addEventListener('DOMContentLoaded', init);
+function langFlag(lang) {
+  const flags = { en:'🇬🇧', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', nl:'🇳🇱', ja:'🇯🇵', zh:'🇨🇳', ko:'🇰🇷', ar:'🇸🇦', ru:'🇷🇺', hi:'🇮🇳' };
+  if (!lang) return '';
+  const code = lang.slice(0, 2).toLowerCase();
+  return flags[code] || '🌐';
+}
 </script>
 </body>
 </html>

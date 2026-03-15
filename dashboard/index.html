@@ -1,117 +1,134 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home — Retena</title>
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preconnect" href="https://mfhdoiddbgpjqjukacnc.supabase.co" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="/dashboard/styles.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home — Retena</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/styles.css">
 </head>
 <body>
 <div class="layout">
   <aside class="sidebar" id="sidebar"></aside>
-  <main class="main">
-    <div class="page-header">
-      <h1>Dashboard</h1>
-      <p>Overview of your WhatsApp capture</p>
-    </div>
+  <div class="main">
+    <div class="page-content">
 
-    <!-- Stats -->
-    <div class="card-grid" id="stats">
-      <div class="card"><div class="spinner"></div></div>
-      <div class="card"><div class="spinner"></div></div>
-      <div class="card"><div class="spinner"></div></div>
-    </div>
+      <div class="page-header animate-in">
+        <h1 class="page-title">Home</h1>
+      </div>
 
-    <!-- Groups -->
-    <div style="margin-bottom:24px">
-      <h2 style="font-size:16px;font-weight:600;margin-bottom:12px">📡 Active Groups</h2>
-      <div class="card" id="groups-list"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
-    </div>
+      <!-- Metric Grid -->
+      <div class="card-grid animate-in animate-in-d1" id="metrics">
+        <div class="metric-card"><div class="metric-value" id="m-groups">0</div><div class="metric-label">Groups Connected</div></div>
+        <div class="metric-card"><div class="metric-value" id="m-messages">0</div><div class="metric-label">Messages Captured</div></div>
+        <div class="metric-card"><div class="metric-value" id="m-voice">0</div><div class="metric-label">Voice Minutes</div></div>
+        <div class="metric-card"><div class="metric-value" id="m-queries">0</div><div class="metric-label">AI Queries</div></div>
+      </div>
 
-    <!-- Recent Activity -->
-    <div>
-      <h2 style="font-size:16px;font-weight:600;margin-bottom:12px">🕐 Recent Activity</h2>
-      <div class="card" id="activity-feed"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
+      <!-- Today's Briefing -->
+      <div class="animate-in animate-in-d2">
+        <div class="section-title">Today's Briefing</div>
+        <div id="briefings"></div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="animate-in animate-in-d3" style="margin-top:24px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="section-title" style="margin-bottom:0">Recent Activity</div>
+          <button class="btn btn-secondary btn-sm" onclick="loadHome()">↻ Refresh</button>
+        </div>
+        <div id="activity"></div>
+      </div>
+
+      <!-- VozClara Tip -->
+      <div class="tip-card animate-in animate-in-d4" id="vc-tip" style="margin-top:24px">
+        <span>🎤</span>
+        <span>Personal voice note? Retena captures groups. For 1-on-1 voice notes, use <a href="https://voz-clara.com" target="_blank" style="color:var(--accent)">VozClara</a> — free for all Retena members.</span>
+        <span class="tip-dismiss" onclick="document.getElementById('vc-tip').style.display='none';localStorage.setItem('vc-tip-dismissed','1')">✕</span>
+      </div>
+
     </div>
-  </main>
-  <div id="mobile-tabs"></div>
+  </div>
 </div>
+<nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
 
-<script src="/dashboard/shared.js"></script>
+<script src="/dashboard/js/shared.js"></script>
 <script>
-async function init() {
-  const ok = await initAuth();
-  if (!ok) return;
-  renderNav('home');
-  loadStats();
-  loadGroups();
-  loadActivity();
-}
+document.addEventListener('DOMContentLoaded', () => {
+  renderSidebar('home');
+  renderMobileTabs('home');
+  if (localStorage.getItem('vc-tip-dismissed')) document.getElementById('vc-tip').style.display = 'none';
+  loadHome();
+});
 
-async function loadStats() {
+async function loadHome() {
+  showLoading(document.getElementById('briefings'));
+  showLoading(document.getElementById('activity'));
+
   try {
-    const [groups, activity] = await Promise.all([
-      api('/api/groups'),
-      api('/api/activity?limit=1'),
-    ]);
-    const totalGroups = groups?.length || 0;
-    const lastMsg = activity?.[0]?.timestamp;
-    document.getElementById('stats').innerHTML = `
-      <div class="card"><div class="stat-value">${totalGroups}</div><div class="stat-label">Groups tracked</div></div>
-      <div class="card"><div class="stat-value">${groups?.reduce((s,g)=>s+(g.total_messages||0),0) || 0}</div><div class="stat-label">Messages captured</div></div>
-      <div class="card"><div class="stat-value">${groups?.reduce((s,g)=>s+(g.voice_notes||0),0) || 0}</div><div class="stat-label">Voice notes</div></div>
-    `;
+    const data = await api('/api/rt/home');
+    renderMetrics(data.metrics || {});
+    renderBriefings(data.briefings || []);
+    renderActivity(data.recentActivity || data.recent_activity || []);
   } catch (e) {
-    document.getElementById('stats').innerHTML = '<div class="card" style="grid-column:1/-1;color:#888;text-align:center;padding:20px">Could not load stats</div>';
+    renderMetrics({});
+    showEmpty(document.getElementById('briefings'), 'No activity yet', "Add Retena's number to a WhatsApp group to start capturing messages.", { label: 'Connect your first group →', href: '/dashboard/groups.html' });
+    showEmpty(document.getElementById('activity'), 'No recent activity', 'Messages will appear here once your groups are active.');
   }
 }
 
-async function loadGroups() {
-  try {
-    const groups = await api('/api/groups');
-    if (!groups?.length) { showEmpty('groups-list','👥','No groups captured yet'); return; }
-    document.getElementById('groups-list').innerHTML = groups.map(g => `
-      <div class="list-item" onclick="location.href='/dashboard/groups.html?id=${encodeURIComponent(g.chat_id)}'">
-        <span class="item-icon">${groupIcon(g.chat_name)}</span>
-        <div class="item-body">
-          <div class="item-title">${esc(g.chat_name || g.chat_id)}</div>
-          <div class="item-meta">${g.total_messages} messages · ${g.voice_notes} voice · ${g.unique_senders} members</div>
+function renderMetrics(m) {
+  document.getElementById('m-groups').textContent = m.groups || 0;
+  document.getElementById('m-messages').textContent = m.messages || 0;
+  document.getElementById('m-voice').textContent = m.voice_minutes ? `${m.voice_minutes} min` : '0';
+  document.getElementById('m-queries').textContent = m.ai_queries || 0;
+}
+
+function renderBriefings(items) {
+  const el = document.getElementById('briefings');
+  if (!items.length) {
+    showEmpty(el, 'No activity yet', "Add Retena's number to a WhatsApp group to start capturing messages.", { label: 'Connect your first group →', href: '/dashboard/groups.html' });
+    return;
+  }
+  el.innerHTML = items.map(b => `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${b.emoji || '💬'}</span>
+          <span style="font-weight:600">${b.name || b.group_name || 'Group'}</span>
         </div>
-        <span class="item-time">${timeAgo(g.last_message)}</span>
+        <span style="font-size:12px;color:var(--text-muted)">${b.messages || 0} msgs · ${b.voice_notes || 0} voice</span>
       </div>
-    `).join('');
-  } catch (e) { showEmpty('groups-list','⚠️','Failed to load groups'); }
+      ${b.decisions ? `<div style="margin-bottom:6px;font-size:13px;color:var(--text-secondary)"><strong>Key decisions:</strong> ${Array.isArray(b.decisions) ? b.decisions.map(d=>'• '+d).join(' ') : b.decisions}</div>` : ''}
+      ${b.action_items ? `<div style="font-size:13px;color:var(--text-secondary)"><strong>Action items:</strong> ${Array.isArray(b.action_items) ? b.action_items.map(a=>'☐ '+a).join(' ') : b.action_items}</div>` : ''}
+      <a href="/dashboard/groups.html" style="font-size:12px;color:var(--accent);margin-top:8px;display:inline-block">View full summary →</a>
+    </div>
+  `).join('');
 }
 
-async function loadActivity() {
-  try {
-    const msgs = await api('/api/activity?limit=15');
-    if (!msgs?.length) { showEmpty('activity-feed','📋','No activity yet'); return; }
-    document.getElementById('activity-feed').innerHTML = msgs.map(m => {
-      const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
-      const text = m.transcription || m.text_content || m.body || '';
-      return `
-        <div class="list-item">
-          <span class="item-icon">${isVoice ? '🎙️' : '💬'}</span>
-          <div class="item-body">
-            <div class="item-title">
-              ${esc(m.sender_name || 'Unknown')}
-              ${m.chat_name ? `<span class="badge badge-group">${esc(m.chat_name)}</span>` : ''}
-              ${isVoice ? `<span class="badge badge-voice">🎙 ${formatDuration(m.duration_seconds)}</span>` : ''}
-            </div>
-            <div class="item-preview">${esc(text.slice(0,150))}</div>
-          </div>
-          <span class="item-time">${timeAgo(m.timestamp)}</span>
-        </div>`;
-    }).join('');
-  } catch (e) { showEmpty('activity-feed','⚠️','Failed to load activity'); }
+function renderActivity(items) {
+  const el = document.getElementById('activity');
+  if (!items.length) {
+    showEmpty(el, 'No recent activity', 'Messages will appear here once your groups are active.');
+    return;
+  }
+  el.innerHTML = items.map(a => `
+    <div class="activity-item">
+      ${renderAvatar(a.sender || a.sender_name || 'Unknown')}
+      <div class="activity-content">
+        <div class="activity-meta">
+          <span class="activity-sender">${a.sender || a.sender_name || 'Unknown'}</span>
+          ${a.group_name ? groupPill(a.group_name) : ''}
+          <span class="activity-time">${timeAgo(a.timestamp || a.created_at)}</span>
+        </div>
+        <div class="activity-text">
+          ${a.message_type === 'voice' || a.type === 'voice' ? `<span class="voice-badge">🎤 ${formatDuration(a.duration || a.voice_duration_sec || 0)}</span> ` : ''}
+          ${truncate(a.text || a.message_text || a.content || a.transcription || '', 200)}
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
-
-document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
 </html>
