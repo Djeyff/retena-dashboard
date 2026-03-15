@@ -26,7 +26,8 @@ body { font-family:'Inter',system-ui,-apple-system,sans-serif; background:var(--
 .nav-item:hover { background:var(--bg-hover); color:var(--text); }
 .nav-item.active { background:var(--bg-hover); color:var(--accent); font-weight:600; }
 .nav-icon { font-size:16px; width:20px; text-align:center; }
-.sidebar-footer { padding:12px 8px; border-top:1px solid var(--border); margin-top:auto; }
+.sidebar-usage { padding:12px 12px 8px; border-top:1px solid var(--border); margin-top:auto; }
+.sidebar-footer { padding:8px 8px 12px; }
 .user-info { display:flex; flex-direction:column; gap:4px; }
 .user-name { font-size:13px; font-weight:500; }
 
@@ -76,8 +77,24 @@ body { font-family:'Inter',system-ui,-apple-system,sans-serif; background:var(--
 
 @media (max-width: 768px) {
   .sidebar { display:none; }
-  .main { margin-left:0; padding:16px; padding-bottom:80px; }
-  #mobile-tabs { display:flex; justify-content:space-around; }
-  .card-grid { grid-template-columns:1fr 1fr; }
+  .main { margin-left:0; padding:12px; padding-bottom:72px; }
+  #mobile-tabs { display:flex; justify-content:space-around; padding:6px 0 env(safe-area-inset-bottom, 8px); }
+  .card-grid { grid-template-columns:1fr 1fr; gap:8px; }
+  .page-header { margin-bottom:16px; }
   .page-header h1 { font-size:18px; }
+  .page-header p { font-size:12px; }
+  .card { padding:14px; border-radius:10px; }
+  .list-item { padding:10px 12px; gap:10px; }
+  .item-title { font-size:13px; flex-wrap:wrap; gap:4px; }
+  .item-preview { font-size:12px; }
+  .item-time { font-size:10px; }
+  .badge { font-size:10px; padding:1px 6px; }
+  .stat-value { font-size:22px; }
+  .stat-label { font-size:11px; }
+  .search-input { padding:10px 14px 10px 36px; font-size:13px; }
+}
+
+@media (max-width: 380px) {
+  .card-grid { grid-template-columns:1fr; }
+  .main { padding:8px; padding-bottom:72px; }
 }

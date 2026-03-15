@@ -132,6 +132,7 @@ function renderNav(activePage) {
         </a>
       `).join('')}
     </nav>
+    <div class="sidebar-usage" id="sidebar-usage"></div>
     <div class="sidebar-footer">
       <div class="user-info">
         <span class="user-name"></span>
@@ -139,6 +140,7 @@ function renderNav(activePage) {
       </div>
     </div>
   `;
+  loadUsageMeters();
 
   // Mobile tabs
   const tabs = document.getElementById('mobile-tabs');
@@ -150,4 +152,40 @@ function renderNav(activePage) {
       </a>
     `).join('');
   }
+}
+
+async function loadUsageMeters() {
+  const el = document.getElementById('sidebar-usage');
+  if (!el) return;
+  try {
+    const groups = await api('/api/groups');
+    const totalMsgs = groups?.reduce((s,g) => s + (g.total_messages||0), 0) || 0;
+    const totalVoice = groups?.reduce((s,g) => s + (g.voice_notes||0), 0) || 0;
+    const totalGroups = groups?.length || 0;
+
+    // Plan limits (Pro defaults)
+    const limits = { messages: 5000, voice: 1000, groups: 50 };
+
+    el.innerHTML = `
+      ${usageMeter('Messages', totalMsgs, limits.messages)}
+      ${usageMeter('Voice notes', totalVoice, limits.voice)}
+      ${usageMeter('Groups', totalGroups, limits.groups)}
+      <div style="font-size:10px;color:var(--text-dim);margin-top:8px;text-align:center">Pro Plan</div>
+    `;
+  } catch (e) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--text-dim);padding:8px">Usage unavailable</div>';
+  }
+}
+
+function usageMeter(label, used, total) {
+  const pct = total > 0 ? Math.min(100, (used / total) * 100) : 0;
+  const color = pct < 50 ? '#22c55e' : pct < 80 ? '#eab308' : '#ef4444';
+  return `<div style="margin-bottom:8px">
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:3px">
+      <span>${label}</span><span>${used} / ${total}</span>
+    </div>
+    <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+      <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:width .3s"></div>
+    </div>
+  </div>`;
 }
