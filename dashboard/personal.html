@@ -13,10 +13,18 @@
 <div class="layout">
   <aside class="sidebar" id="sidebar"></aside>
   <main class="main">
-    <div class="page-header">
-      <h1>📥 Personal Inbox</h1>
-      <p>Private voice notes from your WhatsApp contacts</p>
+    <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div>
+        <h1>📥 Personal Inbox</h1>
+        <p>Private messages from your WhatsApp contacts</p>
+      </div>
+      <div style="display:flex;gap:6px" id="type-filters">
+        <button class="filter-btn active" onclick="filterType('all')">All</button>
+        <button class="filter-btn" onclick="filterType('voice')">🎙 Voice</button>
+        <button class="filter-btn" onclick="filterType('text')">💬 Text</button>
+      </div>
     </div>
+    <style>.filter-btn{padding:6px 14px;border-radius:16px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;transition:all .2s}.filter-btn.active{background:rgba(230,126,34,0.15);color:#E67E22;border-color:rgba(230,126,34,0.3)}</style>
     <div class="card" id="personal-list"><div style="padding:20px;text-align:center"><div class="spinner"></div></div></div>
   </main>
   <div id="mobile-tabs"></div>
@@ -31,24 +39,37 @@ async function init() {
   loadPersonal();
 }
 
+let currentFilter = 'all';
+
+function filterType(type) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  loadPersonal();
+}
+
 async function loadPersonal() {
   try {
-    const notes = await api('/api/personal?limit=50');
-    if (!notes?.length) { showEmpty('personal-list','📥','No personal voice notes yet'); return; }
-    document.getElementById('personal-list').innerHTML = notes.map(n => `
+    const typeParam = currentFilter !== 'all' ? `&type=${currentFilter}` : '';
+    const notes = await api(`/api/personal?limit=50${typeParam}`);
+    if (!notes?.length) { showEmpty('personal-list','📥','No messages yet'); return; }
+    document.getElementById('personal-list').innerHTML = notes.map(n => {
+      const isVoice = n.message_type === 'voice' || n.message_type === 'audio';
+      const content = n.transcription || n.text_content || n.body || '';
+      return `
       <div class="list-item">
-        <span class="item-icon">🎙️</span>
+        <span class="item-icon">${isVoice ? '🎙️' : '💬'}</span>
         <div class="item-body">
           <div class="item-title">
             ${esc(n.sender_name || 'Unknown')}
-            <span class="badge badge-voice">🎙 ${formatDuration(n.duration_seconds)}</span>
+            ${isVoice ? `<span class="badge badge-voice">🎙 ${formatDuration(n.duration_seconds)}</span>` : ''}
             ${n.language ? langFlag(n.language) : ''}
           </div>
-          <div class="item-preview" style="white-space:normal">${esc(n.transcription || '')}</div>
+          <div class="item-preview" style="white-space:normal">${esc(content)}</div>
         </div>
         <span class="item-time">${timeAgo(n.timestamp)}</span>
-      </div>
-    `).join('');
+      </div>`;
+    }).join('');
   } catch (e) { showEmpty('personal-list','⚠️','Failed to load'); }
 }
 
