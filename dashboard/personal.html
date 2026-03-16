@@ -67,15 +67,28 @@
       font-size: 12px;
       color: var(--accent);
     }
-    .summary-inline {
-      margin-top: 8px;
-      padding: 8px 10px;
-      border-left: 2px solid var(--purple-text);
-      background: rgba(88,28,135,0.1);
-      border-radius: 0 6px 6px 0;
-      font-size: 12px;
+    .summary-block {
+      padding: 10px 12px;
+      border-left: 3px solid var(--accent);
+      background: rgba(230,126,34,0.08);
+      border-radius: 0 8px 8px 0;
+      font-size: 12.5px;
       color: var(--text-secondary);
-      line-height: 1.5;
+      line-height: 1.7;
+      margin: 6px 0;
+      max-width: 85%;
+    }
+    .summary-block .bullet {
+      display: flex;
+      gap: 6px;
+      padding: 3px 0;
+    }
+    .summary-block .bullet::before {
+      content: '•';
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
     }
     .sender-badge {
       display: inline-flex;
@@ -296,6 +309,15 @@ function renderChatThread(messages) {
 
     html += `<div style="display:flex;flex-direction:column;${isFromMe ? 'align-items:flex-end' : 'align-items:flex-start'}">`;
 
+    const bullets = parseBullets(m.summary);
+    const hasBullets = bullets.length > 1;
+    const isShortTranscript = text.length < 100;
+
+    // Summary ABOVE transcript (if enough bullets and transcript isn't tiny)
+    if (hasBullets && !isShortTranscript) {
+      html += renderSummaryBlock(bullets, isFromMe);
+    }
+
     html += `<div class="chat-bubble ${bubbleClass}">`;
 
     if (isVoice) {
@@ -306,16 +328,42 @@ function renderChatThread(messages) {
       html += `<div style="white-space:pre-wrap;color:var(--text-primary)">${text}</div>`;
     }
 
-    if (m.summary) {
-      html += `<div class="summary-inline">${typeof m.summary === 'object' ? formatSummary(m.summary) : m.summary}</div>`;
-    }
-
     html += `</div>`; // close bubble
     html += `<div class="chat-time ${isFromMe ? 'right' : ''}">${timeStr}</div>`;
+
+    // Summary BELOW transcript (always if bullets exist)
+    if (hasBullets && !isShortTranscript) {
+      html += renderSummaryBlock(bullets, isFromMe);
+    } else if (bullets.length > 0) {
+      // Short transcript or single bullet → only below
+      html += renderSummaryBlock(bullets, isFromMe);
+    }
+
     html += `</div>`; // close wrapper
   });
 
   thread.innerHTML = html;
+}
+
+function parseBullets(summary) {
+  if (!summary) return [];
+  let text = '';
+  if (typeof summary === 'object') {
+    const pts = summary.keyPoints || summary.key_points || [];
+    const actions = summary.actionItems || summary.action_items || [];
+    const parts = [...(Array.isArray(pts) ? pts : [pts]), ...(Array.isArray(actions) ? actions.map(a => '☐ ' + a) : [actions])];
+    return parts.filter(Boolean);
+  }
+  text = String(summary);
+  // Split on bullet markers: •, -, *, or numbered
+  const lines = text.split(/[•\-\*]|\d+\.\s/).map(s => s.trim()).filter(Boolean);
+  if (lines.length <= 1 && text.length > 10) return [text];
+  return lines;
+}
+
+function renderSummaryBlock(bullets, alignRight) {
+  const align = alignRight ? 'align-self:flex-end' : 'align-self:flex-start';
+  return `<div class="summary-block" style="${align}">${bullets.map(b => `<div class="bullet"><span>${b}</span></div>`).join('')}</div>`;
 }
 
 function formatSummary(s) {
