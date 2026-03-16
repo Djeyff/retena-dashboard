@@ -23,6 +23,7 @@
         <div class="settings-tab" data-tab="groups" onclick="showTab('groups')">Groups</div>
         <div class="settings-tab" data-tab="team" onclick="showTab('team')">Team</div>
         <div class="settings-tab" data-tab="billing" onclick="showTab('billing')">Billing</div>
+        <div class="settings-tab" data-tab="contacts" onclick="showTab('contacts')">Contacts</div>
         <div class="settings-tab" data-tab="api" onclick="showTab('api')">API Keys</div>
         <div class="settings-tab" data-tab="notifications" onclick="showTab('notifications')">Notifications</div>
         <div class="settings-tab" data-tab="security" onclick="showTab('security')">Security</div>
@@ -122,6 +123,40 @@
             <button class="btn btn-secondary btn-sm" onclick="showToast('Payment portal coming soon')">Manage</button>
           </div>
           <div id="payment-info" style="font-size:13px;color:var(--text-muted)">No payment method on file</div>
+        </div>
+      </div>
+
+      <!-- Contacts -->
+      <div class="settings-section" id="tab-contacts">
+        <div class="card animate-in">
+          <div class="section-title">Contact Names</div>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px">
+            Retena uses phone numbers to identify contacts. Import names from Google Contacts or edit them manually.
+          </p>
+          <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+            <button class="btn btn-primary" id="google-import-btn" onclick="importGoogleContacts()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-2px"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 0 1 0 20 10 10 0 0 1 0-20m0 4v6l4 2"/></svg>
+              Import from Google Contacts
+            </button>
+            <button class="btn" style="background:var(--bg-tertiary);color:var(--text-primary)" onclick="showAddContactModal()">+ Add manually</button>
+          </div>
+          <div id="google-import-status" style="display:none;font-size:13px;padding:10px;border-radius:8px;margin-bottom:16px"></div>
+          <div id="contacts-list" style="font-size:13px;color:var(--text-muted)">Loading contacts…</div>
+        </div>
+      </div>
+
+      <!-- Add/Edit Contact Modal -->
+      <div id="contact-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:none;align-items:center;justify-content:center">
+        <div class="card" style="width:90%;max-width:400px;padding:24px">
+          <div class="section-title" id="contact-modal-title">Add Contact</div>
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Phone (with country code)</label>
+          <input class="input" id="contact-phone" placeholder="18097736935" style="margin-bottom:12px">
+          <label style="font-size:12px;color:var(--text-secondary);display:block;margin-bottom:4px">Display Name</label>
+          <input class="input" id="contact-name" placeholder="Cuba" style="margin-bottom:16px">
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button class="btn" style="background:var(--bg-tertiary);color:var(--text-primary)" onclick="closeContactModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveContact()">Save</button>
+          </div>
         </div>
       </div>
 
@@ -421,6 +456,169 @@ function confirmDelete() {
   }
   showToast('Workspace deletion is not yet available');
 }
+
+// ── Contacts Management ──
+let allContacts = [];
+
+async function loadContacts() {
+  const el = document.getElementById('contacts-list');
+  try {
+    const data = await api('/api/contacts');
+    allContacts = data.items || [];
+    if (!allContacts.length) {
+      el.innerHTML = `<div style="padding:20px 0;text-align:center">
+        <div style="font-size:24px;margin-bottom:8px">📇</div>
+        <div style="font-weight:600;margin-bottom:4px">No contacts yet</div>
+        <div style="color:var(--text-muted)">Import from Google or add manually</div>
+      </div>`;
+      return;
+    }
+    el.innerHTML = `<div style="margin-bottom:8px;color:var(--text-secondary)">${allContacts.length} contacts</div>` +
+      allContacts.map(c => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="display:flex;align-items:center;gap:10px">
+            ${renderAvatar(c.display_name)}
+            <div>
+              <div style="font-weight:600;font-size:13px">${esc(c.display_name)}</div>
+              <div style="font-size:11px;color:var(--text-muted)">+${c.phone}</div>
+            </div>
+          </div>
+          <button class="btn" style="background:var(--bg-tertiary);color:var(--text-secondary);font-size:11px;padding:4px 10px" onclick="editContact('${c.phone}','${esc(c.display_name)}')">Edit</button>
+        </div>`).join('');
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--text-muted)">Failed to load contacts</div>';
+  }
+}
+
+function showAddContactModal() {
+  document.getElementById('contact-modal-title').textContent = 'Add Contact';
+  document.getElementById('contact-phone').value = '';
+  document.getElementById('contact-phone').disabled = false;
+  document.getElementById('contact-name').value = '';
+  document.getElementById('contact-modal').style.display = 'flex';
+}
+
+function editContact(phone, name) {
+  document.getElementById('contact-modal-title').textContent = 'Edit Contact';
+  document.getElementById('contact-phone').value = phone;
+  document.getElementById('contact-phone').disabled = true;
+  document.getElementById('contact-name').value = name;
+  document.getElementById('contact-modal').style.display = 'flex';
+}
+
+function closeContactModal() {
+  document.getElementById('contact-modal').style.display = 'none';
+}
+
+async function saveContact() {
+  const phone = document.getElementById('contact-phone').value.replace(/[\s\-\(\)\+]/g, '');
+  const name = document.getElementById('contact-name').value.trim();
+  if (!phone || !name) { showToast('Phone and name required'); return; }
+  try {
+    await api('/api/contacts', { method: 'PUT', body: JSON.stringify({ phone, display_name: name }) });
+    showToast('Contact saved');
+    closeContactModal();
+    loadContacts();
+  } catch (e) { showToast('Failed to save contact'); }
+}
+
+async function importGoogleContacts() {
+  const btn = document.getElementById('google-import-btn');
+  const status = document.getElementById('google-import-status');
+  btn.disabled = true;
+  btn.textContent = 'Connecting…';
+
+  try {
+    // Step 1: Get Google OAuth URL from our API
+    const { auth_url } = await api('/api/contacts/google/auth-url');
+    if (!auth_url) throw new Error('Could not get auth URL');
+
+    // Step 2: Open Google OAuth in popup
+    const popup = window.open(auth_url, 'google-contacts', 'width=500,height=600,left=200,top=100');
+
+    // Step 3: Listen for the redirect with auth code
+    status.style.display = 'block';
+    status.style.background = 'rgba(230,126,34,0.1)';
+    status.style.color = 'var(--accent)';
+    status.textContent = '⏳ Waiting for Google authorization…';
+
+    const checkPopup = setInterval(async () => {
+      try {
+        if (popup.closed) {
+          clearInterval(checkPopup);
+          status.textContent = '❌ Authorization cancelled';
+          status.style.color = 'var(--red)';
+          btn.disabled = false;
+          btn.textContent = 'Import from Google Contacts';
+          return;
+        }
+        const popupUrl = popup.location.href;
+        if (popupUrl.includes('code=')) {
+          clearInterval(checkPopup);
+          const urlParams = new URLSearchParams(popup.location.search);
+          const code = urlParams.get('code');
+          popup.close();
+
+          status.textContent = '⏳ Importing contacts…';
+
+          // Step 4: Send code to our API
+          const result = await api('/api/contacts/google/import', {
+            method: 'POST',
+            body: JSON.stringify({ code, redirect_uri: window.location.href.split('?')[0] })
+          });
+
+          status.style.background = 'rgba(16,185,129,0.1)';
+          status.style.color = 'var(--green)';
+          status.textContent = `✅ Imported ${result.imported} contacts from Google`;
+          loadContacts();
+        }
+      } catch (e) {
+        // Cross-origin — popup still on Google domain, keep waiting
+      }
+    }, 500);
+
+  } catch (e) {
+    status.style.display = 'block';
+    status.style.background = 'rgba(239,68,68,0.1)';
+    status.style.color = 'var(--red)';
+    status.textContent = e.message === 'Google OAuth not configured'
+      ? '⚠️ Google Contacts import is not yet configured for this workspace. Contact names can be added manually.'
+      : `❌ ${e.message}`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Import from Google Contacts';
+}
+
+// Load contacts when tab is shown
+const origShowTab = showTab;
+showTab = function(tabId) {
+  origShowTab(tabId);
+  if (tabId === 'contacts') loadContacts();
+};
+
+// Check if redirected from Google OAuth
+(function checkGoogleCallback() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('code')) {
+    showTab('contacts');
+    const status = document.getElementById('google-import-status');
+    status.style.display = 'block';
+    status.textContent = '⏳ Importing contacts…';
+    api('/api/contacts/google/import', {
+      method: 'POST',
+      body: JSON.stringify({ code: params.get('code'), redirect_uri: window.location.href.split('?')[0] })
+    }).then(result => {
+      status.style.background = 'rgba(16,185,129,0.1)';
+      status.style.color = 'var(--green)';
+      status.textContent = `✅ Imported ${result.imported} contacts`;
+      window.history.replaceState({}, '', window.location.pathname);
+      loadContacts();
+    }).catch(e => {
+      status.style.color = 'var(--red)';
+      status.textContent = `❌ Import failed: ${e.message}`;
+    });
+  }
+})();
 </script>
 </body>
 </html>
