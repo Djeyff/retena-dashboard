@@ -796,9 +796,14 @@ html, body {
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* ── Responsive ── */
+@media (max-width: 1024px) {
+  .sidebar { width: 180px; }
+  .main { margin-left: 180px; }
+}
+
 @media (max-width: 768px) {
-  .sidebar { display: none; }
-  .main { margin-left: 0; }
+  .sidebar { display: none !important; }
+  .main { margin-left: 0 !important; }
   .mobile-tabs { display: block; }
   .page-content { padding: 16px; padding-bottom: 80px; }
 
