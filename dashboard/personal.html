@@ -187,6 +187,11 @@ function buildConversations(messages) {
     }
     if (!m.from_me && m.sender_name) {
       map[cid].contact_name = m.sender_name;
+    } else if (m.from_me && m.chat_name) {
+      // For sent messages, use resolved chat_name (contact name from retena_contacts)
+      if (!map[cid].contact_name || map[cid].contact_name === cid.replace(/@.*/, '')) {
+        map[cid].contact_name = m.chat_name;
+      }
     }
     map[cid].message_count++;
     if (m.message_type === 'voice' || m.message_type === 'audio') map[cid].voice_count++;
