@@ -112,6 +112,19 @@
           </div>
         </div>
         <div class="chat-thread" id="chat-thread" style="display:none"></div>
+        <!-- Reply Input Bar -->
+        <div class="reply-bar" id="reply-bar" style="display:none">
+          <div style="display:flex;align-items:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--border);background:var(--bg-sidebar)">
+            <textarea class="input" id="reply-input" placeholder="Type a message…" rows="1" 
+              style="flex:1;resize:none;min-height:38px;max-height:120px;padding:8px 12px;font-size:13px;line-height:1.5;border-radius:20px"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply()}"
+              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+            <button class="btn btn-primary" id="send-btn" onclick="sendReply()" 
+              style="border-radius:50%;width:38px;height:38px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -251,7 +264,8 @@ function selectConversation(chatId) {
   document.getElementById('panel-right').classList.remove('hidden-mobile');
   document.getElementById('chat-empty').style.display = 'none';
 
-  // Header
+  // Show reply bar + header
+  document.getElementById('reply-bar').style.display = 'block';
   document.getElementById('chat-header').style.display = 'flex';
   document.getElementById('chat-avatar').innerHTML = renderAvatar(conv.contact_name, 'lg');
   document.getElementById('chat-name').textContent = conv.contact_name;
@@ -430,6 +444,75 @@ function toggleTranslate(msgId) {
   const arrow = document.getElementById(`arrow-${msgId}`);
   if (panel) panel.classList.toggle('open');
   if (arrow) arrow.style.transform = panel?.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+
+// ── Send Reply ──
+async function sendReply() {
+  const input = document.getElementById('reply-input');
+  const btn = document.getElementById('send-btn');
+  const message = input.value.trim();
+  if (!message || !selectedChatId) return;
+
+  // Optimistic UI: add message to thread immediately
+  const now = new Date();
+  const tempMsg = {
+    id: 'temp-' + Date.now(),
+    chat_id: selectedChatId,
+    message_type: 'text',
+    text_content: message,
+    content: message,
+    transcription: '',
+    text: message,
+    sender_name: 'Jeffrey',
+    from_me: true,
+    timestamp: now.toISOString(),
+    created_at: now.toISOString(),
+  };
+
+  // Add to allMessages and re-render thread
+  allMessages.unshift(tempMsg);
+  const msgs = allMessages
+    .filter(m => m.chat_id === selectedChatId)
+    .sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
+  renderThread(msgs);
+
+  // Scroll to bottom
+  const thread = document.getElementById('chat-thread');
+  setTimeout(() => thread.scrollTop = thread.scrollHeight, 50);
+
+  // Clear input
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Disable button while sending
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+
+  try {
+    await api('/api/send', {
+      method: 'POST',
+      body: JSON.stringify({ chatId: selectedChatId, message }),
+    });
+    // Update conversation list
+    const conv = conversations.find(c => c.chat_id === selectedChatId);
+    if (conv) {
+      conv.last_message = tempMsg;
+      conv.message_count++;
+      conv.text_count++;
+    }
+    renderConversationList(document.getElementById('conv-search').value.toLowerCase());
+  } catch (e) {
+    // Mark failed message
+    const failEl = document.getElementById(`card-${tempMsg.id}`);
+    if (failEl) {
+      failEl.style.borderColor = '#ef4444';
+      failEl.insertAdjacentHTML('beforeend', '<div style="font-size:10px;color:#ef4444;margin-top:4px">⚠ Failed to send</div>');
+    }
+    console.error('Send failed:', e);
+  } finally {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
 }
 
 async function translateMsg(msgId) {

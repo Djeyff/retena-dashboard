@@ -181,6 +181,18 @@ function renderGroupDetail(g) {
         </div>`).join('') : '<div style="padding:16px 0;font-size:13px;color:var(--text-muted)">No messages yet</div>'}
     </div>
 
+    <!-- Reply to Group -->
+    <div style="display:flex;align-items:flex-end;gap:8px;margin-bottom:16px;">
+      <textarea class="input" id="group-reply-input" placeholder="Send a message to this group…" rows="1"
+        style="flex:1;resize:none;min-height:36px;max-height:80px;padding:8px 12px;font-size:13px;line-height:1.5;border-radius:16px"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGroupMsg()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
+      <button class="btn btn-primary btn-sm" id="group-send-btn" onclick="sendGroupMsg()"
+        style="border-radius:50%;width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
+      </button>
+    </div>
+
     <!-- AI Summary -->
     ${g.summary ? `
     <div class="card" style="margin-bottom:16px">
@@ -219,6 +231,27 @@ function renderGroupDetail(g) {
 function backToList() {
   document.getElementById('panel-left').classList.remove('hidden-mobile');
   document.getElementById('panel-right').classList.add('hidden-mobile');
+}
+
+async function sendGroupMsg() {
+  const input = document.getElementById('group-reply-input');
+  const btn = document.getElementById('group-send-btn');
+  const message = input.value.trim();
+  if (!message || !selectedGroupId) return;
+  
+  btn.disabled = true; btn.style.opacity = '0.5';
+  input.value = ''; input.style.height = 'auto';
+  
+  try {
+    await api('/api/send', { method: 'POST', body: JSON.stringify({ chatId: selectedGroupId, message }) });
+    // Refresh group detail to show new message
+    setTimeout(() => selectGroup(selectedGroupId), 1500);
+  } catch (e) {
+    input.value = message;
+    alert('Failed to send: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.style.opacity = '1';
+  }
 }
 
 async function toggleCapture(id, enable) {
