@@ -330,15 +330,6 @@ function renderChatThread(messages) {
 
     html += `</div>`; // close bubble
     html += `<div class="chat-time ${isFromMe ? 'right' : ''}">${timeStr}</div>`;
-
-    // Summary BELOW transcript (always if bullets exist)
-    if (hasBullets && !isShortTranscript) {
-      html += renderSummaryBlock(bullets, isFromMe);
-    } else if (bullets.length > 0) {
-      // Short transcript or single bullet → only below
-      html += renderSummaryBlock(bullets, isFromMe);
-    }
-
     html += `</div>`; // close wrapper
   });
 

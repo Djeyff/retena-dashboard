@@ -107,7 +107,7 @@ function renderTranscripts() {
           <span class="activity-time">${timeAgo(t.created_at || t.timestamp)}</span>
         </div>
         <div id="expanded-${i}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
-          ${summary ? `<div class="summary-card${isPersonal ? ' personal-summary' : ''}" style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Summary</div><div style="font-size:13px;color:var(--text-secondary);line-height:1.6">${typeof summary === 'object' ? formatSummaryObj(summary) : summary}</div></div>` : ''}
+          ${summary ? `<div class="summary-card${isPersonal ? ' personal-summary' : ''}" style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Summary</div><div style="font-size:13px;color:var(--text-secondary);line-height:1.6">${formatSummaryObj(summary)}</div></div>` : ''}
           <div style="font-size:13px;line-height:1.7;color:var(--text-primary);white-space:pre-wrap">${text}</div>
           <div style="margin-top:10px"><button class="btn btn-secondary btn-sm" onclick="event.stopPropagation();navigator.clipboard.writeText(\`${text.replace(/`/g,'\\`').replace(/\\/g,'\\\\')}\`);showToast('Copied!')">📋 Copy</button></div>
         </div>
@@ -121,17 +121,17 @@ function toggleTranscript(i) {
 }
 
 function formatSummaryObj(s) {
-  let html = '';
-  if (s.keyPoints || s.key_points) {
-    const pts = s.keyPoints || s.key_points;
-    html += Array.isArray(pts) ? pts.map(p => '• ' + p).join('<br>') : pts;
+  const bullets = [];
+  if (typeof s === 'string') {
+    s.split(/[•\-\*]|\d+\.\s/).map(b => b.trim()).filter(Boolean).forEach(b => bullets.push(b));
+  } else {
+    const pts = s.keyPoints || s.key_points || [];
+    (Array.isArray(pts) ? pts : [pts]).filter(Boolean).forEach(b => bullets.push(b));
+    const acts = s.actionItems || s.action_items || [];
+    (Array.isArray(acts) ? acts : [acts]).filter(Boolean).forEach(a => bullets.push('☐ ' + a));
   }
-  if (s.actionItems || s.action_items) {
-    const items = s.actionItems || s.action_items;
-    html += '<br><strong>Action items:</strong><br>';
-    html += Array.isArray(items) ? items.map(a => '☐ ' + a).join('<br>') : items;
-  }
-  return html || JSON.stringify(s);
+  if (!bullets.length) return typeof s === 'string' ? s : JSON.stringify(s);
+  return bullets.map(b => `<div style="display:flex;gap:6px;padding:3px 0"><span style="color:var(--accent);font-weight:700;flex-shrink:0">•</span><span>${b}</span></div>`).join('');
 }
 
 function langFlag(lang) {
