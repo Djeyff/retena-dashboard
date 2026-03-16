@@ -67,28 +67,127 @@
       font-size: 12px;
       color: var(--accent);
     }
-    .summary-block {
-      padding: 10px 12px;
-      border-left: 3px solid var(--accent);
-      background: rgba(230,126,34,0.08);
-      border-radius: 0 8px 8px 0;
-      font-size: 12.5px;
-      color: var(--text-secondary);
-      line-height: 1.7;
-      margin: 6px 0;
-      max-width: 85%;
+    .msg-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      max-width: 88%;
+      margin-bottom: 12px;
     }
-    .summary-block .bullet {
+    .msg-card.me {
+      background: rgba(230,126,34,0.06);
+      border-color: rgba(230,126,34,0.2);
+      align-self: flex-end;
+    }
+    .msg-card.them { align-self: flex-start; }
+    .msg-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .msg-card-header .badge {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .msg-card-header .badge-voice {
+      background: rgba(230,126,34,0.15);
+      color: var(--accent);
+    }
+    .msg-card-header .badge-text {
+      background: rgba(59,130,246,0.15);
+      color: #60a5fa;
+    }
+    .msg-summary {
+      border-left: 3px solid var(--accent);
+      background: rgba(230,126,34,0.06);
+      border-radius: 0 8px 8px 0;
+      padding: 10px 12px;
+      margin: 10px 0;
+    }
+    .msg-summary-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .msg-summary .bullet {
       display: flex;
       gap: 6px;
       padding: 3px 0;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+      line-height: 1.6;
     }
-    .summary-block .bullet::before {
+    .msg-summary .bullet::before {
       content: '•';
       color: var(--accent);
       font-weight: 700;
       font-size: 14px;
       flex-shrink: 0;
+    }
+    .msg-transcript {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text-primary);
+      white-space: pre-wrap;
+      padding: 8px 0 4px;
+    }
+    .msg-footer {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .translate-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .translate-row select {
+      background: var(--bg-sidebar);
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-family: inherit;
+    }
+    .translate-row .btn-translate {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: rgba(230,126,34,0.15);
+      color: var(--accent);
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .translate-row .btn-translate:hover { background: rgba(230,126,34,0.25); }
+    .translation-result {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-left: 3px solid #60a5fa;
+      background: rgba(59,130,246,0.06);
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    .lang-arrow {
+      font-size: 11px;
+      color: var(--text-muted);
     }
     .sender-badge {
       display: inline-flex;
@@ -291,11 +390,10 @@ function renderChatThread(messages) {
   let html = '';
   let lastDate = '';
 
-  messages.forEach(m => {
+  messages.forEach((m, idx) => {
     const d = new Date(m.created_at);
     const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
-    // Date divider
     if (dateStr !== lastDate) {
       html += `<div class="chat-date-divider">${dateStr}</div>`;
       lastDate = dateStr;
@@ -304,36 +402,118 @@ function renderChatThread(messages) {
     const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
     const text = m.transcription || m.text || m.content || '';
     const isFromMe = m.from_me || m.sender_name === 'Jeffrey';
-    const bubbleClass = isFromMe ? 'me' : 'them';
+    const cardClass = isFromMe ? 'me' : 'them';
     const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-    html += `<div style="display:flex;flex-direction:column;${isFromMe ? 'align-items:flex-end' : 'align-items:flex-start'}">`;
-
     const bullets = parseBullets(m.summary);
-    const hasBullets = bullets.length > 1;
-    const isShortTranscript = text.length < 100;
+    const msgId = m.id || `msg-${idx}`;
+    const lang = m.language || detectLang(text);
+    const flag = langFlag(lang);
+    const langLabel = langName(lang);
 
-    // Summary ABOVE transcript (if enough bullets and transcript isn't tiny)
-    if (hasBullets && !isShortTranscript) {
-      html += renderSummaryBlock(bullets, isFromMe);
-    }
+    html += `<div class="msg-card ${cardClass}" id="card-${msgId}">`;
 
-    html += `<div class="chat-bubble ${bubbleClass}">`;
-
+    // Header row
+    html += `<div class="msg-card-header">`;
     if (isVoice) {
-      html += `<div class="voice-inline">🎤 Voice note · ${formatDuration(m.duration || m.duration_seconds || 0)}${m.language ? ` · ${langFlag(m.language)}` : ''}</div>`;
+      html += `<span class="badge badge-voice">🎤 ${formatDuration(m.duration || m.duration_seconds || 0)}</span>`;
+    } else {
+      html += `<span class="badge badge-text">💬 Text</span>`;
+    }
+    html += `<span style="font-size:16px">${flag}</span>`;
+    html += `<span style="font-size:11px;color:var(--text-muted)">${langLabel}</span>`;
+    html += `<span style="flex:1"></span>`;
+    html += `<span style="font-size:11px;color:var(--text-muted)">${timeStr}</span>`;
+    html += `</div>`;
+
+    // Summary bullets (if any)
+    if (bullets.length > 0) {
+      html += `<div class="msg-summary">`;
+      html += `<div class="msg-summary-title">Summary</div>`;
+      html += bullets.map(b => `<div class="bullet"><span>${b}</span></div>`).join('');
+      html += `</div>`;
     }
 
+    // Transcript
     if (text) {
-      html += `<div style="white-space:pre-wrap;color:var(--text-primary)">${text}</div>`;
+      html += `<div class="msg-transcript">${text}</div>`;
     }
 
-    html += `</div>`; // close bubble
-    html += `<div class="chat-time ${isFromMe ? 'right' : ''}">${timeStr}</div>`;
-    html += `</div>`; // close wrapper
+    // Translate row
+    html += `<div class="translate-row">`;
+    html += `<span class="lang-arrow">${flag} ${langLabel} →</span>`;
+    html += `<select id="lang-sel-${msgId}" onchange="updateLangLabel('${msgId}')">`;
+    const defaultTarget = getDefaultLang();
+    TRANSLATE_LANGS.forEach(l => {
+      html += `<option value="${l.code}" ${l.code === defaultTarget ? 'selected' : ''}>${l.flag} ${l.name}</option>`;
+    });
+    html += `</select>`;
+    html += `<button class="btn-translate" onclick="translateMsg('${msgId}')">Translate</button>`;
+    html += `</div>`;
+    html += `<div id="translation-${msgId}" style="display:none" class="translation-result"></div>`;
+
+    html += `</div>`; // close card
   });
 
   thread.innerHTML = html;
+}
+
+const TRANSLATE_LANGS = [
+  { code: 'en', flag: '🇬🇧', name: 'English' },
+  { code: 'es', flag: '🇪🇸', name: 'Spanish' },
+  { code: 'fr', flag: '🇫🇷', name: 'French' },
+  { code: 'pt', flag: '🇧🇷', name: 'Portuguese' },
+  { code: 'de', flag: '🇩🇪', name: 'German' },
+  { code: 'it', flag: '🇮🇹', name: 'Italian' },
+  { code: 'nl', flag: '🇳🇱', name: 'Dutch' },
+  { code: 'ru', flag: '🇷🇺', name: 'Russian' },
+  { code: 'zh', flag: '🇨🇳', name: 'Chinese' },
+  { code: 'ja', flag: '🇯🇵', name: 'Japanese' },
+  { code: 'ko', flag: '🇰🇷', name: 'Korean' },
+  { code: 'ar', flag: '🇸🇦', name: 'Arabic' },
+  { code: 'hi', flag: '🇮🇳', name: 'Hindi' },
+  { code: 'ht', flag: '🇭🇹', name: 'Creole' },
+];
+
+function getDefaultLang() {
+  return localStorage.getItem('retena_default_lang') || 'en';
+}
+
+function detectLang(text) {
+  if (!text) return 'unknown';
+  const es = /[áéíóúñ¿¡]|(\b(que|los|las|una|por|para|con|del|como|pero|este|esta|tiene|puede)\b)/i;
+  const fr = /[àâçèéêëîïôùûü]|(\b(les|des|une|est|que|dans|avec|pour|sur|pas|sont|cette|mais|tout)\b)/i;
+  const pt = /[ãõç]|(\b(uma|com|que|por|para|não|como|dos|das|mais|tem|seu|sua)\b)/i;
+  const en = /(\b(the|and|is|are|was|were|have|has|this|that|with|from|they|their|would|could)\b)/i;
+  const ht = /(\b(mwen|ou|li|yo|pa|nan|ak|pou|ki|sa|te|ap)\b)/i;
+  const scores = { es: (text.match(es) || []).length, fr: (text.match(fr) || []).length, pt: (text.match(pt) || []).length, en: (text.match(en) || []).length, ht: (text.match(ht) || []).length };
+  const best = Object.entries(scores).sort((a,b) => b[1] - a[1])[0];
+  return best[1] > 0 ? best[0] : 'unknown';
+}
+
+function langName(code) {
+  if (!code) return 'Unknown';
+  const c = code.slice(0, 2).toLowerCase();
+  const lang = TRANSLATE_LANGS.find(l => l.code === c);
+  return lang ? lang.name : code;
+}
+
+async function translateMsg(msgId) {
+  const sel = document.getElementById(`lang-sel-${msgId}`);
+  const target = sel.value;
+  const card = document.getElementById(`card-${msgId}`);
+  const transcript = card?.querySelector('.msg-transcript');
+  if (!transcript) return;
+  const text = transcript.textContent;
+  const resultEl = document.getElementById(`translation-${msgId}`);
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<span style="color:var(--text-muted)">Translating…</span>';
+  try {
+    const r = await api('/api/rt/translate', { method: 'POST', body: JSON.stringify({ text, target }) });
+    const targetLang = TRANSLATE_LANGS.find(l => l.code === target);
+    resultEl.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${targetLang?.flag || '🌐'} ${targetLang?.name || target}</div>${r.translation || r.text || 'Translation unavailable'}`;
+  } catch (e) {
+    resultEl.innerHTML = '<span style="color:#ef4444">Translation failed</span>';
+  }
 }
 
 function parseBullets(summary) {
@@ -350,11 +530,6 @@ function parseBullets(summary) {
   const lines = text.split(/[•\-\*]|\d+\.\s/).map(s => s.trim()).filter(Boolean);
   if (lines.length <= 1 && text.length > 10) return [text];
   return lines;
-}
-
-function renderSummaryBlock(bullets, alignRight) {
-  const align = alignRight ? 'align-self:flex-end' : 'align-self:flex-start';
-  return `<div class="summary-block" style="${align}">${bullets.map(b => `<div class="bullet"><span>${b}</span></div>`).join('')}</div>`;
 }
 
 function formatSummary(s) {
@@ -377,10 +552,10 @@ function backToList() {
 }
 
 function langFlag(lang) {
-  const flags = { en:'🇬🇧', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', nl:'🇳🇱', ja:'🇯🇵', zh:'🇨🇳', ko:'🇰🇷', ar:'🇸🇦', ru:'🇷🇺', hi:'🇮🇳' };
-  if (!lang) return '';
+  const flags = { en:'🇬🇧', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', nl:'🇳🇱', ja:'🇯🇵', zh:'🇨🇳', ko:'🇰🇷', ar:'🇸🇦', ru:'🇷🇺', hi:'🇮🇳', ht:'🇭🇹', unknown:'🏳️' };
+  if (!lang) return '🏳️';
   const code = lang.slice(0, 2).toLowerCase();
-  return flags[code] || '🌐';
+  return flags[code] || '🏳️';
 }
 </script>
 </body>
