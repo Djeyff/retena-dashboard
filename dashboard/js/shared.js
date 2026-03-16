@@ -48,7 +48,7 @@ function renderSidebar(activeId) {
   }
 
   el.innerHTML = `
-    <div class="sidebar-logo">${RT_LOGO}<span>Retena</span></div>
+    <div class="sidebar-logo">${RT_LOGO}<span>Retena</span><span id="wa-status-dot" title="Checking…" style="margin-left:auto;width:10px;height:10px;border-radius:50%;background:#666;flex-shrink:0;transition:background 0.3s"></span></div>
     <nav class="sidebar-nav">${navHtml}</nav>
     <div class="sidebar-bottom">
       <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px;padding:0 4px">PRO PLAN</div>
@@ -60,6 +60,23 @@ function renderSidebar(activeId) {
       <a class="sidebar-crosssell" href="https://voz-clara.com" target="_blank">🎤 Personal use → VozClara</a>
     </div>
   `;
+
+  // Start WhatsApp status polling
+  checkWaStatus();
+  setInterval(checkWaStatus, 30000);
+}
+
+async function checkWaStatus() {
+  const dot = document.getElementById('wa-status-dot');
+  if (!dot) return;
+  try {
+    const r = await api('/api/wa-status');
+    dot.style.background = r.connected ? '#22c55e' : '#ef4444';
+    dot.title = r.connected ? `WhatsApp connected · ${r.transcriptions || 0} transcriptions` : 'WhatsApp disconnected';
+  } catch {
+    dot.style.background = '#ef4444';
+    dot.title = 'WhatsApp status unknown';
+  }
 }
 
 // ── Render Mobile Tabs ──
