@@ -345,6 +345,10 @@ function renderThread(messages) {
       html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📄 Document</div>`;
     } else if (m.message_type === 'sticker') {
       html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🏷️ Sticker</div>`;
+    } else if (m.message_type === 'media') {
+      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📎 Media</div>`;
+    } else if (!text && isVoice) {
+      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🎤 Voice note (transcription pending…)</div>`;
     }
 
     // Time + language
