@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
     const limit = Math.min(Number(req.query.limit) || 500, 1000);
     const chatFilter = req.query.chat ? `&chat_id=eq.${req.query.chat}` : '';
 
-    const qs = `rewa_messages?select=id,chat_id,chat_name,sender_id,sender_name,from_me,is_group,message_type,body,transcription,media_caption,summary,duration_seconds,language,has_media,timestamp,created_at&is_group=eq.false&chat_id=neq.status@broadcast&order=timestamp.desc&limit=${limit}${chatFilter}`;
+    const qs = `rewa_messages?select=id,chat_id,chat_name,sender_id,sender_name,from_me,is_group,message_type,body,text_content,transcription,summary,duration_seconds,language,has_media,timestamp,created_at&is_group=eq.false&chat_id=neq.status@broadcast&order=timestamp.desc&limit=${limit}${chatFilter}`;
 
     const resp = await fetch(`${SUPA_URL}/rest/v1/${qs}`, {
       headers: {
