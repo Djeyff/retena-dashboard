@@ -213,7 +213,7 @@ function renderConversationList(filter = '') {
 
   el.innerHTML = convs.map(c => {
     const last = c.last_message;
-    const text = last.transcription || last.text || last.body || last.content || '';
+    const text = last.transcription || last.text_content || last.text || last.body || last.content || '';
     const isVoice = last.message_type === 'voice' || last.message_type === 'audio';
     const prefix = last.from_me ? '<span style="color:var(--text-muted)">You: </span>' : '';
     const voiceIcon = isVoice ? '🎤 ' : '';
@@ -288,7 +288,7 @@ function renderThread(messages) {
 
     const isMe = m.from_me === true;
     const side = isMe ? 'me' : 'them';
-    const text = m.transcription || m.text || m.body || m.content || '';
+    const text = m.transcription || m.text_content || m.text || m.body || m.content || '';
     const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
     const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
     const msgId = m.id || `msg-${idx}`;
