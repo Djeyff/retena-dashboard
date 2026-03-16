@@ -6,6 +6,86 @@
   <title>Personal Inbox — Retena</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/dashboard/styles.css">
+  <style>
+    .chat-bubble {
+      max-width: 85%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      line-height: 1.6;
+      position: relative;
+      margin-bottom: 4px;
+    }
+    .chat-bubble.them {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+      align-self: flex-start;
+    }
+    .chat-bubble.me {
+      background: rgba(230,126,34,0.12);
+      border: 1px solid rgba(230,126,34,0.2);
+      border-bottom-right-radius: 4px;
+      align-self: flex-end;
+    }
+    .chat-time {
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .chat-time.right { text-align: right; }
+    .chat-date-divider {
+      text-align: center;
+      font-size: 11px;
+      color: var(--text-muted);
+      padding: 12px 0 8px;
+      position: relative;
+    }
+    .chat-date-divider::before,
+    .chat-date-divider::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      width: 30%;
+      height: 1px;
+      background: var(--border);
+    }
+    .chat-date-divider::before { left: 0; }
+    .chat-date-divider::after { right: 0; }
+    .chat-thread {
+      display: flex;
+      flex-direction: column;
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .voice-inline {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 12px;
+      color: var(--accent);
+    }
+    .summary-inline {
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-left: 2px solid var(--purple-text);
+      background: rgba(88,28,135,0.1);
+      border-radius: 0 6px 6px 0;
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .sender-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+  </style>
 </head>
 <body>
 <div class="layout">
@@ -13,27 +93,34 @@
   <div class="main">
     <div class="page-content two-panel">
 
-      <!-- Left: Note List -->
+      <!-- Left: Sender List -->
       <div class="panel-left" id="panel-left">
         <div class="panel-left-header">
           <h2>Personal Inbox</h2>
         </div>
-        <div class="filter-bar" style="padding:8px 8px 0">
-          <span class="filter-pill active" data-filter="all" onclick="setFilter('all')">All</span>
-          <span class="filter-pill" data-filter="voice" onclick="setFilter('voice')">🎤 Voice</span>
-          <span class="filter-pill" data-filter="text" onclick="setFilter('text')">💬 Text</span>
-          <span class="filter-pill" data-filter="starred" onclick="setFilter('starred')">⭐ Starred</span>
+        <div style="padding:8px 8px 0">
+          <input class="input" placeholder="Search contacts…" id="sender-search" oninput="filterSenders()" style="font-size:13px">
         </div>
-        <div class="panel-list" id="note-list"></div>
+        <div class="panel-list" id="sender-list"></div>
       </div>
 
-      <!-- Right: Note Detail -->
-      <div class="panel-right" id="panel-right">
-        <div class="panel-empty" id="note-empty">
+      <!-- Right: Chat Thread -->
+      <div class="panel-right" id="panel-right" style="display:flex;flex-direction:column">
+        <div class="panel-empty" id="chat-empty">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
-          <p>Select a note to see details</p>
+          <p>Select a contact to see their messages</p>
         </div>
-        <div id="note-detail" style="display:none;padding:24px"></div>
+        <!-- Chat header -->
+        <div id="chat-header" style="display:none;padding:14px 20px;border-bottom:1px solid var(--border);display:none;align-items:center;gap:12px;background:var(--bg-sidebar)">
+          <button class="btn btn-secondary btn-sm" onclick="backToList()" id="back-btn" style="display:none">←</button>
+          <div id="chat-header-avatar"></div>
+          <div>
+            <div id="chat-header-name" style="font-weight:700;font-size:15px"></div>
+            <div id="chat-header-meta" style="font-size:12px;color:var(--text-muted)"></div>
+          </div>
+        </div>
+        <!-- Messages -->
+        <div class="chat-thread" id="chat-thread" style="display:none"></div>
       </div>
 
     </div>
@@ -44,8 +131,8 @@
 <script src="/dashboard/js/shared.js"></script>
 <script>
 let allNotes = [];
-let selectedNoteId = null;
-let currentFilter = 'all';
+let senderMap = {};
+let selectedSender = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   renderSidebar('personal');
@@ -54,64 +141,94 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadNotes() {
-  showLoading(document.getElementById('note-list'));
+  showLoading(document.getElementById('sender-list'));
   try {
     const data = await api('/api/rt/personal');
     allNotes = data.items || data || [];
-    renderNoteList();
+    buildSenderMap();
+    renderSenderList();
   } catch (e) {
     renderEmptyInbox();
   }
 }
 
-function setFilter(f) {
-  currentFilter = f;
-  document.querySelectorAll('.filter-pill').forEach(el => el.classList.toggle('active', el.dataset.filter === f));
-  renderNoteList();
+function buildSenderMap() {
+  senderMap = {};
+  allNotes.forEach(n => {
+    const key = n.sender_name || n.sender || n.chat_id || 'Unknown';
+    if (!senderMap[key]) {
+      senderMap[key] = {
+        name: key,
+        messages: [],
+        lastMessage: null,
+        voiceCount: 0,
+        textCount: 0,
+      };
+    }
+    senderMap[key].messages.push(n);
+    const isVoice = n.message_type === 'voice' || n.message_type === 'audio';
+    if (isVoice) senderMap[key].voiceCount++;
+    else senderMap[key].textCount++;
+    if (!senderMap[key].lastMessage || new Date(n.created_at) > new Date(senderMap[key].lastMessage.created_at)) {
+      senderMap[key].lastMessage = n;
+    }
+  });
+  // Sort each sender's messages chronologically (oldest first)
+  Object.values(senderMap).forEach(s => {
+    s.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  });
 }
 
-function renderNoteList() {
-  const el = document.getElementById('note-list');
-  let notes = allNotes;
-  if (currentFilter === 'voice') notes = notes.filter(n => n.message_type === 'voice' || n.type === 'voice');
-  else if (currentFilter === 'text') notes = notes.filter(n => n.message_type === 'text' || n.type === 'text' || (!n.message_type && !n.duration));
-  else if (currentFilter === 'starred') notes = notes.filter(n => n.starred || n.is_starred);
+function filterSenders() {
+  const q = document.getElementById('sender-search').value.toLowerCase();
+  renderSenderList(q);
+}
 
-  if (!notes.length) {
+function renderSenderList(filter = '') {
+  const el = document.getElementById('sender-list');
+  let senders = Object.values(senderMap)
+    .sort((a, b) => new Date(b.lastMessage?.created_at || 0) - new Date(a.lastMessage?.created_at || 0));
+
+  if (filter) {
+    senders = senders.filter(s => s.name.toLowerCase().includes(filter));
+  }
+
+  if (!senders.length) {
     renderEmptyInbox();
     return;
   }
 
-  el.innerHTML = notes.map(n => {
-    const id = n.id;
-    const isVoice = n.message_type === 'voice' || n.type === 'voice' || n.duration;
-    const text = n.transcription || n.text || n.message_text || n.content || '';
-    const starred = n.starred || n.is_starred;
-    const sender = n.sender_name || n.sender || n.chat_id?.replace(/@.*/, '') || '';
+  el.innerHTML = senders.map(s => {
+    const last = s.lastMessage;
+    const lastText = last?.transcription || last?.text || last?.content || '';
+    const isVoice = last?.message_type === 'voice' || last?.message_type === 'audio';
+    const total = s.messages.length;
+
     return `
-      <div class="panel-list-item${selectedNoteId === id ? ' selected' : ''}" onclick="selectNote('${id}')">
-        <div style="display:flex;align-items:flex-start;gap:10px">
-          ${renderAvatar(sender || 'Unknown', 'sm')}
+      <div class="panel-list-item${selectedSender === s.name ? ' selected' : ''}" onclick="selectSender('${s.name.replace(/'/g, "\\'")}')">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${renderAvatar(s.name)}
           <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
-              <span style="font-weight:600;font-size:13px">${sender || 'Unknown'}</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
+              <span style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</span>
+              <span style="font-size:11px;color:var(--text-muted);flex-shrink:0">${timeAgo(last?.created_at)}</span>
             </div>
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-              ${isVoice ? `<span class="pill pill-voice">🎤 ${formatDuration(n.duration || n.voice_duration_sec || 0)}</span>` : '<span class="pill pill-text">💬 Text</span>'}
-              <span class="pill pill-personal">Personal</span>
-              ${n.language ? `<span style="font-size:11px">${langFlag(n.language)}</span>` : ''}
+            <div style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+              ${isVoice ? '🎤 ' : ''}${truncate(lastText, 50)}
             </div>
-            <div style="font-size:13px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${truncate(text, 80)}</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${timeAgo(n.created_at || n.timestamp)}</div>
+            <div class="sender-badge">
+              ${total} message${total !== 1 ? 's' : ''}
+              ${s.voiceCount ? ` · 🎤 ${s.voiceCount}` : ''}
+              ${s.textCount ? ` · 💬 ${s.textCount}` : ''}
+            </div>
           </div>
-          <span style="cursor:pointer;font-size:16px" onclick="event.stopPropagation();toggleStar('${id}')">${starred ? '⭐' : '☆'}</span>
         </div>
       </div>`;
   }).join('');
 }
 
 function renderEmptyInbox() {
-  const el = document.getElementById('note-list');
+  const el = document.getElementById('sender-list');
   el.innerHTML = `
     <div class="empty-state" style="padding:40px 20px">
       <h3>No personal notes yet</h3>
@@ -126,66 +243,79 @@ function renderEmptyInbox() {
     </div>`;
 }
 
-async function selectNote(id) {
-  selectedNoteId = id;
-  renderNoteList();
+function selectSender(name) {
+  selectedSender = name;
+  renderSenderList(document.getElementById('sender-search').value.toLowerCase());
 
+  const sender = senderMap[name];
+  if (!sender) return;
+
+  // Mobile: show chat panel
   document.getElementById('panel-left').classList.add('hidden-mobile');
   document.getElementById('panel-right').classList.remove('hidden-mobile');
-  document.getElementById('note-empty').style.display = 'none';
+  document.getElementById('chat-empty').style.display = 'none';
 
-  const detail = document.getElementById('note-detail');
-  detail.style.display = 'block';
-  showLoading(detail);
-
-  try {
-    const n = await api(`/api/rt/personal/${id}`);
-    renderNoteDetail(n);
-  } catch (e) {
-    // Try from cache
-    const cached = allNotes.find(n => n.id === id);
-    if (cached) renderNoteDetail(cached);
-    else showError(detail);
-  }
-}
-
-function renderNoteDetail(n) {
-  const detail = document.getElementById('note-detail');
-  const isVoice = n.message_type === 'voice' || n.type === 'voice' || n.duration;
-  const text = n.transcription || n.text || n.message_text || n.content || '';
-  const summary = n.summary || n.summary_json;
-  const starred = n.starred || n.is_starred;
-
-  detail.innerHTML = `
-    <button class="btn btn-secondary btn-sm" onclick="backToList()" style="display:none;margin-bottom:16px" id="back-btn">← Back</button>
-
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">
-      ${isVoice ? `<span class="pill pill-voice">🎤 ${formatDuration(n.duration || n.voice_duration_sec || 0)}</span>` : '<span class="pill pill-text">💬 Text</span>'}
-      <span class="pill pill-personal">Personal</span>
-      ${n.language ? `<span style="font-size:12px">${langFlag(n.language)} ${n.language}</span>` : ''}
-      <span style="font-size:12px;color:var(--text-muted)">${formatDate(n.created_at || n.timestamp)}</span>
-    </div>
-
-    ${summary ? `
-    <div class="card" style="margin-bottom:16px;border-left:3px solid var(--purple-text);padding-left:16px">
-      <div class="section-title" style="margin-bottom:8px">Summary</div>
-      <div style="font-size:13px;color:var(--text-secondary);line-height:1.6">${typeof summary === 'object' ? formatSummary(summary) : summary}</div>
-    </div>` : ''}
-
-    <div class="card" style="margin-bottom:16px">
-      <div class="section-title" style="margin-bottom:8px">Transcript</div>
-      <div style="font-size:14px;line-height:1.7;color:var(--text-primary);white-space:pre-wrap">${text || 'No transcript available'}</div>
-    </div>
-
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn btn-secondary btn-sm" onclick="copyText(\`${text.replace(/`/g,'\\`').replace(/\\/g,'\\\\')}\`)">📋 Copy</button>
-      <button class="btn btn-secondary btn-sm" onclick="downloadNote('${n.id}')">⬇ Download .txt</button>
-      <button class="btn btn-secondary btn-sm" onclick="toggleStar('${n.id}')">${starred ? '⭐ Starred' : '☆ Star'}</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteNote('${n.id}')">🗑 Delete</button>
-    </div>
-  `;
+  // Header
+  const header = document.getElementById('chat-header');
+  header.style.display = 'flex';
+  document.getElementById('chat-header-avatar').innerHTML = renderAvatar(name, 'lg');
+  document.getElementById('chat-header-name').textContent = name;
+  document.getElementById('chat-header-meta').textContent = `${sender.messages.length} messages · ${sender.voiceCount} voice · ${sender.textCount} text`;
 
   if (window.innerWidth <= 768) document.getElementById('back-btn').style.display = 'inline-flex';
+
+  // Render chat thread
+  const thread = document.getElementById('chat-thread');
+  thread.style.display = 'flex';
+  renderChatThread(sender.messages);
+
+  // Scroll to bottom
+  setTimeout(() => thread.scrollTop = thread.scrollHeight, 50);
+}
+
+function renderChatThread(messages) {
+  const thread = document.getElementById('chat-thread');
+  let html = '';
+  let lastDate = '';
+
+  messages.forEach(m => {
+    const d = new Date(m.created_at);
+    const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+    // Date divider
+    if (dateStr !== lastDate) {
+      html += `<div class="chat-date-divider">${dateStr}</div>`;
+      lastDate = dateStr;
+    }
+
+    const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
+    const text = m.transcription || m.text || m.content || '';
+    const isFromMe = m.from_me || m.sender_name === 'Jeffrey';
+    const bubbleClass = isFromMe ? 'me' : 'them';
+    const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    html += `<div style="display:flex;flex-direction:column;${isFromMe ? 'align-items:flex-end' : 'align-items:flex-start'}">`;
+
+    html += `<div class="chat-bubble ${bubbleClass}">`;
+
+    if (isVoice) {
+      html += `<div class="voice-inline">🎤 Voice note · ${formatDuration(m.duration || m.duration_seconds || 0)}${m.language ? ` · ${langFlag(m.language)}` : ''}</div>`;
+    }
+
+    if (text) {
+      html += `<div style="white-space:pre-wrap;color:var(--text-primary)">${text}</div>`;
+    }
+
+    if (m.summary) {
+      html += `<div class="summary-inline">${typeof m.summary === 'object' ? formatSummary(m.summary) : m.summary}</div>`;
+    }
+
+    html += `</div>`; // close bubble
+    html += `<div class="chat-time ${isFromMe ? 'right' : ''}">${timeStr}</div>`;
+    html += `</div>`; // close wrapper
+  });
+
+  thread.innerHTML = html;
 }
 
 function formatSummary(s) {
@@ -196,7 +326,7 @@ function formatSummary(s) {
   }
   if (s.actionItems || s.action_items) {
     const items = s.actionItems || s.action_items;
-    html += '<br><br><strong>Action items:</strong><br>';
+    html += '<br><strong>Action items:</strong><br>';
     html += Array.isArray(items) ? items.map(a => '☐ ' + a).join('<br>') : items;
   }
   return html || JSON.stringify(s);
@@ -205,45 +335,6 @@ function formatSummary(s) {
 function backToList() {
   document.getElementById('panel-left').classList.remove('hidden-mobile');
   document.getElementById('panel-right').classList.add('hidden-mobile');
-}
-
-function copyText(text) {
-  navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard'));
-}
-
-function downloadNote(id) {
-  const n = allNotes.find(n => n.id === id);
-  if (!n) return;
-  const text = n.transcription || n.text || n.message_text || n.content || '';
-  const blob = new Blob([text], { type: 'text/plain' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `retena-note-${id}.txt`;
-  a.click();
-}
-
-async function toggleStar(id) {
-  try {
-    await api(`/api/rt/personal/${id}/star`, { method: 'POST' });
-    const n = allNotes.find(n => n.id === id);
-    if (n) { n.starred = !n.starred; n.is_starred = n.starred; }
-    renderNoteList();
-    if (selectedNoteId === id) selectNote(id);
-    showToast('Updated');
-  } catch (e) { showToast('Failed to update'); }
-}
-
-async function deleteNote(id) {
-  if (!confirm('Delete this note? This cannot be undone.')) return;
-  try {
-    await api(`/api/rt/personal/${id}`, { method: 'DELETE' });
-    allNotes = allNotes.filter(n => n.id !== id);
-    renderNoteList();
-    document.getElementById('note-detail').style.display = 'none';
-    document.getElementById('note-empty').style.display = 'flex';
-    backToList();
-    showToast('Note deleted');
-  } catch (e) { showToast('Failed to delete'); }
 }
 
 function langFlag(lang) {
