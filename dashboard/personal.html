@@ -559,12 +559,12 @@ async function translateMsg(msgId) {
   const target = sel.value;
   const card = document.getElementById(`card-${msgId}`);
 
-  // Collect transcript + bullet points
+  // Collect summary bullets + transcript
   const transcript = card?.querySelector('.msg-transcript');
   const bulletEls = card?.querySelectorAll('.msg-summary .bullet span') || [];
   const parts = [];
   if (bulletEls.length) {
-    parts.push('BULLETS:');
+    parts.push('SUMMARY:');
     bulletEls.forEach(b => parts.push('• ' + b.textContent));
     parts.push('---');
   }
@@ -579,9 +579,27 @@ async function translateMsg(msgId) {
     const r = await api('/api/rt/translate', { method: 'POST', body: JSON.stringify({ text, target }) });
     const targetLang = TRANSLATE_LANGS.find(l => l.code === target);
     let translated = r.translation || r.text || 'Translation unavailable';
-    // Format bullets in translation
-    translated = translated.replace(/^• /gm, '<div style="display:flex;gap:6px;padding:2px 0"><span style="color:#60a5fa;font-weight:700">•</span><span>').replace(/(?<=<span>)(.+)$/gm, '$1</span></div>');
-    resultEl.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${targetLang?.flag || '🏳️'} ${targetLang?.name || target}</div>${translated}`;
+
+    // Split on --- to render summary vs transcript separately
+    let html = '';
+    const sections = translated.split(/\n?---\n?/);
+    if (sections.length >= 2) {
+      // Summary section
+      const summaryLines = sections[0].split('\n').filter(l => l.trim());
+      html += '<div style="border-left:3px solid #60a5fa;background:rgba(59,130,246,0.06);border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:8px">';
+      html += '<div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">SUMMARY</div>';
+      summaryLines.forEach(line => {
+        const clean = line.replace(/^[•\-\*]\s*/, '').trim();
+        if (clean) html += `<div style="display:flex;gap:6px;padding:3px 0;font-size:12.5px;color:var(--text-secondary);line-height:1.6"><span style="color:#60a5fa;font-weight:700;flex-shrink:0">•</span><span>${clean}</span></div>`;
+      });
+      html += '</div>';
+      // Transcript section
+      html += `<div style="font-size:13px;line-height:1.65;color:var(--text-primary);white-space:pre-wrap">${sections.slice(1).join('\n---\n').trim()}</div>`;
+    } else {
+      html += `<div style="white-space:pre-wrap">${translated}</div>`;
+    }
+
+    resultEl.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${targetLang?.flag || '🏳️'} ${targetLang?.name || target}</div>${html}`;
   } catch (e) {
     resultEl.innerHTML = '<span style="color:#ef4444">Translation failed</span>';
   }
