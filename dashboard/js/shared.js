@@ -1,5 +1,23 @@
 /* Retena Dashboard — Shared JS */
 
+// ── PWA: Register service worker + inject manifest ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/dashboard/sw.js').catch(() => {});
+}
+if (!document.querySelector('link[rel="manifest"]')) {
+  const m = document.createElement('link');
+  m.rel = 'manifest'; m.href = '/dashboard/manifest.json';
+  document.head.appendChild(m);
+  // iOS meta tags
+  const meta = (n, c) => { const t = document.createElement('meta'); t.name = n; t.content = c; document.head.appendChild(t); };
+  meta('apple-mobile-web-app-capable', 'yes');
+  meta('apple-mobile-web-app-status-bar-style', 'black-translucent');
+  meta('theme-color', '#E67E22');
+  const icon = document.createElement('link');
+  icon.rel = 'apple-touch-icon'; icon.href = '/dashboard/icons/icon-192.png';
+  document.head.appendChild(icon);
+}
+
 // ── Logo ──
 const RT_LOGO = `<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#1E3A5F"/><text x="14" y="19" text-anchor="middle" fill="white" font-family="DM Sans" font-weight="700" font-size="16">R</text></svg>`;
 
