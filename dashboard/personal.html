@@ -497,24 +497,45 @@ function getDefaultLang() {
 
 function detectLang(text) {
   if (!text || text.length < 3) return 'unknown';
-  const t = text.toLowerCase();
-  // Count word matches (global flag for proper counting)
-  const esWords = (t.match(/\b(que|los|las|una|por|para|con|del|como|pero|este|esta|tiene|puede|hay|más|también|todo|cuando|donde|muy|solo|bueno|mañana|hoy|bien|quiero|vamos|eso|ese|esa)\b/g) || []).length;
-  const esChars = (t.match(/[áéíóúñ¿¡]/g) || []).length;
-  const frWords = (t.match(/\b(les|des|une|est|que|dans|avec|pour|sur|pas|sont|cette|mais|tout|bien|nous|vous|leur|elle|aussi|très|faire|peut|bonjour|merci|oui|non|comme|plus|chez)\b/g) || []).length;
-  const frChars = (t.match(/[àâçèêëîïôùûüœæ]/g) || []).length;
-  const enWords = (t.match(/\b(the|and|is|are|was|were|have|has|this|that|with|from|they|their|would|could|should|about|been|just|also|not|but|will|can|had|all|when|there|what|your|more|some)\b/g) || []).length;
-  const ptWords = (t.match(/\b(uma|com|que|por|para|não|como|dos|das|mais|tem|seu|sua|isso|onde|aqui|muito|ainda|entre|foram|agora|então)\b/g) || []).length;
-  const htWords = (t.match(/\b(mwen|ou|li|yo|pa|nan|ak|pou|ki|sa|te|ap|anpil|tout|kòm|jan|lè|konsa)\b/g) || []).length;
+  const t = ' ' + text.toLowerCase().replace(/[.,!?;:""''()\[\]]/g, ' ') + ' ';
+
+  // Spanish — heavy list, common DR/Caribbean Spanish included
+  const es = (t.match(/\s(el|la|los|las|un|una|de|en|que|y|no|se|lo|por|con|para|del|al|es|como|pero|más|todo|te|me|mi|tu|su|ya|si|hay|fue|ser|ir|va|le|a|o|bien|bueno|eso|ese|esa|qué|muy|sin|hoy|así|vamos|quiero|puede|tiene|dice|dijo|hola|donde|aquí|ahora|cómo|porque|cuando|nunca|nada|algo|sobre|hasta|otra|otro|poco|mucho|puedes|hacer|poner|decir|saber|esto|sido|mañana|después|entre|solo|también|necesito|plano|dimensiones)\s/g) || []).length;
+
+  // French
+  const fr = (t.match(/\s(le|la|les|de|du|des|un|une|en|et|est|que|ne|pas|je|tu|il|nous|vous|ils|ce|qui|dans|pour|sur|avec|son|sa|ses|au|aux|mais|ou|donc|car|bien|fait|être|avoir|sont|très|tout|cette|ces|plus|chez|oui|non|merci|bonjour|comme|aussi|même|puis|après|avant|encore|jamais|rien|peu|trop|ici|là)\s/g) || []).length;
+
+  // English
+  const en = (t.match(/\s(the|and|is|are|was|were|have|has|this|that|with|from|they|their|would|could|should|about|been|just|also|not|but|will|can|had|all|when|there|what|your|more|some|into|than|its|our|out|very|only|then|them|here|where|still|after|each|much|both|which|who|how|why|yes|no|got|get|did|does|going|want|said|need)\s/g) || []).length;
+
+  // Portuguese
+  const pt = (t.match(/\s(o|a|os|as|um|uma|de|em|que|e|não|se|por|com|para|do|da|dos|das|ao|aos|mas|ou|como|mais|seu|sua|já|bem|isso|este|esta|onde|aqui|muito|ainda|entre|foram|agora|então|também|pode|tem|há|foi|são|está|você|meu|minha|todo|toda|depois|antes|sempre|nunca|nada|outro|outra)\s/g) || []).length;
+
+  // Haitian Creole — very specific words that don't overlap with Spanish/French
+  const ht = (t.match(/\s(mwen|ou|li|yo|pa|nan|ak|pou|ki|sa|te|ap|anpil|kòm|jan|lè|konsa|bagay|lavi|fè|gen|manje|dlo|lakay|pitit|zanmi|travay|jwenn|konn|bezwen|kote|poukisa|kilès|tout|tankou|parèt|rete|vini)\s/g) || []).length;
+
+  // Scoring: each word match = 1 point, bonus for diacritics
+  const esBonus = (t.match(/[áéíóúñ¿¡]/g) || []).length;
+  const frBonus = (t.match(/[àâçèêëîïôùûüœæ]/g) || []).length;
+
   const scores = {
-    es: esWords * 2 + esChars,
-    fr: frWords * 2 + frChars,
-    en: enWords * 2,
-    pt: ptWords * 2,
-    ht: htWords * 2,
+    es: es + esBonus,
+    fr: fr + frBonus,
+    en: en,
+    pt: pt,
+    ht: ht,
   };
-  const sorted = Object.entries(scores).sort((a,b) => b[1] - a[1]);
-  return sorted[0][1] > 0 ? sorted[0][0] : 'unknown';
+
+  // Tie-breaking: if es and ht are close, prefer es (Caribbean Spanish often shares short words)
+  if (scores.ht > 0 && scores.es >= scores.ht) scores.ht = 0;
+  // If es and pt are close, check for unique markers
+  if (scores.pt > 0 && scores.es > 0 && Math.abs(scores.es - scores.pt) <= 2) {
+    if (/[ñ¿¡]/.test(t)) scores.pt = 0; // definitely Spanish
+    if (/[ãõ]/.test(t) || /\snão\s/.test(t)) scores.es = 0; // definitely Portuguese
+  }
+
+  const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  return sorted[0][1] > 0 ? sorted[0][0] : 'es'; // default to Spanish for DR context
 }
 
 function langName(code) {
