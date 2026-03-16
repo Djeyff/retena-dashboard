@@ -146,15 +146,29 @@
       margin-top: 8px;
       flex-wrap: wrap;
     }
-    .translate-row {
-      display: flex;
+    .translate-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      margin-top: 6px;
+      padding: 2px 0;
+      user-select: none;
+    }
+    .translate-toggle:hover { color: var(--accent); }
+    .translate-toggle .arrow { transition: transform 0.2s; display: inline-block; font-size: 9px; }
+    .translate-toggle .arrow.open { transform: rotate(180deg); }
+    .translate-panel {
+      display: none;
       align-items: center;
       gap: 6px;
-      margin-top: 10px;
-      padding-top: 8px;
-      border-top: 1px solid var(--border);
+      margin-top: 6px;
+      padding-top: 6px;
     }
-    .translate-row select {
+    .translate-panel.open { display: flex; }
+    .translate-panel select {
       background: var(--bg-sidebar);
       color: var(--text-secondary);
       border: 1px solid var(--border);
@@ -163,7 +177,7 @@
       font-size: 11px;
       font-family: inherit;
     }
-    .translate-row .btn-translate {
+    .translate-panel .btn-translate {
       font-size: 11px;
       padding: 4px 10px;
       border-radius: 6px;
@@ -173,7 +187,7 @@
       cursor: pointer;
       font-weight: 600;
     }
-    .translate-row .btn-translate:hover { background: rgba(230,126,34,0.25); }
+    .translate-panel .btn-translate:hover { background: rgba(230,126,34,0.25); }
     .translation-result {
       margin-top: 8px;
       padding: 10px 12px;
@@ -438,16 +452,19 @@ function renderChatThread(messages) {
       html += `<div class="msg-transcript">${text}</div>`;
     }
 
-    // Translate row
-    html += `<div class="translate-row">`;
-    html += `<span class="lang-arrow">${flag} ${langLabel} →</span>`;
-    html += `<select id="lang-sel-${msgId}" onchange="updateLangLabel('${msgId}')">`;
+    // Translate toggle (collapsed by default)
+    html += `<div class="translate-toggle" onclick="toggleTranslate('${msgId}')">`;
+    html += `<span class="arrow" id="arrow-${msgId}">▼</span> Translate`;
+    html += `</div>`;
+    html += `<div class="translate-panel" id="tpanel-${msgId}">`;
+    html += `<span style="font-size:11px;color:var(--text-muted)">${flag} ${langLabel} →</span>`;
+    html += `<select id="lang-sel-${msgId}">`;
     const defaultTarget = getDefaultLang();
     TRANSLATE_LANGS.forEach(l => {
       html += `<option value="${l.code}" ${l.code === defaultTarget ? 'selected' : ''}>${l.flag} ${l.name}</option>`;
     });
     html += `</select>`;
-    html += `<button class="btn-translate" onclick="translateMsg('${msgId}')">Translate</button>`;
+    html += `<button class="btn-translate" onclick="translateMsg('${msgId}')">Go</button>`;
     html += `</div>`;
     html += `<div id="translation-${msgId}" style="display:none" class="translation-result"></div>`;
 
@@ -479,38 +496,71 @@ function getDefaultLang() {
 }
 
 function detectLang(text) {
-  if (!text) return 'unknown';
-  const es = /[áéíóúñ¿¡]|(\b(que|los|las|una|por|para|con|del|como|pero|este|esta|tiene|puede)\b)/i;
-  const fr = /[àâçèéêëîïôùûü]|(\b(les|des|une|est|que|dans|avec|pour|sur|pas|sont|cette|mais|tout)\b)/i;
-  const pt = /[ãõç]|(\b(uma|com|que|por|para|não|como|dos|das|mais|tem|seu|sua)\b)/i;
-  const en = /(\b(the|and|is|are|was|were|have|has|this|that|with|from|they|their|would|could)\b)/i;
-  const ht = /(\b(mwen|ou|li|yo|pa|nan|ak|pou|ki|sa|te|ap)\b)/i;
-  const scores = { es: (text.match(es) || []).length, fr: (text.match(fr) || []).length, pt: (text.match(pt) || []).length, en: (text.match(en) || []).length, ht: (text.match(ht) || []).length };
-  const best = Object.entries(scores).sort((a,b) => b[1] - a[1])[0];
-  return best[1] > 0 ? best[0] : 'unknown';
+  if (!text || text.length < 3) return 'unknown';
+  const t = text.toLowerCase();
+  // Count word matches (global flag for proper counting)
+  const esWords = (t.match(/\b(que|los|las|una|por|para|con|del|como|pero|este|esta|tiene|puede|hay|más|también|todo|cuando|donde|muy|solo|bueno|mañana|hoy|bien|quiero|vamos|eso|ese|esa)\b/g) || []).length;
+  const esChars = (t.match(/[áéíóúñ¿¡]/g) || []).length;
+  const frWords = (t.match(/\b(les|des|une|est|que|dans|avec|pour|sur|pas|sont|cette|mais|tout|bien|nous|vous|leur|elle|aussi|très|faire|peut|bonjour|merci|oui|non|comme|plus|chez)\b/g) || []).length;
+  const frChars = (t.match(/[àâçèêëîïôùûüœæ]/g) || []).length;
+  const enWords = (t.match(/\b(the|and|is|are|was|were|have|has|this|that|with|from|they|their|would|could|should|about|been|just|also|not|but|will|can|had|all|when|there|what|your|more|some)\b/g) || []).length;
+  const ptWords = (t.match(/\b(uma|com|que|por|para|não|como|dos|das|mais|tem|seu|sua|isso|onde|aqui|muito|ainda|entre|foram|agora|então)\b/g) || []).length;
+  const htWords = (t.match(/\b(mwen|ou|li|yo|pa|nan|ak|pou|ki|sa|te|ap|anpil|tout|kòm|jan|lè|konsa)\b/g) || []).length;
+  const scores = {
+    es: esWords * 2 + esChars,
+    fr: frWords * 2 + frChars,
+    en: enWords * 2,
+    pt: ptWords * 2,
+    ht: htWords * 2,
+  };
+  const sorted = Object.entries(scores).sort((a,b) => b[1] - a[1]);
+  return sorted[0][1] > 0 ? sorted[0][0] : 'unknown';
 }
 
 function langName(code) {
   if (!code) return 'Unknown';
-  const c = code.slice(0, 2).toLowerCase();
+  const nameMap = { spanish:'es', english:'en', french:'fr', german:'de', portuguese:'pt', italian:'it', dutch:'nl', japanese:'ja', chinese:'zh', korean:'ko', arabic:'ar', russian:'ru', hindi:'hi', creole:'ht' };
+  const lower = code.toLowerCase().trim();
+  const c = nameMap[lower] || lower.slice(0, 2);
   const lang = TRANSLATE_LANGS.find(l => l.code === c);
-  return lang ? lang.name : code;
+  return lang ? lang.name : code.charAt(0).toUpperCase() + code.slice(1);
+}
+
+function toggleTranslate(msgId) {
+  const panel = document.getElementById(`tpanel-${msgId}`);
+  const arrow = document.getElementById(`arrow-${msgId}`);
+  panel.classList.toggle('open');
+  arrow.classList.toggle('open');
 }
 
 async function translateMsg(msgId) {
   const sel = document.getElementById(`lang-sel-${msgId}`);
   const target = sel.value;
   const card = document.getElementById(`card-${msgId}`);
+
+  // Collect transcript + bullet points
   const transcript = card?.querySelector('.msg-transcript');
-  if (!transcript) return;
-  const text = transcript.textContent;
+  const bulletEls = card?.querySelectorAll('.msg-summary .bullet span') || [];
+  const parts = [];
+  if (bulletEls.length) {
+    parts.push('BULLETS:');
+    bulletEls.forEach(b => parts.push('• ' + b.textContent));
+    parts.push('---');
+  }
+  if (transcript) parts.push(transcript.textContent);
+  const text = parts.join('\n');
+  if (!text.trim()) return;
+
   const resultEl = document.getElementById(`translation-${msgId}`);
   resultEl.style.display = 'block';
   resultEl.innerHTML = '<span style="color:var(--text-muted)">Translating…</span>';
   try {
     const r = await api('/api/rt/translate', { method: 'POST', body: JSON.stringify({ text, target }) });
     const targetLang = TRANSLATE_LANGS.find(l => l.code === target);
-    resultEl.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${targetLang?.flag || '🌐'} ${targetLang?.name || target}</div>${r.translation || r.text || 'Translation unavailable'}`;
+    let translated = r.translation || r.text || 'Translation unavailable';
+    // Format bullets in translation
+    translated = translated.replace(/^• /gm, '<div style="display:flex;gap:6px;padding:2px 0"><span style="color:#60a5fa;font-weight:700">•</span><span>').replace(/(?<=<span>)(.+)$/gm, '$1</span></div>');
+    resultEl.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${targetLang?.flag || '🏳️'} ${targetLang?.name || target}</div>${translated}`;
   } catch (e) {
     resultEl.innerHTML = '<span style="color:#ef4444">Translation failed</span>';
   }
@@ -553,8 +603,11 @@ function backToList() {
 
 function langFlag(lang) {
   const flags = { en:'🇬🇧', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', nl:'🇳🇱', ja:'🇯🇵', zh:'🇨🇳', ko:'🇰🇷', ar:'🇸🇦', ru:'🇷🇺', hi:'🇮🇳', ht:'🇭🇹', unknown:'🏳️' };
+  // Also map full names → codes
+  const nameMap = { spanish:'es', english:'en', french:'fr', german:'de', portuguese:'pt', italian:'it', dutch:'nl', japanese:'ja', chinese:'zh', korean:'ko', arabic:'ar', russian:'ru', hindi:'hi', creole:'ht' };
   if (!lang) return '🏳️';
-  const code = lang.slice(0, 2).toLowerCase();
+  const lower = lang.toLowerCase().trim();
+  const code = nameMap[lower] || lower.slice(0, 2);
   return flags[code] || '🏳️';
 }
 </script>
