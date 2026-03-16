@@ -21,8 +21,9 @@ const RT_NAV = [
 const RT_MOBILE_TABS = [
   { id:'home', label:'Home', href:'/dashboard/', icon:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>` },
   { id:'groups', label:'Groups', href:'/dashboard/groups.html', icon:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>` },
+  { id:'personal', label:'Inbox', href:'/dashboard/personal.html', icon:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>` },
   { id:'search', label:'Search', href:'/dashboard/search.html', icon:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>` },
-  { id:'settings', label:'Settings', href:'/dashboard/settings.html', icon:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>` },
+  { id:'more', label:'More', href:'#', icon:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>` },
 ];
 
 const PLAN_LIMITS = {
@@ -65,9 +66,60 @@ function renderSidebar(activeId) {
 function renderMobileTabs(activeId) {
   const el = document.getElementById('mobile-tabs');
   if (!el) return;
-  el.innerHTML = RT_MOBILE_TABS.map(t =>
-    `<a class="mobile-tab${t.id === activeId ? ' active' : ''}" href="${t.href}">${t.icon}<span>${t.label}</span></a>`
-  ).join('');
+
+  // Check if current page is one of the "more" pages
+  const morePages = ['summaries', 'transcripts', 'activity', 'exports', 'settings'];
+  const isMoreActive = morePages.includes(activeId);
+
+  el.innerHTML = RT_MOBILE_TABS.map(t => {
+    if (t.id === 'more') {
+      return `<a class="mobile-tab${isMoreActive ? ' active' : ''}" href="#" onclick="toggleMobileMenu(event)">${t.icon}<span>${t.label}</span></a>`;
+    }
+    return `<a class="mobile-tab${t.id === activeId ? ' active' : ''}" href="${t.href}">${t.icon}<span>${t.label}</span></a>`;
+  }).join('');
+
+  // Add slide-up drawer for "More" menu
+  if (!document.getElementById('mobile-drawer')) {
+    const drawer = document.createElement('div');
+    drawer.id = 'mobile-drawer';
+    drawer.className = 'mobile-drawer';
+    drawer.innerHTML = `
+      <div class="mobile-drawer-overlay" onclick="closeMobileMenu()"></div>
+      <div class="mobile-drawer-panel">
+        <div class="mobile-drawer-handle" onclick="closeMobileMenu()"><div class="handle-bar"></div></div>
+        <nav class="mobile-drawer-nav">
+          ${RT_NAV.filter(n => n.type !== 'separator').map(n =>
+            `<a class="mobile-drawer-item${n.id === activeId ? ' active' : ''}" href="${n.href}">
+              ${n.icon}<span>${n.label}</span>
+            </a>`
+          ).join('')}
+        </nav>
+        <div class="mobile-drawer-footer">
+          <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">PRO PLAN</div>
+          <div id="mobile-meters" class="sidebar-meters"></div>
+          <a class="sidebar-crosssell" href="https://voz-clara.com" target="_blank" style="margin-top:8px">🎤 Personal use → VozClara</a>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(drawer);
+  }
+}
+
+function toggleMobileMenu(e) {
+  if (e) e.preventDefault();
+  const drawer = document.getElementById('mobile-drawer');
+  if (drawer) {
+    drawer.classList.toggle('open');
+    document.body.style.overflow = drawer.classList.contains('open') ? 'hidden' : '';
+  }
+}
+
+function closeMobileMenu() {
+  const drawer = document.getElementById('mobile-drawer');
+  if (drawer) {
+    drawer.classList.remove('open');
+    document.body.style.overflow = '';
+  }
 }
 
 // ── Usage Meter ──
@@ -86,13 +138,17 @@ function usageMeter(label, emoji, used, total) {
 
 // ── Update sidebar meters from usage data ──
 function updateSidebarMeters(usage) {
-  const el = document.getElementById('sidebar-meters');
-  if (!el || !usage) return;
+  if (!usage) return;
   const plan = PLAN_LIMITS[usage.plan || 'starter'];
-  el.innerHTML =
+  const html =
     usageMeter('Voice min', '🎙', usage.voice_minutes || 0, plan.voice_min) +
     usageMeter('AI queries', '🤖', usage.ai_queries || 0, plan.ai_queries) +
     usageMeter('Groups', '👥', usage.groups || 0, plan.groups);
+  // Update both sidebar and mobile drawer
+  const el = document.getElementById('sidebar-meters');
+  if (el) el.innerHTML = html;
+  const mobileEl = document.getElementById('mobile-meters');
+  if (mobileEl) mobileEl.innerHTML = html;
 }
 
 // ── API Helper ──
