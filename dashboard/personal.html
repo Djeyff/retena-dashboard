@@ -7,209 +7,78 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/dashboard/styles.css">
   <style>
-    .chat-bubble {
-      max-width: 85%;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 13px;
-      line-height: 1.6;
-      position: relative;
-      margin-bottom: 4px;
-    }
-    .chat-bubble.them {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-bottom-left-radius: 4px;
-      align-self: flex-start;
-    }
-    .chat-bubble.me {
-      background: rgba(230,126,34,0.12);
-      border: 1px solid rgba(230,126,34,0.2);
-      border-bottom-right-radius: 4px;
-      align-self: flex-end;
-    }
-    .chat-time {
-      font-size: 10px;
-      color: var(--text-muted);
-      margin-bottom: 12px;
-    }
-    .chat-time.right { text-align: right; }
-    .chat-date-divider {
-      text-align: center;
-      font-size: 11px;
-      color: var(--text-muted);
-      padding: 12px 0 8px;
-      position: relative;
-    }
-    .chat-date-divider::before,
-    .chat-date-divider::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      width: 30%;
-      height: 1px;
-      background: var(--border);
-    }
-    .chat-date-divider::before { left: 0; }
-    .chat-date-divider::after { right: 0; }
-    .chat-thread {
-      display: flex;
-      flex-direction: column;
-      padding: 16px 20px;
-      overflow-y: auto;
-      flex: 1;
-    }
-    .voice-inline {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-      font-size: 12px;
-      color: var(--accent);
-    }
-    .msg-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px 16px;
-      max-width: 88%;
-      margin-bottom: 12px;
-    }
-    .msg-card.me {
-      background: rgba(230,126,34,0.06);
-      border-color: rgba(230,126,34,0.2);
-      align-self: flex-end;
-    }
-    .msg-card.them { align-self: flex-start; }
-    .msg-card-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      flex-wrap: wrap;
-    }
-    .msg-card-header .badge {
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-weight: 600;
-    }
-    .msg-card-header .badge-voice {
-      background: rgba(230,126,34,0.15);
-      color: var(--accent);
-    }
-    .msg-card-header .badge-text {
-      background: rgba(59,130,246,0.15);
-      color: #60a5fa;
-    }
-    .msg-summary {
-      border-left: 3px solid var(--accent);
-      background: rgba(230,126,34,0.06);
-      border-radius: 0 8px 8px 0;
-      padding: 10px 12px;
-      margin: 10px 0;
-    }
-    .msg-summary-title {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .msg-summary .bullet {
-      display: flex;
-      gap: 6px;
-      padding: 3px 0;
-      font-size: 12.5px;
-      color: var(--text-secondary);
-      line-height: 1.6;
-    }
-    .msg-summary .bullet::before {
-      content: '•';
-      color: var(--accent);
-      font-weight: 700;
-      font-size: 14px;
-      flex-shrink: 0;
-    }
-    .msg-transcript {
-      font-size: 13px;
-      line-height: 1.65;
-      color: var(--text-primary);
-      white-space: pre-wrap;
-      padding: 8px 0 4px;
-    }
-    .msg-footer {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-top: 8px;
-      flex-wrap: wrap;
-    }
-    .translate-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      color: var(--text-muted);
-      cursor: pointer;
-      margin-top: 6px;
-      padding: 2px 0;
-      user-select: none;
-    }
+    /* ── Chat Layout ── */
+    .two-panel { display: flex; height: calc(100vh - 60px); overflow: hidden; }
+    .panel-left { width: 340px; min-width: 280px; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    .panel-right { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Conversation List ── */
+    .conv-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    .conv-item:hover { background: rgba(230,126,34,0.04); }
+    .conv-item.selected { background: rgba(230,126,34,0.08); border-left: 3px solid var(--accent); }
+    .conv-preview { font-size: 12px; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+    .conv-time { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+    .conv-name { font-weight: 600; font-size: 13px; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .conv-meta { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+    .conv-badge { font-size: 10px; color: var(--text-muted); }
+    .conv-unread { background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; border-radius: 10px; min-width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; padding: 0 5px; }
+
+    /* ── Chat Header ── */
+    .chat-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--bg-sidebar); }
+    .chat-header-name { font-weight: 700; font-size: 15px; }
+    .chat-header-meta { font-size: 12px; color: var(--text-muted); }
+
+    /* ── Chat Thread ── */
+    .chat-thread { display: flex; flex-direction: column; padding: 16px 20px; overflow-y: auto; flex: 1; gap: 2px; }
+    .chat-date-divider { text-align: center; font-size: 11px; color: var(--text-muted); padding: 16px 0 8px; position: relative; }
+    .chat-date-divider::before, .chat-date-divider::after { content: ''; position: absolute; top: 55%; width: 30%; height: 1px; background: var(--border); }
+    .chat-date-divider::before { left: 5%; }
+    .chat-date-divider::after { right: 5%; }
+
+    /* ── Message Bubbles (WhatsApp-style) ── */
+    .msg-row { display: flex; margin-bottom: 2px; }
+    .msg-row.me { justify-content: flex-end; }
+    .msg-row.them { justify-content: flex-start; }
+    .msg-bubble { max-width: 75%; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.55; position: relative; word-wrap: break-word; }
+    .msg-bubble.me { background: rgba(230,126,34,0.10); border: 1px solid rgba(230,126,34,0.18); border-bottom-right-radius: 4px; }
+    .msg-bubble.them { background: var(--bg-card); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+    .msg-bubble-time { font-size: 10px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 6px; }
+    .msg-bubble.me .msg-bubble-time { justify-content: flex-end; }
+    .msg-bubble-text { white-space: pre-wrap; }
+
+    /* ── Voice Badge ── */
+    .voice-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--accent); margin-bottom: 4px; }
+
+    /* ── Summary Block ── */
+    .msg-summary { border-left: 3px solid var(--accent); background: rgba(230,126,34,0.06); border-radius: 0 8px 8px 0; padding: 8px 10px; margin: 6px 0 4px; }
+    .msg-summary-title { font-size: 10px; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .msg-summary .bullet { display: flex; gap: 6px; padding: 2px 0; font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .msg-summary .bullet::before { content: '•'; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+
+    /* ── Translate ── */
+    .translate-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); cursor: pointer; margin-top: 4px; user-select: none; }
     .translate-toggle:hover { color: var(--accent); }
-    .translate-toggle .arrow { transition: transform 0.2s; display: inline-block; font-size: 9px; }
-    .translate-toggle .arrow.open { transform: rotate(180deg); }
-    .translate-panel {
-      display: none;
-      align-items: center;
-      gap: 6px;
-      margin-top: 6px;
-      padding-top: 6px;
-    }
-    .translate-panel.open { display: flex; }
-    .translate-panel select {
-      background: var(--bg-sidebar);
-      color: var(--text-secondary);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 8px;
-      font-size: 11px;
-      font-family: inherit;
-    }
-    .translate-panel .btn-translate {
-      font-size: 11px;
-      padding: 4px 10px;
-      border-radius: 6px;
-      background: rgba(230,126,34,0.15);
-      color: var(--accent);
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-    }
+    .translate-panel { display: none; align-items: center; gap: 6px; margin-top: 6px; }
+    .translate-panel.open { display: flex; flex-wrap: wrap; }
+    .translate-panel select { background: var(--bg-sidebar); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-family: inherit; }
+    .translate-panel .btn-translate { font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(230,126,34,0.15); color: var(--accent); border: none; cursor: pointer; font-weight: 600; }
     .translate-panel .btn-translate:hover { background: rgba(230,126,34,0.25); }
-    .translation-result {
-      margin-top: 8px;
-      padding: 10px 12px;
-      border-left: 3px solid #60a5fa;
-      background: rgba(59,130,246,0.06);
-      border-radius: 0 8px 8px 0;
-      font-size: 13px;
-      color: var(--text-primary);
-      line-height: 1.6;
-      white-space: pre-wrap;
+    .translation-result { margin-top: 6px; padding: 8px 10px; border-left: 3px solid #60a5fa; background: rgba(59,130,246,0.06); border-radius: 0 8px 8px 0; font-size: 12px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
+
+    /* ── Empty State ── */
+    .panel-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); gap: 12px; }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .two-panel { flex-direction: column; }
+      .panel-left { width: 100%; border-right: none; }
+      .panel-right { width: 100%; }
+      .hidden-mobile { display: none !important; }
+      .msg-bubble { max-width: 88%; }
+      #back-btn { display: inline-flex !important; }
     }
-    .lang-arrow {
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-    .sender-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
+    @media (min-width: 769px) {
+      #back-btn { display: none !important; }
     }
   </style>
 </head>
@@ -219,33 +88,29 @@
   <div class="main">
     <div class="page-content two-panel">
 
-      <!-- Left: Sender List -->
+      <!-- Left: Conversation List -->
       <div class="panel-left" id="panel-left">
-        <div class="panel-left-header">
-          <h2>Personal Inbox</h2>
+        <div style="padding: 16px 16px 8px;">
+          <h2 style="font-size: 18px; font-weight: 700; margin: 0 0 10px;">Chats</h2>
+          <input class="input" placeholder="Search contacts…" id="conv-search" oninput="filterConversations()" style="font-size: 13px;">
         </div>
-        <div style="padding:8px 8px 0">
-          <input class="input" placeholder="Search contacts…" id="sender-search" oninput="filterSenders()" style="font-size:13px">
-        </div>
-        <div class="panel-list" id="sender-list"></div>
+        <div id="conv-list" style="overflow-y: auto; flex: 1;"></div>
       </div>
 
       <!-- Right: Chat Thread -->
       <div class="panel-right hidden-mobile" id="panel-right">
         <div class="panel-empty" id="chat-empty">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z"/></svg>
-          <p>Select a contact to see their messages</p>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          <p>Select a conversation</p>
         </div>
-        <!-- Chat header -->
-        <div id="chat-header" style="display:none;padding:14px 20px;border-bottom:1px solid var(--border);display:none;align-items:center;gap:12px;background:var(--bg-sidebar)">
-          <button class="btn btn-secondary btn-sm" onclick="backToList()" id="back-btn" style="display:none">←</button>
-          <div id="chat-header-avatar"></div>
+        <div class="chat-header" id="chat-header" style="display:none">
+          <button class="btn btn-secondary btn-sm" id="back-btn" onclick="backToList()">←</button>
+          <div id="chat-avatar"></div>
           <div>
-            <div id="chat-header-name" style="font-weight:700;font-size:15px"></div>
-            <div id="chat-header-meta" style="font-size:12px;color:var(--text-muted)"></div>
+            <div class="chat-header-name" id="chat-name"></div>
+            <div class="chat-header-meta" id="chat-meta"></div>
           </div>
         </div>
-        <!-- Messages -->
         <div class="chat-thread" id="chat-thread" style="display:none"></div>
       </div>
 
@@ -256,156 +121,164 @@
 
 <script src="/dashboard/js/shared.js"></script>
 <script>
-let allNotes = [];
-let senderMap = {};
-let selectedSender = null;
+// ── State ──
+let allMessages = [];
+let conversations = [];
+let selectedChatId = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   renderSidebar('personal');
-  renderMobileTabs('home');
-  loadNotes();
+  renderMobileTabs('personal');
+  loadPersonal();
 });
 
-async function loadNotes() {
-  showLoading(document.getElementById('sender-list'));
+// ── Load Data ──
+async function loadPersonal() {
+  showLoading(document.getElementById('conv-list'));
   try {
-    const data = await api('/api/rt/personal');
-    allNotes = data.items || data || [];
-    buildSenderMap();
-    renderSenderList();
+    // Try the new endpoint first (returns chat_id, from_me, conversations)
+    let data;
+    try {
+      data = await api('/api/data/personal');
+    } catch (e1) {
+      // Fallback to old endpoint
+      data = await api('/api/rt/personal');
+    }
+    allMessages = data.items || [];
+    conversations = data.conversations || buildConversations(allMessages);
+    renderConversationList();
   } catch (e) {
-    renderEmptyInbox();
+    document.getElementById('conv-list').innerHTML = `
+      <div class="panel-empty" style="padding:40px 20px">
+        <p>Could not load messages</p>
+        <p style="font-size:12px;color:var(--text-muted)">${e.message}</p>
+      </div>`;
   }
 }
 
-function buildSenderMap() {
-  senderMap = {};
-  allNotes.forEach(n => {
-    const key = n.sender_name || n.sender || n.chat_id || 'Unknown';
-    if (!senderMap[key]) {
-      senderMap[key] = {
-        name: key,
-        messages: [],
-        lastMessage: null,
-        voiceCount: 0,
-        textCount: 0,
+// ── Fallback: build conversations client-side if API doesn't return them ──
+function buildConversations(messages) {
+  const map = {};
+  for (const m of messages) {
+    const cid = m.chat_id;
+    if (!cid || cid === 'status@broadcast') continue;
+    if (!map[cid]) {
+      map[cid] = {
+        chat_id: cid,
+        contact_name: null,
+        last_message: m,
+        message_count: 0,
+        voice_count: 0,
+        text_count: 0,
       };
     }
-    senderMap[key].messages.push(n);
-    const isVoice = n.message_type === 'voice' || n.message_type === 'audio';
-    if (isVoice) senderMap[key].voiceCount++;
-    else senderMap[key].textCount++;
-    if (!senderMap[key].lastMessage || new Date(n.created_at) > new Date(senderMap[key].lastMessage.created_at)) {
-      senderMap[key].lastMessage = n;
+    if (!m.from_me && m.sender_name) {
+      map[cid].contact_name = m.sender_name;
     }
-  });
-  // Sort each sender's messages chronologically (oldest first)
-  Object.values(senderMap).forEach(s => {
-    s.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  });
+    map[cid].message_count++;
+    if (m.message_type === 'voice' || m.message_type === 'audio') map[cid].voice_count++;
+    else map[cid].text_count++;
+  }
+  // Resolve missing contact names
+  for (const c of Object.values(map)) {
+    if (!c.contact_name) {
+      const phone = c.chat_id.replace(/@.*/, '');
+      c.contact_name = phone;
+    }
+  }
+  return Object.values(map).sort((a, b) =>
+    new Date(b.last_message.timestamp || b.last_message.created_at) -
+    new Date(a.last_message.timestamp || a.last_message.created_at)
+  );
 }
 
-function filterSenders() {
-  const q = document.getElementById('sender-search').value.toLowerCase();
-  renderSenderList(q);
+// ── Filter ──
+function filterConversations() {
+  const q = document.getElementById('conv-search').value.toLowerCase();
+  renderConversationList(q);
 }
 
-function renderSenderList(filter = '') {
-  const el = document.getElementById('sender-list');
-  let senders = Object.values(senderMap)
-    .sort((a, b) => new Date(b.lastMessage?.created_at || 0) - new Date(a.lastMessage?.created_at || 0));
-
+// ── Render Conversation List ──
+function renderConversationList(filter = '') {
+  const el = document.getElementById('conv-list');
+  let convs = conversations;
   if (filter) {
-    senders = senders.filter(s => s.name.toLowerCase().includes(filter));
+    convs = convs.filter(c => (c.contact_name || '').toLowerCase().includes(filter));
   }
 
-  if (!senders.length) {
-    renderEmptyInbox();
+  if (!convs.length) {
+    el.innerHTML = `<div class="panel-empty" style="padding:40px 20px"><p>No conversations found</p></div>`;
     return;
   }
 
-  el.innerHTML = senders.map(s => {
-    const last = s.lastMessage;
-    const lastText = last?.transcription || last?.text || last?.content || '';
-    const isVoice = last?.message_type === 'voice' || last?.message_type === 'audio';
-    const total = s.messages.length;
+  el.innerHTML = convs.map(c => {
+    const last = c.last_message;
+    const text = last.transcription || last.text || last.body || last.content || '';
+    const isVoice = last.message_type === 'voice' || last.message_type === 'audio';
+    const prefix = last.from_me ? '<span style="color:var(--text-muted)">You: </span>' : '';
+    const voiceIcon = isVoice ? '🎤 ' : '';
+    const t = timeAgo(last.timestamp || last.created_at);
+    const sel = selectedChatId === c.chat_id ? ' selected' : '';
 
     return `
-      <div class="panel-list-item${selectedSender === s.name ? ' selected' : ''}" onclick="selectSender('${s.name.replace(/'/g, "\\'")}')">
-        <div style="display:flex;align-items:center;gap:10px">
-          ${renderAvatar(s.name)}
-          <div style="flex:1;min-width:0">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px">
-              <span style="font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.name}</span>
-              <span style="font-size:11px;color:var(--text-muted);flex-shrink:0">${timeAgo(last?.created_at)}</span>
-            </div>
-            <div style="font-size:12px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-              ${isVoice ? '🎤 ' : ''}${truncate(lastText, 50)}
-            </div>
-            <div class="sender-badge">
-              ${total} message${total !== 1 ? 's' : ''}
-              ${s.voiceCount ? ` · 🎤 ${s.voiceCount}` : ''}
-              ${s.textCount ? ` · 💬 ${s.textCount}` : ''}
-            </div>
+      <div class="conv-item${sel}" onclick="selectConversation('${c.chat_id}')">
+        ${renderAvatar(c.contact_name)}
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+            <span class="conv-name">${esc(c.contact_name)}</span>
+            <span class="conv-time">${t}</span>
+          </div>
+          <div class="conv-preview">${prefix}${voiceIcon}${esc(truncate(text, 45))}</div>
+          <div class="conv-meta">
+            <span class="conv-badge">${c.message_count} msg${c.message_count !== 1 ? 's' : ''}</span>
+            ${c.voice_count ? `<span class="conv-badge">🎤 ${c.voice_count}</span>` : ''}
           </div>
         </div>
       </div>`;
   }).join('');
 }
 
-function renderEmptyInbox() {
-  const el = document.getElementById('sender-list');
-  el.innerHTML = `
-    <div class="empty-state" style="padding:40px 20px">
-      <h3>No personal notes yet</h3>
-      <p>Forward a voice note from any chat to Retena's number to transcribe it.</p>
-      <div class="card" style="text-align:left;margin-top:16px">
-        <div style="font-size:13px;color:var(--text-muted);margin-bottom:8px">Send voice notes to:</div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:18px;font-weight:700;color:var(--text-primary)">+1 (350) 223-9900</span>
-          <button class="btn btn-secondary btn-sm" onclick="navigator.clipboard.writeText('+13502239900');showToast('Copied!')">Copy</button>
-        </div>
-      </div>
-    </div>`;
-}
+// ── Select Conversation ──
+function selectConversation(chatId) {
+  selectedChatId = chatId;
+  renderConversationList(document.getElementById('conv-search').value.toLowerCase());
 
-function selectSender(name) {
-  selectedSender = name;
-  renderSenderList(document.getElementById('sender-search').value.toLowerCase());
+  const conv = conversations.find(c => c.chat_id === chatId);
+  if (!conv) return;
 
-  const sender = senderMap[name];
-  if (!sender) return;
-
-  // Mobile: show chat panel
+  // Mobile: swap panels
   document.getElementById('panel-left').classList.add('hidden-mobile');
   document.getElementById('panel-right').classList.remove('hidden-mobile');
   document.getElementById('chat-empty').style.display = 'none';
 
   // Header
-  const header = document.getElementById('chat-header');
-  header.style.display = 'flex';
-  document.getElementById('chat-header-avatar').innerHTML = renderAvatar(name, 'lg');
-  document.getElementById('chat-header-name').textContent = name;
-  document.getElementById('chat-header-meta').textContent = `${sender.messages.length} messages · ${sender.voiceCount} voice · ${sender.textCount} text`;
+  document.getElementById('chat-header').style.display = 'flex';
+  document.getElementById('chat-avatar').innerHTML = renderAvatar(conv.contact_name, 'lg');
+  document.getElementById('chat-name').textContent = conv.contact_name;
+  document.getElementById('chat-meta').textContent =
+    `${conv.message_count} messages · ${conv.voice_count} voice · ${conv.text_count} text`;
 
-  if (window.innerWidth <= 768) document.getElementById('back-btn').style.display = 'inline-flex';
+  // Filter messages for this chat
+  const msgs = allMessages
+    .filter(m => m.chat_id === chatId)
+    .sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
 
-  // Render chat thread
-  const thread = document.getElementById('chat-thread');
-  thread.style.display = 'flex';
-  renderChatThread(sender.messages);
+  renderThread(msgs);
 
   // Scroll to bottom
+  const thread = document.getElementById('chat-thread');
   setTimeout(() => thread.scrollTop = thread.scrollHeight, 50);
 }
 
-function renderChatThread(messages) {
+// ── Render Thread ──
+function renderThread(messages) {
   const thread = document.getElementById('chat-thread');
+  thread.style.display = 'flex';
   let html = '';
   let lastDate = '';
 
   messages.forEach((m, idx) => {
-    const d = new Date(m.created_at);
+    const d = new Date(m.timestamp || m.created_at);
     const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
     if (dateStr !== lastDate) {
@@ -413,67 +286,103 @@ function renderChatThread(messages) {
       lastDate = dateStr;
     }
 
+    const isMe = m.from_me === true;
+    const side = isMe ? 'me' : 'them';
+    const text = m.transcription || m.text || m.body || m.content || '';
     const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
-    const text = m.transcription || m.text || m.content || '';
-    const isFromMe = m.from_me || m.sender_name === 'Jeffrey';
-    const cardClass = isFromMe ? 'me' : 'them';
     const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    const bullets = parseBullets(m.summary);
     const msgId = m.id || `msg-${idx}`;
-    const lang = m.language || detectLang(text);
-    const flag = langFlag(lang);
-    const langLabel = langName(lang);
+    const senderLabel = isMe ? '' : `<div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:2px">${esc(m.sender_name || '')}</div>`;
 
-    html += `<div class="msg-card ${cardClass}" id="card-${msgId}">`;
+    html += `<div class="msg-row ${side}">`;
+    html += `<div class="msg-bubble ${side}" id="card-${msgId}">`;
 
-    // Header row
-    html += `<div class="msg-card-header">`;
+    // Sender label (only for "them" messages)
+    if (!isMe) html += senderLabel;
+
+    // Voice badge
     if (isVoice) {
-      html += `<span class="badge badge-voice">🎤 ${formatDuration(m.duration || m.duration_seconds || 0)}</span>`;
-    } else {
-      html += `<span class="badge badge-text">💬 Text</span>`;
+      const dur = m.duration || m.duration_seconds || 0;
+      html += `<div class="voice-badge">🎤 ${formatDuration(dur)}</div>`;
     }
-    html += `<span style="font-size:16px">${flag}</span>`;
-    html += `<span style="font-size:11px;color:var(--text-muted)">${langLabel}</span>`;
-    html += `<span style="flex:1"></span>`;
-    html += `<span style="font-size:11px;color:var(--text-muted)">${timeStr}</span>`;
-    html += `</div>`;
 
-    // Summary bullets (if any)
+    // Summary
+    const bullets = parseBullets(m.summary);
     if (bullets.length > 0) {
       html += `<div class="msg-summary">`;
       html += `<div class="msg-summary-title">Summary</div>`;
-      html += bullets.map(b => `<div class="bullet"><span>${b}</span></div>`).join('');
+      html += bullets.map(b => `<div class="bullet"><span>${esc(b)}</span></div>`).join('');
       html += `</div>`;
     }
 
-    // Transcript
+    // Text content
     if (text) {
-      html += `<div class="msg-transcript">${text}</div>`;
+      html += `<div class="msg-bubble-text">${esc(text)}</div>`;
+    } else if (m.message_type === 'image' || m.message_type === 'album') {
+      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📷 ${m.media_caption ? esc(m.media_caption) : 'Photo'}</div>`;
+    } else if (m.message_type === 'video') {
+      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🎥 Video</div>`;
+    } else if (m.message_type === 'document') {
+      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📄 Document</div>`;
+    } else if (m.message_type === 'sticker') {
+      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🏷️ Sticker</div>`;
     }
 
-    // Translate toggle (collapsed by default)
-    html += `<div class="translate-toggle" onclick="toggleTranslate('${msgId}')">`;
-    html += `<span class="arrow" id="arrow-${msgId}">▼</span> Translate`;
-    html += `</div>`;
-    html += `<div class="translate-panel" id="tpanel-${msgId}">`;
-    html += `<span style="font-size:11px;color:var(--text-muted)">${flag} ${langLabel} →</span>`;
-    html += `<select id="lang-sel-${msgId}">`;
-    const defaultTarget = getDefaultLang();
-    TRANSLATE_LANGS.forEach(l => {
-      html += `<option value="${l.code}" ${l.code === defaultTarget ? 'selected' : ''}>${l.flag} ${l.name}</option>`;
-    });
-    html += `</select>`;
-    html += `<button class="btn-translate" onclick="translateMsg('${msgId}')">Go</button>`;
-    html += `</div>`;
-    html += `<div id="translation-${msgId}" style="display:none" class="translation-result"></div>`;
+    // Time + language
+    const lang = m.language || (text ? detectLang(text) : '');
+    const flag = lang ? langFlag(lang) : '';
+    html += `<div class="msg-bubble-time">${flag ? flag + ' ' : ''}${timeStr}${isMe ? ' ✓' : ''}</div>`;
 
-    html += `</div>`; // close card
+    // Translate toggle (only for messages with text)
+    if (text && text.length > 5) {
+      html += `<div class="translate-toggle" onclick="toggleTranslate('${msgId}')">`;
+      html += `<span id="arrow-${msgId}" style="font-size:9px">▼</span> Translate`;
+      html += `</div>`;
+      html += `<div class="translate-panel" id="tpanel-${msgId}">`;
+      const defaultTarget = getDefaultLang();
+      html += `<select id="lang-sel-${msgId}">`;
+      TRANSLATE_LANGS.forEach(l => {
+        html += `<option value="${l.code}" ${l.code === defaultTarget ? 'selected' : ''}>${l.flag} ${l.name}</option>`;
+      });
+      html += `</select>`;
+      html += `<button class="btn-translate" onclick="translateMsg('${msgId}')">Go</button>`;
+      html += `</div>`;
+      html += `<div id="translation-${msgId}" style="display:none" class="translation-result"></div>`;
+    }
+
+    html += `</div></div>`; // close bubble + row
   });
 
   thread.innerHTML = html;
 }
 
+// ── Back Button (mobile) ──
+function backToList() {
+  document.getElementById('panel-left').classList.remove('hidden-mobile');
+  document.getElementById('panel-right').classList.add('hidden-mobile');
+}
+
+// ── Utilities ──
+function esc(s) {
+  if (!s) return '';
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function parseBullets(summary) {
+  if (!summary) return [];
+  if (typeof summary === 'object') {
+    const pts = summary.keyPoints || summary.key_points || [];
+    const actions = summary.actionItems || summary.action_items || [];
+    return [...(Array.isArray(pts) ? pts : [pts]), ...(Array.isArray(actions) ? actions.map(a => '☐ ' + a) : [])].filter(Boolean);
+  }
+  const text = String(summary);
+  const lines = text.split(/[•\-\*]|\d+\.\s/).map(s => s.trim()).filter(Boolean);
+  return lines.length <= 1 && text.length > 10 ? [text] : lines;
+}
+
+// ── Language ──
 const TRANSLATE_LANGS = [
   { code: 'en', flag: '🇬🇧', name: 'English' },
   { code: 'es', flag: '🇪🇸', name: 'Spanish' },
@@ -491,163 +400,57 @@ const TRANSLATE_LANGS = [
   { code: 'ht', flag: '🇭🇹', name: 'Creole' },
 ];
 
-function getDefaultLang() {
-  return localStorage.getItem('retena_default_lang') || 'en';
+function getDefaultLang() { return localStorage.getItem('retena_default_lang') || 'en'; }
+
+function langFlag(lang) {
+  const flags = { en:'🇬🇧', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', nl:'🇳🇱', ja:'🇯🇵', zh:'🇨🇳', ko:'🇰🇷', ar:'🇸🇦', ru:'🇷🇺', hi:'🇮🇳', ht:'🇭🇹', unknown:'🏳️' };
+  const nameMap = { spanish:'es', english:'en', french:'fr', german:'de', portuguese:'pt', italian:'it', dutch:'nl', japanese:'ja', chinese:'zh', korean:'ko', arabic:'ar', russian:'ru', hindi:'hi', creole:'ht' };
+  if (!lang) return '🏳️';
+  const lower = lang.toLowerCase().trim();
+  const code = nameMap[lower] || lower.slice(0, 2);
+  return flags[code] || '🏳️';
 }
 
 function detectLang(text) {
-  if (!text || text.length < 3) return 'unknown';
+  if (!text || text.length < 3) return '';
   const t = ' ' + text.toLowerCase().replace(/[.,!?;:""''()\[\]]/g, ' ') + ' ';
-
-  // Spanish — heavy list, common DR/Caribbean Spanish included
-  const es = (t.match(/\s(el|la|los|las|un|una|de|en|que|y|no|se|lo|por|con|para|del|al|es|como|pero|más|todo|te|me|mi|tu|su|ya|si|hay|fue|ser|ir|va|le|a|o|bien|bueno|eso|ese|esa|qué|muy|sin|hoy|así|vamos|quiero|puede|tiene|dice|dijo|hola|donde|aquí|ahora|cómo|porque|cuando|nunca|nada|algo|sobre|hasta|otra|otro|poco|mucho|puedes|hacer|poner|decir|saber|esto|sido|mañana|después|entre|solo|también|necesito|plano|dimensiones)\s/g) || []).length;
-
-  // French
-  const fr = (t.match(/\s(le|la|les|de|du|des|un|une|en|et|est|que|ne|pas|je|tu|il|nous|vous|ils|ce|qui|dans|pour|sur|avec|son|sa|ses|au|aux|mais|ou|donc|car|bien|fait|être|avoir|sont|très|tout|cette|ces|plus|chez|oui|non|merci|bonjour|comme|aussi|même|puis|après|avant|encore|jamais|rien|peu|trop|ici|là)\s/g) || []).length;
-
-  // English
+  const es = (t.match(/\s(el|la|los|las|un|una|de|en|que|y|no|se|lo|por|con|para|del|al|es|como|pero|más|todo|te|me|mi|tu|su|ya|si|hay|fue|ser|ir|va|le|bien|bueno|eso|ese|esa|qué|muy|sin|hoy|así|vamos|quiero|puede|tiene|dice|hola|donde|aquí|ahora|cómo|porque|cuando|nunca|nada|algo|sobre|hasta|otra|poco|mucho|puedes|hacer|poner|decir|saber|esto|sido|mañana|después|entre|solo|también|necesito)\s/g) || []).length;
+  const fr = (t.match(/\s(le|la|les|de|du|des|un|une|en|et|est|que|ne|pas|je|tu|il|nous|vous|ils|ce|qui|dans|pour|sur|avec|son|sa|ses|au|aux|mais|ou|donc|car|bien|fait|être|avoir|sont|très|tout|cette|ces|plus|chez|oui|non|merci|bonjour|comme|aussi|même|puis|après|avant|encore|jamais|rien)\s/g) || []).length;
   const en = (t.match(/\s(the|and|is|are|was|were|have|has|this|that|with|from|they|their|would|could|should|about|been|just|also|not|but|will|can|had|all|when|there|what|your|more|some|into|than|its|our|out|very|only|then|them|here|where|still|after|each|much|both|which|who|how|why|yes|no|got|get|did|does|going|want|said|need)\s/g) || []).length;
-
-  // Portuguese
-  const pt = (t.match(/\s(o|a|os|as|um|uma|de|em|que|e|não|se|por|com|para|do|da|dos|das|ao|aos|mas|ou|como|mais|seu|sua|já|bem|isso|este|esta|onde|aqui|muito|ainda|entre|foram|agora|então|também|pode|tem|há|foi|são|está|você|meu|minha|todo|toda|depois|antes|sempre|nunca|nada|outro|outra)\s/g) || []).length;
-
-  // Haitian Creole — very specific words that don't overlap with Spanish/French
-  const ht = (t.match(/\s(mwen|ou|li|yo|pa|nan|ak|pou|ki|sa|te|ap|anpil|kòm|jan|lè|konsa|bagay|lavi|fè|gen|manje|dlo|lakay|pitit|zanmi|travay|jwenn|konn|bezwen|kote|poukisa|kilès|tout|tankou|parèt|rete|vini)\s/g) || []).length;
-
-  // Scoring: each word match = 1 point, bonus for diacritics
   const esBonus = (t.match(/[áéíóúñ¿¡]/g) || []).length;
   const frBonus = (t.match(/[àâçèêëîïôùûüœæ]/g) || []).length;
-
-  const scores = {
-    es: es + esBonus,
-    fr: fr + frBonus,
-    en: en,
-    pt: pt,
-    ht: ht,
-  };
-
-  // Tie-breaking: if es and ht are close, prefer es (Caribbean Spanish often shares short words)
-  if (scores.ht > 0 && scores.es >= scores.ht) scores.ht = 0;
-  // If es and pt are close, check for unique markers
-  if (scores.pt > 0 && scores.es > 0 && Math.abs(scores.es - scores.pt) <= 2) {
-    if (/[ñ¿¡]/.test(t)) scores.pt = 0; // definitely Spanish
-    if (/[ãõ]/.test(t) || /\snão\s/.test(t)) scores.es = 0; // definitely Portuguese
-  }
-
+  const scores = { es: es + esBonus, fr: fr + frBonus, en };
   const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  return sorted[0][1] > 0 ? sorted[0][0] : 'es'; // default to Spanish for DR context
+  return sorted[0][1] > 0 ? sorted[0][0] : '';
 }
 
-function langName(code) {
-  if (!code) return 'Unknown';
-  const nameMap = { spanish:'es', english:'en', french:'fr', german:'de', portuguese:'pt', italian:'it', dutch:'nl', japanese:'ja', chinese:'zh', korean:'ko', arabic:'ar', russian:'ru', hindi:'hi', creole:'ht' };
-  const lower = code.toLowerCase().trim();
-  const c = nameMap[lower] || lower.slice(0, 2);
-  const lang = TRANSLATE_LANGS.find(l => l.code === c);
-  return lang ? lang.name : code.charAt(0).toUpperCase() + code.slice(1);
-}
-
+// ── Translate ──
 function toggleTranslate(msgId) {
   const panel = document.getElementById(`tpanel-${msgId}`);
   const arrow = document.getElementById(`arrow-${msgId}`);
-  panel.classList.toggle('open');
-  arrow.classList.toggle('open');
+  if (panel) panel.classList.toggle('open');
+  if (arrow) arrow.style.transform = panel?.classList.contains('open') ? 'rotate(180deg)' : '';
 }
 
 async function translateMsg(msgId) {
   const sel = document.getElementById(`lang-sel-${msgId}`);
   const target = sel.value;
   const card = document.getElementById(`card-${msgId}`);
-
-  // Collect summary bullets + transcript
-  const transcript = card?.querySelector('.msg-transcript');
-  const bulletEls = card?.querySelectorAll('.msg-summary .bullet span') || [];
-  const parts = [];
-  if (bulletEls.length) {
-    parts.push('SUMMARY:');
-    bulletEls.forEach(b => parts.push('• ' + b.textContent));
-    parts.push('---');
-  }
-  if (transcript) parts.push(transcript.textContent);
-  const text = parts.join('\n');
-  if (!text.trim()) return;
+  const textEl = card?.querySelector('.msg-bubble-text');
+  const text = textEl?.textContent;
+  if (!text?.trim()) return;
 
   const resultEl = document.getElementById(`translation-${msgId}`);
   resultEl.style.display = 'block';
   resultEl.innerHTML = '<span style="color:var(--text-muted)">Translating…</span>';
   try {
     const r = await api('/api/rt/translate', { method: 'POST', body: JSON.stringify({ text, target }) });
-    const targetLang = TRANSLATE_LANGS.find(l => l.code === target);
-    let translated = r.translation || r.text || 'Translation unavailable';
-
-    // Split on --- to render summary vs transcript separately
-    let html = '';
-    const sections = translated.split(/\n?---\n?/);
-    if (sections.length >= 2) {
-      // Summary section
-      const summaryLines = sections[0].split('\n').filter(l => l.trim());
-      html += '<div style="border-left:3px solid #60a5fa;background:rgba(59,130,246,0.06);border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:8px">';
-      html += '<div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px">SUMMARY</div>';
-      summaryLines.forEach(line => {
-        const clean = line.replace(/^[•\-\*]\s*/, '').trim();
-        if (clean) html += `<div style="display:flex;gap:6px;padding:3px 0;font-size:12.5px;color:var(--text-secondary);line-height:1.6"><span style="color:#60a5fa;font-weight:700;flex-shrink:0">•</span><span>${clean}</span></div>`;
-      });
-      html += '</div>';
-      // Transcript section
-      html += `<div style="font-size:13px;line-height:1.65;color:var(--text-primary);white-space:pre-wrap">${sections.slice(1).join('\n---\n').trim()}</div>`;
-    } else {
-      html += `<div style="white-space:pre-wrap">${translated}</div>`;
-    }
-
-    resultEl.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${targetLang?.flag || '🏳️'} ${targetLang?.name || target}</div>${html}`;
+    const translated = r.translation || r.text || 'Translation unavailable';
+    const lang = TRANSLATE_LANGS.find(l => l.code === target);
+    resultEl.innerHTML = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">${lang?.flag || '🏳️'} ${lang?.name || target}</div><div style="white-space:pre-wrap">${esc(translated)}</div>`;
   } catch (e) {
     resultEl.innerHTML = '<span style="color:#ef4444">Translation failed</span>';
   }
-}
-
-function parseBullets(summary) {
-  if (!summary) return [];
-  let text = '';
-  if (typeof summary === 'object') {
-    const pts = summary.keyPoints || summary.key_points || [];
-    const actions = summary.actionItems || summary.action_items || [];
-    const parts = [...(Array.isArray(pts) ? pts : [pts]), ...(Array.isArray(actions) ? actions.map(a => '☐ ' + a) : [actions])];
-    return parts.filter(Boolean);
-  }
-  text = String(summary);
-  // Split on bullet markers: •, -, *, or numbered
-  const lines = text.split(/[•\-\*]|\d+\.\s/).map(s => s.trim()).filter(Boolean);
-  if (lines.length <= 1 && text.length > 10) return [text];
-  return lines;
-}
-
-function formatSummary(s) {
-  let html = '';
-  if (s.keyPoints || s.key_points) {
-    const pts = s.keyPoints || s.key_points;
-    html += Array.isArray(pts) ? pts.map(p => '• ' + p).join('<br>') : pts;
-  }
-  if (s.actionItems || s.action_items) {
-    const items = s.actionItems || s.action_items;
-    html += '<br><strong>Action items:</strong><br>';
-    html += Array.isArray(items) ? items.map(a => '☐ ' + a).join('<br>') : items;
-  }
-  return html || JSON.stringify(s);
-}
-
-function backToList() {
-  document.getElementById('panel-left').classList.remove('hidden-mobile');
-  document.getElementById('panel-right').classList.add('hidden-mobile');
-}
-
-function langFlag(lang) {
-  const flags = { en:'🇬🇧', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', nl:'🇳🇱', ja:'🇯🇵', zh:'🇨🇳', ko:'🇰🇷', ar:'🇸🇦', ru:'🇷🇺', hi:'🇮🇳', ht:'🇭🇹', unknown:'🏳️' };
-  // Also map full names → codes
-  const nameMap = { spanish:'es', english:'en', french:'fr', german:'de', portuguese:'pt', italian:'it', dutch:'nl', japanese:'ja', chinese:'zh', korean:'ko', arabic:'ar', russian:'ru', hindi:'hi', creole:'ht' };
-  if (!lang) return '🏳️';
-  const lower = lang.toLowerCase().trim();
-  const code = nameMap[lower] || lower.slice(0, 2);
-  return flags[code] || '🏳️';
 }
 </script>
 </body>
