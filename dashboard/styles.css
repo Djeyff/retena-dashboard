@@ -458,6 +458,8 @@ html, body {
   flex: 1;
   overflow-y: auto;
   background: var(--bg-page);
+  display: flex;
+  flex-direction: column;
 }
 
 .panel-left-header {
@@ -813,8 +815,8 @@ html, body {
     border-bottom: 1px solid var(--border);
   }
 
-  .panel-left.hidden-mobile { display: none; }
-  .panel-right.hidden-mobile { display: none; }
+  .panel-left.hidden-mobile { display: none !important; }
+  .panel-right.hidden-mobile { display: none !important; }
 
   .panel-right {
     width: 100%;
