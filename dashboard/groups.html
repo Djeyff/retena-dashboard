@@ -174,8 +174,8 @@ function renderGroupDetail(g) {
               <span class="activity-time">${timeAgo(m.timestamp || m.created_at)}</span>
             </div>
             <div class="activity-text">
-              ${m.message_type === 'voice' || m.type === 'voice' ? `<span class="voice-badge">🎤 ${formatDuration(m.duration || m.voice_duration_sec || 0)}</span> ` : ''}
-              ${truncate(m.text || m.message_text || m.content || m.transcription || '', 300)}
+              ${(m.message_type === 'voice' || m.type === 'voice') ? `<span class="voice-badge">🎤 ${(m.duration || m.voice_duration_sec) > 0 ? formatDuration(m.duration || m.voice_duration_sec) : 'Voice'}</span> ` : ''}
+              ${truncate(m.text || m.message_text || m.content || m.transcription || (m.message_type === 'voice' ? 'No transcription' : ''), 300)}
             </div>
           </div>
         </div>`).join('') : '<div style="padding:16px 0;font-size:13px;color:var(--text-muted)">No messages yet</div>'}
