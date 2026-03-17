@@ -344,13 +344,26 @@ async function selectConversation(chatId) {
   document.getElementById('chat-meta').textContent =
     `${conv.message_count} messages · ${conv.voice_count} voice · ${conv.text_count} text`;
 
-  // WhatsApp deep link — whatsapp:// scheme works in Brave + Chrome + most Android browsers
+  // WhatsApp deep link — iframe trick: fires custom scheme without navigating the page
+  // Fallback: wa.me (works in all browsers including Brave)
   const waBar = document.getElementById('chat-wa-bar');
   const waLink = document.getElementById('chat-wa-link');
   const phone = (conv.chat_id || '').split('@')[0].replace(/\D/g, '');
   if (phone && waBar && waLink) {
-    // whatsapp:// custom scheme: all browsers (incl. Brave) pass this to the WA app
-    waLink.href = `whatsapp://send?phone=${phone}`;
+    waLink.href = `https://wa.me/${phone}`;
+    waLink.onclick = (e) => {
+      e.preventDefault();
+      // Try to open via hidden iframe (doesn't navigate the page, just fires the intent)
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'display:none;width:0;height:0;border:0';
+      iframe.src = `whatsapp://send?phone=${phone}`;
+      document.body.appendChild(iframe);
+      // After 1.5s, if app didn't open, fallback to wa.me in new tab
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        window.open(`https://wa.me/${phone}`, '_blank');
+      }, 1500);
+    };
     waBar.style.display = 'block';
   }
 
