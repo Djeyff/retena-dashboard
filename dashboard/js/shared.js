@@ -216,6 +216,18 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function esc(s) {
+  if (!s) return '';
+  const div = document.createElement('div');
+  div.textContent = String(s);
+  return div.innerHTML;
+}
+
+function truncate(s, len = 100) {
+  if (!s) return '';
+  return s.length > len ? s.slice(0, len) + '…' : s;
+}
+
 function timeAgo(dateStr) {
   if (!dateStr) return '';
   const now = new Date();
