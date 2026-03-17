@@ -364,6 +364,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSidebar('settings');
   renderMobileTabs('settings');
   loadSettings();
+  loadNotifPrefs();
 });
 
 function showTab(tabId) {
@@ -508,7 +509,19 @@ function largeMeter(label, used, total, unit = '') {
 function toggleNotif(id) {
   const el = document.getElementById(id);
   el.classList.toggle('on');
-  showToast('Notification preference updated');
+  // Persist to localStorage
+  const prefs = JSON.parse(localStorage.getItem('retena_notif_prefs') || '{}');
+  prefs[id] = el.classList.contains('on');
+  localStorage.setItem('retena_notif_prefs', JSON.stringify(prefs));
+  showToast(el.classList.contains('on') ? 'Notification enabled' : 'Notification disabled');
+}
+
+function loadNotifPrefs() {
+  const prefs = JSON.parse(localStorage.getItem('retena_notif_prefs') || '{"notif-newgroup":true}');
+  for (const [id, on] of Object.entries(prefs)) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('on', on);
+  }
 }
 
 async function sendInvite() {

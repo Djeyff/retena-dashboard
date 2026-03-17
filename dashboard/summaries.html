@@ -15,14 +15,32 @@
 
       <div class="page-header animate-in">
         <h1 class="page-title">Summaries</h1>
+        <p style="font-size:13px;color:var(--text-muted);margin-top:4px">AI-generated briefings of your WhatsApp conversations</p>
       </div>
 
       <!-- Controls -->
       <div class="animate-in animate-in-d1" style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
-        <input type="date" class="input" id="summary-date" style="width:auto" onchange="loadSummaries()">
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="btn btn-sm" onclick="changeDate(-1)" style="background:var(--bg-tertiary);padding:6px 10px">←</button>
+          <input type="date" class="input" id="summary-date" style="width:auto" onchange="loadSummaries()">
+          <button class="btn btn-sm" onclick="changeDate(1)" style="background:var(--bg-tertiary);padding:6px 10px">→</button>
+        </div>
         <div style="display:flex;border-radius:8px;overflow:hidden;border:1px solid var(--border)">
           <button class="btn btn-sm summary-toggle active" id="toggle-daily" onclick="setType('daily')" style="border-radius:0;border:none">Daily</button>
           <button class="btn btn-sm summary-toggle" id="toggle-weekly" onclick="setType('weekly')" style="border-radius:0;border:none">Weekly</button>
+        </div>
+        <button class="btn btn-sm" id="generate-btn" onclick="loadSummaries()" style="background:var(--accent);color:white">
+          ✨ Generate
+        </button>
+      </div>
+
+      <!-- Stats bar -->
+      <div id="summary-stats" class="animate-in animate-in-d1" style="display:none;margin-bottom:20px">
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div class="stat-pill" id="stat-chats">0 chats</div>
+          <div class="stat-pill" id="stat-msgs">0 messages</div>
+          <div class="stat-pill" id="stat-voice">0 voice notes</div>
+          <div class="stat-pill" id="stat-speakers">0 participants</div>
         </div>
       </div>
 
@@ -33,16 +51,130 @@
 </div>
 <nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
 
+<style>
+.stat-pill {
+  background: var(--bg-tertiary);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.summary-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+.summary-card:hover {
+  border-color: var(--accent);
+}
+.summary-section {
+  margin-bottom: 14px;
+}
+.summary-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.topic-pill {
+  display: inline-block;
+  background: rgba(230,126,34,0.12);
+  color: var(--accent);
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin: 2px 4px 2px 0;
+}
+.action-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.action-check {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.decision-item {
+  padding: 4px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.highlight-box {
+  background: rgba(230,126,34,0.06);
+  border-left: 3px solid var(--accent);
+  padding: 10px 14px;
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.5;
+}
+.speakers-list {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.speaker-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-tertiary);
+  padding: 2px 8px 2px 2px;
+  border-radius: 14px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.speaker-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: white;
+}
+</style>
+
 <script src="/dashboard/js/shared.js"></script>
 <script>
 let summaryType = 'daily';
+const SPEAKER_COLORS = ['#E67E22','#3498DB','#2ECC71','#9B59B6','#E74C3C','#1ABC9C','#F39C12','#E91E63','#00BCD4','#FF5722'];
 
 document.addEventListener('DOMContentLoaded', () => {
   renderSidebar('summaries');
   renderMobileTabs('home');
-  document.getElementById('summary-date').value = new Date().toISOString().split('T')[0];
-  loadSummaries();
+  // Default to yesterday (more likely to have full data)
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  document.getElementById('summary-date').value = yesterday.toISOString().split('T')[0];
+  setType('daily');
 });
+
+function changeDate(delta) {
+  const input = document.getElementById('summary-date');
+  const d = new Date(input.value);
+  d.setDate(d.getDate() + delta);
+  input.value = d.toISOString().split('T')[0];
+  loadSummaries();
+}
 
 function setType(type) {
   summaryType = type;
@@ -55,63 +187,116 @@ function setType(type) {
   loadSummaries();
 }
 
+function speakerAvatar(name, idx) {
+  const initial = (name || '?')[0].toUpperCase();
+  const color = SPEAKER_COLORS[idx % SPEAKER_COLORS.length];
+  return `<div class="speaker-dot" style="background:${color}">${initial}</div>`;
+}
+
 async function loadSummaries() {
   const el = document.getElementById('summaries-content');
+  const statsBar = document.getElementById('summary-stats');
+  const btn = document.getElementById('generate-btn');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Generating...';
   showLoading(el);
+  statsBar.style.display = 'none';
+
   const date = document.getElementById('summary-date').value;
   try {
-    const data = await api(`/api/rt/summaries?date=${date}&type=${summaryType}`);
-    const items = data.items || data || [];
+    const data = await api(`/api/summaries?date=${date}&type=${summaryType}`);
+    const items = data.items || [];
+
+    btn.disabled = false;
+    btn.textContent = '✨ Generate';
+
     if (!items.length) {
-      showEmpty(el, 'No summaries for this date', `Try selecting a different date or switch between daily and weekly views.`);
+      showEmpty(el, 'No conversations found', `No messages were captured on ${date}. Try a different date or check that your WhatsApp is connected.`);
       return;
     }
-    el.innerHTML = items.map(s => `
-      <div class="card animate-in" style="margin-bottom:16px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:8px">
-            <span style="font-size:18px">${s.emoji || '💬'}</span>
-            <span style="font-weight:600;font-size:15px">${s.group_name || s.name || 'Group'}</span>
+
+    // Stats bar
+    const totalMsgs = items.reduce((s, i) => s + (i.messages_processed || 0), 0);
+    const totalVoice = items.reduce((s, i) => s + (i.voice_notes || 0), 0);
+    const totalSpeakers = items.reduce((s, i) => s + (i.unique_speakers || 0), 0);
+    document.getElementById('stat-chats').textContent = `${items.length} chat${items.length !== 1 ? 's' : ''}`;
+    document.getElementById('stat-msgs').textContent = `${totalMsgs} messages`;
+    document.getElementById('stat-voice').textContent = `${totalVoice} voice notes`;
+    document.getElementById('stat-speakers').textContent = `${totalSpeakers} participants`;
+    statsBar.style.display = 'block';
+
+    el.innerHTML = items.map((s, idx) => {
+      const topics = s.key_topics || s.topics || [];
+      const decisions = s.decisions || s.key_decisions || [];
+      const actions = s.action_items || [];
+      const speakers = s.speakers || [];
+
+      return `
+      <div class="summary-card animate-in" style="animation-delay:${idx * 60}ms">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-size:24px">${s.emoji || '💬'}</span>
+            <div>
+              <div style="font-weight:700;font-size:15px">${esc(s.group_name || 'Chat')}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${s.messages_processed} msgs · ${s.voice_notes} voice · ${s.unique_speakers} speakers</div>
+            </div>
           </div>
-          <span style="font-size:12px;color:var(--text-muted)">${s.messages_processed || 0} msgs · ${s.voice_notes || 0} voice · ${s.unique_speakers || 0} speakers</span>
+          <span class="pill" style="background:rgba(230,126,34,0.12);color:var(--accent);font-size:11px">${s.sentiment || 'neutral'}</span>
         </div>
 
-        ${s.decisions || s.key_decisions ? `
-        <div style="margin-bottom:10px">
-          <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Key Decisions</div>
-          <div style="font-size:13px;color:var(--text-secondary);line-height:1.6">${formatList(s.decisions || s.key_decisions)}</div>
+        <!-- Summary -->
+        ${s.summary ? `
+        <div class="summary-section">
+          <div style="font-size:14px;color:var(--text-primary);line-height:1.6">${esc(s.summary)}</div>
         </div>` : ''}
 
-        ${s.action_items ? `
-        <div style="margin-bottom:10px">
-          <div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Action Items</div>
-          <div style="font-size:13px;color:var(--text-secondary);line-height:1.6">${formatList(s.action_items, '☐')}</div>
+        <!-- Topics -->
+        ${topics.length ? `
+        <div class="summary-section">
+          <div class="summary-section-title">Topics</div>
+          <div>${topics.map(t => `<span class="topic-pill">${esc(t)}</span>`).join('')}</div>
         </div>` : ''}
 
-        ${s.topics ? `
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          ${(Array.isArray(s.topics) ? s.topics : [s.topics]).map(t => `<span class="pill pill-group">${t}</span>`).join('')}
+        <!-- Highlight -->
+        ${s.highlight ? `
+        <div class="summary-section">
+          <div class="summary-section-title">Highlight</div>
+          <div class="highlight-box">💡 ${esc(s.highlight)}</div>
         </div>` : ''}
 
-        <button class="btn btn-secondary btn-sm" onclick="exportSummary('${s.id || ''}')">📄 Export PDF</button>
-      </div>
-    `).join('');
+        <!-- Decisions -->
+        ${decisions.length ? `
+        <div class="summary-section">
+          <div class="summary-section-title">Key Decisions</div>
+          ${decisions.map(d => `<div class="decision-item">▸ ${esc(d)}</div>`).join('')}
+        </div>` : ''}
+
+        <!-- Action Items -->
+        ${actions.length ? `
+        <div class="summary-section">
+          <div class="summary-section-title">Action Items</div>
+          ${actions.map(a => `<div class="action-item"><div class="action-check"></div><span>${esc(a)}</span></div>`).join('')}
+        </div>` : ''}
+
+        <!-- Speakers -->
+        ${speakers.length ? `
+        <div class="summary-section">
+          <div class="summary-section-title">Participants</div>
+          <div class="speakers-list">
+            ${speakers.map((sp, i) => `<div class="speaker-chip">${speakerAvatar(sp, i)} ${esc(sp)}</div>`).join('')}
+          </div>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+
   } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '✨ Generate';
     showError(el);
   }
 }
-
-function formatList(items, prefix = '•') {
-  if (Array.isArray(items)) return items.map(i => `${prefix} ${i}`).join('<br>');
-  return items || '';
-}
-
-async function exportSummary(id) {
-  showToast('Export feature coming soon');
-}
-
-// Initialize toggle styles
-setType('daily');
 </script>
 </body>
 </html>
