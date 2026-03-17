@@ -283,12 +283,9 @@ async function loadSummaries(forceRegenerate = false) {
         </div>
 
         <!-- Summary -->
-        ${s.summary && !isFallback ? `
+        ${s.summary ? `
         <div class="summary-section">
           <div style="font-size:14px;color:var(--text-primary);line-height:1.6">${esc(s.summary)}</div>
-        </div>` : isFallback ? `
-        <div class="summary-section">
-          <div style="font-size:13px;color:var(--text-muted);font-style:italic;padding:8px 0">⚠️ Not enough text content to generate a summary — ${s.voice_notes > 0 ? 'voice notes may not be transcribed yet.' : 'no readable messages found.'}</div>
         </div>` : ''}
 
         <!-- Topics -->
