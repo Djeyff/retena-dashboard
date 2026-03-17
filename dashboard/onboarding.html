@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Get Started — Retena</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --border: #2e3248; --border2: #3d4266;
+      --text: #f0f2ff; --text2: #9ba3c7; --text3: #6b7499;
+      --accent: #E67E22; --accent2: #d4701a;
+      --green: #22c55e; --red: #ef4444;
+      --radius: 14px; --radius-sm: 9px;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 24px 16px 60px; }
+
+    /* Header */
+    .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; }
+    .logo svg { flex-shrink: 0; }
+    .logo-name { font-weight: 700; font-size: 1.2rem; }
+
+    /* Progress */
+    .progress { display: flex; align-items: center; gap: 0; margin-bottom: 40px; }
+    .step-dot { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: .8rem; font-weight: 700; border: 2px solid var(--border2); color: var(--text3); background: var(--bg2); transition: all .3s; flex-shrink: 0; }
+    .step-dot.active { border-color: var(--accent); color: var(--accent); background: rgba(230,126,34,.12); }
+    .step-dot.done { border-color: var(--green); color: #fff; background: var(--green); }
+    .step-line { flex: 1; height: 2px; background: var(--border); min-width: 24px; max-width: 60px; transition: background .3s; }
+    .step-line.done { background: var(--green); }
+
+    /* Card */
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 32px 28px; width: 100%; max-width: 520px; }
+    .card-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; }
+    .card-sub { color: var(--text2); font-size: .9rem; line-height: 1.5; margin-bottom: 28px; }
+
+    /* Form */
+    label { display: block; font-size: .82rem; font-weight: 600; color: var(--text2); margin-bottom: 6px; margin-top: 18px; }
+    label:first-of-type { margin-top: 0; }
+    input[type=text], input[type=email] {
+      width: 100%; padding: 12px 14px; background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: var(--radius-sm); color: var(--text); font-family: inherit; font-size: .95rem;
+      outline: none; transition: border-color .2s;
+    }
+    input:focus { border-color: var(--accent); }
+    .input-note { font-size: .78rem; color: var(--text3); margin-top: 5px; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 20px; border-radius: var(--radius-sm); font-family: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; border: none; transition: all .2s; }
+    .btn-primary { background: var(--accent); color: #fff; width: 100%; margin-top: 24px; padding: 14px; font-size: .95rem; }
+    .btn-primary:hover { background: var(--accent2); }
+    .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-outline { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+    .btn-outline:hover { border-color: var(--border2); background: var(--bg3); color: var(--text); }
+
+    /* Plan cards */
+    .plans { display: flex; flex-direction: column; gap: 12px; margin-bottom: 8px; }
+    .plan-card { background: var(--bg3); border: 2px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all .2s; position: relative; }
+    .plan-card:hover { border-color: var(--border2); }
+    .plan-card.selected { border-color: var(--accent); background: rgba(230,126,34,.07); }
+    .plan-badge { position: absolute; top: -1px; right: 16px; background: var(--accent); color: #fff; font-size: .7rem; font-weight: 700; padding: 3px 10px; border-radius: 0 0 8px 8px; letter-spacing: .04em; }
+    .plan-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .plan-name { font-weight: 700; font-size: 1rem; }
+    .plan-note { font-size: .78rem; color: var(--text3); margin-top: 2px; }
+    .plan-price { text-align: right; flex-shrink: 0; }
+    .plan-price-num { font-size: 1.3rem; font-weight: 700; }
+    .plan-price-per { font-size: .75rem; color: var(--text3); }
+    .plan-features { margin-top: 14px; display: flex; flex-direction: column; gap: 5px; }
+    .plan-feat { display: flex; align-items: center; gap: 7px; font-size: .82rem; color: var(--text2); }
+    .plan-feat svg { color: var(--green); flex-shrink: 0; }
+    .plan-feat.dim { color: var(--text3); }
+    .plan-feat.dim svg { color: var(--text3); }
+    .radio-dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border2); flex-shrink: 0; transition: all .2s; }
+    .plan-card.selected .radio-dot { border-color: var(--accent); background: var(--accent); box-shadow: 0 0 0 3px rgba(230,126,34,.2); }
+
+    /* Connect step */
+    .wa-number { background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); padding: 18px; text-align: center; margin: 20px 0; }
+    .wa-number-label { font-size: .78rem; color: var(--text3); margin-bottom: 6px; }
+    .wa-number-val { font-size: 1.5rem; font-weight: 700; letter-spacing: .04em; color: var(--text); }
+    .wa-number-copy { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; font-size: .78rem; color: var(--accent); cursor: pointer; }
+    .steps-list { display: flex; flex-direction: column; gap: 12px; margin: 20px 0; }
+    .step-item { display: flex; gap: 12px; align-items: flex-start; }
+    .step-num { width: 26px; height: 26px; border-radius: 50%; background: rgba(230,126,34,.15); color: var(--accent); font-weight: 700; font-size: .8rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .step-text { font-size: .88rem; color: var(--text2); line-height: 1.5; }
+    .step-text strong { color: var(--text); }
+
+    /* Success */
+    .success-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(34,197,94,.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; }
+    .alert { padding: 12px 14px; border-radius: var(--radius-sm); font-size: .85rem; margin-top: 10px; }
+    .alert-err { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
+    .alert-ok { background: rgba(34,197,94,.1); border: 1px solid rgba(34,197,94,.3); color: #86efac; }
+
+    /* Trial note */
+    .trial-note { text-align: center; font-size: .78rem; color: var(--text3); margin-top: 12px; }
+
+    @media (max-width: 480px) {
+      .card { padding: 24px 18px; }
+      .plan-card { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="logo">
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#1E3A5F"/><text x="16" y="22" text-anchor="middle" fill="white" font-family="DM Sans" font-weight="700" font-size="18">R</text></svg>
+  <span class="logo-name">Retena</span>
+</div>
+
+<!-- Progress bar -->
+<div class="progress" id="progressBar">
+  <div class="step-dot active" id="dot-1">1</div>
+  <div class="step-line" id="line-1"></div>
+  <div class="step-dot" id="dot-2">2</div>
+  <div class="step-line" id="line-2"></div>
+  <div class="step-dot" id="dot-3">3</div>
+  <div class="step-line" id="line-3"></div>
+  <div class="step-dot" id="dot-4">4</div>
+</div>
+
+<!-- ── STEP 1: Account ── -->
+<div class="card" id="step1">
+  <div class="card-title">Create your account</div>
+  <div class="card-sub">Start your 7-day free trial. No charge until day 8.</div>
+
+  <label>Work email</label>
+  <input type="email" id="s1-email" placeholder="you@company.com" autocomplete="email" />
+
+  <label>Your name</label>
+  <input type="text" id="s1-name" placeholder="Juan García" autocomplete="name" />
+
+  <label>Company / team name</label>
+  <input type="text" id="s1-company" placeholder="Construcciones Ramírez" />
+
+  <div id="s1-error"></div>
+  <button class="btn btn-primary" id="s1-btn" onclick="step1Next()">Continue →</button>
+</div>
+
+<!-- ── STEP 2: Plan ── -->
+<div class="card" id="step2" style="display:none">
+  <div class="card-title">Choose your plan</div>
+  <div class="card-sub">All plans include a 7-day free trial. Your card won't be charged until day 8.</div>
+
+  <div class="plans">
+    <!-- Starter -->
+    <div class="plan-card" id="plan-starter" onclick="selectPlan('starter')">
+      <div class="plan-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px"><div class="radio-dot" id="radio-starter"></div><div class="plan-name">Starter</div></div>
+          <div class="plan-note">5 groups · 1 seat</div>
+        </div>
+        <div class="plan-price"><div class="plan-price-num">$39</div><div class="plan-price-per">/mo</div></div>
+      </div>
+      <div class="plan-features">
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>5 WhatsApp groups</div>
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>100 voice minutes/mo</div>
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>AI daily summaries</div>
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>50 AI queries/mo</div>
+      </div>
+    </div>
+
+    <!-- Pro -->
+    <div class="plan-card selected" id="plan-pro" onclick="selectPlan('pro')">
+      <div class="plan-badge">MOST POPULAR</div>
+      <div class="plan-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px"><div class="radio-dot" id="radio-pro" style="border-color:var(--accent);background:var(--accent);box-shadow:0 0 0 3px rgba(230,126,34,.2)"></div><div class="plan-name">Pro</div></div>
+          <div class="plan-note">15 groups · 3 seats</div>
+        </div>
+        <div class="plan-price"><div class="plan-price-num">$79</div><div class="plan-price-per">/mo</div></div>
+      </div>
+      <div class="plan-features">
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>15 WhatsApp groups</div>
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>500 voice minutes/mo</div>
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Everything in Starter</div>
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>300 AI queries/mo · Team tracking</div>
+      </div>
+    </div>
+
+    <!-- Business -->
+    <div class="plan-card" id="plan-business" onclick="selectPlan('business')">
+      <div class="plan-header">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px"><div class="radio-dot" id="radio-business"></div><div class="plan-name">Business</div></div>
+          <div class="plan-note">Unlimited groups · 5 seats</div>
+        </div>
+        <div class="plan-price"><div class="plan-price-num">$199</div><div class="plan-price-per">/mo</div></div>
+      </div>
+      <div class="plan-features">
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Unlimited groups</div>
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Unlimited voice minutes</div>
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Everything in Pro</div>
+        <div class="plan-feat"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>API access · SLA · Onboarding</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" id="s2-btn" onclick="step2Next()">Start free trial →</button>
+  <div class="trial-note">7-day free trial · Credit card required · Cancel anytime</div>
+  <div id="s2-error"></div>
+</div>
+
+<!-- ── STEP 3: Connect WhatsApp ── -->
+<div class="card" id="step3" style="display:none">
+  <div class="card-title">Connect your first group</div>
+  <div class="card-sub">Add Retena to any WhatsApp group — your team changes nothing.</div>
+
+  <div class="wa-number">
+    <div class="wa-number-label">Retena's WhatsApp number</div>
+    <div class="wa-number-val" id="retena-number">+1 (555) RETENA</div>
+    <div class="wa-number-copy" onclick="copyNumber()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      <span id="copy-label">Copy number</span>
+    </div>
+  </div>
+
+  <div class="steps-list">
+    <div class="step-item">
+      <div class="step-num">1</div>
+      <div class="step-text"><strong>Save the number</strong> in your phone contacts as "Retena"</div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">2</div>
+      <div class="step-text"><strong>Open any WhatsApp group</strong> where you want transcription</div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">3</div>
+      <div class="step-text"><strong>Add Retena</strong> as a participant — it needs admin rights to receive voice notes</div>
+    </div>
+    <div class="step-item">
+      <div class="step-num">4</div>
+      <div class="step-text"><strong>Send a voice note</strong> in the group — you'll see it transcribed in your dashboard within 10 seconds</div>
+    </div>
+  </div>
+
+  <button class="btn btn-primary" onclick="goToDashboard()">Open my dashboard →</button>
+  <div style="text-align:center;margin-top:12px">
+    <span style="font-size:.8rem;color:var(--text3)">You can also connect groups from the Groups page in your dashboard</span>
+  </div>
+</div>
+
+<!-- ── STEP 4: Done ── -->
+<div class="card" id="step4" style="display:none;text-align:center">
+  <div class="success-icon">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+  <div class="card-title">You're all set!</div>
+  <div class="card-sub" style="text-align:center">Your account is active. Start by connecting your first WhatsApp group.</div>
+  <button class="btn btn-primary" onclick="goToDashboard()">Open dashboard →</button>
+</div>
+
+<script>
+  let currentStep = 1;
+  let selectedPlan = 'pro';
+  let userEmail = '';
+
+  // ── Step 1: Account ──
+  async function step1Next() {
+    const email = document.getElementById('s1-email').value.trim();
+    const name = document.getElementById('s1-name').value.trim();
+    const company = document.getElementById('s1-company').value.trim();
+    const errEl = document.getElementById('s1-error');
+    errEl.innerHTML = '';
+
+    if (!email || !email.includes('@')) {
+      errEl.innerHTML = '<div class="alert alert-err">Please enter a valid work email.</div>';
+      return;
+    }
+    if (!name) {
+      errEl.innerHTML = '<div class="alert alert-err">Please enter your name.</div>';
+      return;
+    }
+
+    const btn = document.getElementById('s1-btn');
+    btn.disabled = true; btn.textContent = 'Creating account…';
+
+    try {
+      const res = await fetch('/api/rt/onboard/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name, company }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error');
+      userEmail = email;
+      goToStep(2);
+    } catch (e) {
+      errEl.innerHTML = `<div class="alert alert-err">${e.message}</div>`;
+      btn.disabled = false; btn.textContent = 'Continue →';
+    }
+  }
+
+  // ── Step 2: Plan ──
+  function selectPlan(plan) {
+    selectedPlan = plan;
+    ['starter','pro','business'].forEach(p => {
+      const card = document.getElementById('plan-' + p);
+      const radio = document.getElementById('radio-' + p);
+      card.classList.toggle('selected', p === plan);
+      if (p === plan) {
+        radio.style.borderColor = 'var(--accent)';
+        radio.style.background = 'var(--accent)';
+        radio.style.boxShadow = '0 0 0 3px rgba(230,126,34,.2)';
+      } else {
+        radio.style.borderColor = 'var(--border2)';
+        radio.style.background = 'transparent';
+        radio.style.boxShadow = 'none';
+      }
+    });
+  }
+
+  async function step2Next() {
+    const btn = document.getElementById('s2-btn');
+    const errEl = document.getElementById('s2-error');
+    btn.disabled = true; btn.textContent = 'Loading checkout…';
+    errEl.innerHTML = '';
+
+    try {
+      const res = await fetch('/api/rt/onboard/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: selectedPlan, email: userEmail }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not start checkout');
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        // Paddle not configured yet — skip to connect step
+        goToStep(3);
+      }
+    } catch (e) {
+      errEl.innerHTML = `<div class="alert alert-err" style="margin-top:12px">${e.message}</div>`;
+      btn.disabled = false; btn.textContent = 'Start free trial →';
+    }
+  }
+
+  // ── Step nav ──
+  function goToStep(n) {
+    for (let i = 1; i <= 4; i++) {
+      document.getElementById('step' + i).style.display = i === n ? 'block' : 'none';
+      const dot = document.getElementById('dot-' + i);
+      if (i < n) { dot.className = 'step-dot done'; dot.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>`; }
+      else if (i === n) { dot.className = 'step-dot active'; dot.textContent = i; }
+      else { dot.className = 'step-dot'; dot.textContent = i; }
+      if (i < 4) {
+        const line = document.getElementById('line-' + i);
+        line.className = 'step-line' + (i < n ? ' done' : '');
+      }
+    }
+    currentStep = n;
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // ── Copy number ──
+  function copyNumber() {
+    const num = document.getElementById('retena-number').textContent;
+    navigator.clipboard.writeText(num).then(() => {
+      const lbl = document.getElementById('copy-label');
+      lbl.textContent = 'Copied!';
+      setTimeout(() => lbl.textContent = 'Copy number', 2000);
+    });
+  }
+
+  // ── Go to dashboard ──
+  function goToDashboard() { window.location.href = '/dashboard/'; }
+
+  // ── Check for Paddle return ──
+  (function() {
+    const params = new URLSearchParams(location.search);
+    if (params.get('checkout') === 'success') {
+      // Load Retena number
+      fetch('/api/rt/onboard/complete', { method: 'POST', credentials: 'include' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.wa_number) document.getElementById('retena-number').textContent = d.wa_number;
+        }).catch(() => {});
+      goToStep(3);
+    } else if (params.get('checkout') === 'cancel') {
+      goToStep(2);
+    }
+  })();
+</script>
+</body>
+</html>
