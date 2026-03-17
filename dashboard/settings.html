@@ -254,25 +254,122 @@
 
       <!-- Notifications -->
       <div class="settings-section" id="tab-notifications">
-        <div class="card animate-in">
+
+        <!-- Push Notifications Card -->
+        <div class="card animate-in" style="margin-bottom:16px" id="push-card">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <div style="font-size:28px">🔔</div>
+            <div>
+              <div style="font-size:16px;font-weight:700">Push Notifications</div>
+              <div style="font-size:12px;color:var(--text-secondary)">Get real-time alerts on this device</div>
+            </div>
+            <div id="push-status-badge" style="margin-left:auto;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;background:var(--bg-tertiary);color:var(--text-muted)">Loading…</div>
+          </div>
+
+          <!-- State: not supported -->
+          <div id="push-unsupported" style="display:none;padding:14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px;font-size:13px;color:#ef4444">
+            ⚠️ Push notifications aren't supported in this browser. Try Chrome or Edge on desktop/Android.
+          </div>
+
+          <!-- State: permission denied -->
+          <div id="push-blocked" style="display:none;padding:14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:10px">
+            <div style="font-size:13px;font-weight:600;color:#ef4444;margin-bottom:4px">🚫 Notifications blocked</div>
+            <div style="font-size:12px;color:var(--text-muted)">You've blocked notifications for this site. To enable them, click the 🔒 icon in your browser's address bar and allow notifications, then refresh this page.</div>
+          </div>
+
+          <!-- State: not subscribed -->
+          <div id="push-enable-section" style="display:none">
+            <div style="padding:16px;background:var(--bg-tertiary);border-radius:10px;margin-bottom:14px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:6px">Get notified instantly when:</div>
+              <div style="font-size:12px;color:var(--text-secondary);line-height:1.8">
+                🎤 A voice note is transcribed<br>
+                👥 A new WhatsApp group is connected<br>
+                📊 Your daily digest is ready<br>
+                🔑 A keyword you care about is mentioned
+              </div>
+            </div>
+            <button class="btn btn-primary" id="enable-push-btn" onclick="enablePush()">
+              🔔 Enable push notifications
+            </button>
+          </div>
+
+          <!-- State: subscribed — show toggles -->
+          <div id="push-prefs-section" style="display:none">
+
+            <!-- Voice transcribed -->
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:14px">🎤 Voice note transcribed</div>
+                <div style="font-size:12px;color:var(--text-muted)">Notification with a preview of the transcript</div>
+              </div>
+              <div class="toggle" id="pref-voice_transcribed" onclick="togglePushPref('voice_transcribed')"></div>
+            </div>
+
+            <!-- New group -->
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:14px">👥 New group detected</div>
+                <div style="font-size:12px;color:var(--text-muted)">When Retena captures a new WhatsApp group</div>
+              </div>
+              <div class="toggle" id="pref-new_group" onclick="togglePushPref('new_group')"></div>
+            </div>
+
+            <!-- Daily digest -->
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+              <div style="flex:1">
+                <div style="font-weight:600;font-size:14px">📊 Daily digest ready</div>
+                <div style="font-size:12px;color:var(--text-muted)">Morning briefing with yesterday's highlights</div>
+              </div>
+              <div class="toggle" id="pref-daily_digest" onclick="togglePushPref('daily_digest')"></div>
+            </div>
+
+            <!-- Keyword alerts -->
+            <div style="padding:14px 0;border-bottom:1px solid var(--border)">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+                <div>
+                  <div style="font-weight:600;font-size:14px">🔑 Keyword alerts</div>
+                  <div style="font-size:12px;color:var(--text-muted)">Alert when these words appear in any message</div>
+                </div>
+                <div class="toggle" id="pref-keyword_alerts" onclick="togglePushPref('keyword_alerts')"></div>
+              </div>
+              <div id="keyword-section" style="display:none">
+                <div id="keyword-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+                <div style="display:flex;gap:8px">
+                  <input class="input" id="keyword-input" placeholder="Add a keyword…" style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter')addKeyword()">
+                  <button class="btn btn-secondary btn-sm" onclick="addKeyword()">Add</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Test + Disable row -->
+            <div style="display:flex;gap:10px;padding-top:14px;flex-wrap:wrap">
+              <button class="btn btn-secondary btn-sm" id="test-push-btn" onclick="testPush()">🧪 Send test notification</button>
+              <button class="btn btn-danger btn-sm" onclick="disablePush()">Turn off notifications</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Notifications Card -->
+        <div class="card animate-in animate-in-d1">
+          <div style="font-weight:700;font-size:15px;margin-bottom:14px">📧 Email Notifications</div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
             <div>
-              <div style="font-weight:600;font-size:14px">Daily briefing email</div>
-              <div style="font-size:12px;color:var(--text-muted)">Receive a morning summary of all group activity</div>
+              <div style="font-weight:600;font-size:14px">Daily briefing</div>
+              <div style="font-size:12px;color:var(--text-muted)">Morning summary of all group activity</div>
             </div>
             <div class="toggle" id="notif-daily" onclick="toggleNotif('notif-daily')"></div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)">
             <div>
               <div style="font-weight:600;font-size:14px">Weekly summary</div>
-              <div style="font-size:12px;color:var(--text-muted)">A weekly recap with key metrics and insights</div>
+              <div style="font-size:12px;color:var(--text-muted)">Weekly recap with key metrics and insights</div>
             </div>
             <div class="toggle" id="notif-weekly" onclick="toggleNotif('notif-weekly')"></div>
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0">
             <div>
               <div style="font-weight:600;font-size:14px">New group detected</div>
-              <div style="font-size:12px;color:var(--text-muted)">Get notified when Retena detects a new WhatsApp group</div>
+              <div style="font-size:12px;color:var(--text-muted)">Email when Retena detects a new WhatsApp group</div>
             </div>
             <div class="toggle on" id="notif-newgroup" onclick="toggleNotif('notif-newgroup')"></div>
           </div>
@@ -1291,6 +1388,249 @@ async function transcribeSelected() {
   _vhBatchRunning = false;
   updateBatchBtn();
   setTimeout(() => loadVoiceHistory(), 1000);
+}
+
+// ── Push Notifications ──────────────────────────────────────────
+
+const PUSH_API = window._API_BASE || 'https://dashboard-api.voz-clara.com';
+let _pushSubscription = null;
+let _pushPrefs = {};
+
+// Initialize push state on page load (when notifications tab is shown or on DOMContentLoaded)
+document.addEventListener('DOMContentLoaded', () => setTimeout(initPushUI, 500));
+
+async function initPushUI() {
+  const card = document.getElementById('push-card');
+  if (!card) return;
+
+  const badge = document.getElementById('push-status-badge');
+  const sections = ['push-unsupported', 'push-blocked', 'push-enable-section', 'push-prefs-section'];
+  const show = (id) => sections.forEach(s => document.getElementById(s).style.display = s === id ? '' : 'none');
+
+  // Check support
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    show('push-unsupported');
+    badge.textContent = 'Not supported';
+    badge.style.background = 'rgba(239,68,68,0.15)';
+    badge.style.color = '#ef4444';
+    return;
+  }
+
+  // Check permission
+  const perm = Notification.permission;
+  if (perm === 'denied') {
+    show('push-blocked');
+    badge.textContent = 'Blocked';
+    badge.style.background = 'rgba(239,68,68,0.15)';
+    badge.style.color = '#ef4444';
+    return;
+  }
+
+  // Check existing subscription
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    _pushSubscription = await reg.pushManager.getSubscription();
+  } catch (e) {}
+
+  if (_pushSubscription) {
+    // Check if server still knows about it
+    try {
+      const status = await fetch(`${PUSH_API}/api/push/status?endpoint=${encodeURIComponent(_pushSubscription.endpoint)}`).then(r => r.json());
+      if (status.subscribed) {
+        _pushPrefs = status.prefs || {};
+        applyPushPrefs();
+        show('push-prefs-section');
+        badge.textContent = 'Active';
+        badge.style.background = 'rgba(16,185,129,0.15)';
+        badge.style.color = '#10b981';
+        updateKeywordUI();
+        return;
+      }
+    } catch {}
+  }
+
+  // Not subscribed
+  show('push-enable-section');
+  badge.textContent = 'Off';
+  badge.style.background = 'var(--bg-tertiary)';
+  badge.style.color = 'var(--text-muted)';
+}
+
+async function enablePush() {
+  const btn = document.getElementById('enable-push-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Requesting permission…';
+
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') {
+      btn.disabled = false;
+      btn.textContent = '🔔 Enable push notifications';
+      showToast('Permission denied');
+      initPushUI();
+      return;
+    }
+
+    // Get VAPID public key
+    const { publicKey } = await fetch(`${PUSH_API}/api/push/vapid-public-key`).then(r => r.json());
+    if (!publicKey) throw new Error('VAPID key not available');
+
+    // Subscribe
+    const reg = await navigator.serviceWorker.ready;
+    _pushSubscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicKey),
+    });
+
+    // Save to API with default prefs
+    const defaultPrefs = {
+      voice_transcribed: true,
+      new_group: true,
+      daily_digest: false,
+      keyword_alerts: false,
+      keywords: [],
+    };
+    const result = await fetch(`${PUSH_API}/api/push/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ..._pushSubscription.toJSON(), prefs: defaultPrefs }),
+    }).then(r => r.json());
+
+    _pushPrefs = result.prefs || defaultPrefs;
+    applyPushPrefs();
+    initPushUI();
+    showToast('🔔 Push notifications enabled!');
+  } catch (e) {
+    console.error('[push] enable error:', e);
+    btn.disabled = false;
+    btn.textContent = '🔔 Enable push notifications';
+    showToast('Failed to enable push: ' + e.message);
+  }
+}
+
+async function disablePush() {
+  if (!confirm('Turn off push notifications on this device?')) return;
+  try {
+    if (_pushSubscription) {
+      await fetch(`${PUSH_API}/api/push/unsubscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint: _pushSubscription.endpoint }),
+      });
+      await _pushSubscription.unsubscribe();
+      _pushSubscription = null;
+    }
+    _pushPrefs = {};
+    showToast('Push notifications disabled');
+    initPushUI();
+  } catch (e) {
+    showToast('Error: ' + e.message);
+  }
+}
+
+async function togglePushPref(key) {
+  if (!_pushSubscription) return;
+  const el = document.getElementById(`pref-${key}`);
+  const newVal = !el.classList.contains('on');
+  el.classList.toggle('on', newVal);
+  _pushPrefs[key] = newVal;
+
+  // Show/hide keyword section
+  if (key === 'keyword_alerts') updateKeywordUI();
+
+  try {
+    await fetch(`${PUSH_API}/api/push/prefs`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: _pushSubscription.endpoint, prefs: _pushPrefs }),
+    });
+    showToast(newVal ? 'Notification enabled' : 'Notification disabled');
+  } catch (e) {
+    showToast('Failed to save pref');
+  }
+}
+
+function applyPushPrefs() {
+  const keys = ['voice_transcribed', 'new_group', 'daily_digest', 'keyword_alerts'];
+  keys.forEach(k => {
+    const el = document.getElementById(`pref-${k}`);
+    if (el) el.classList.toggle('on', !!_pushPrefs[k]);
+  });
+  updateKeywordUI();
+}
+
+function updateKeywordUI() {
+  const section = document.getElementById('keyword-section');
+  const tags = document.getElementById('keyword-tags');
+  if (!section || !tags) return;
+  const enabled = _pushPrefs.keyword_alerts;
+  section.style.display = enabled ? '' : 'none';
+  if (!enabled) return;
+  const keywords = _pushPrefs.keywords || [];
+  tags.innerHTML = keywords.map(kw => `
+    <span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px">
+      ${esc(kw)}
+      <button onclick="removeKeyword('${esc(kw)}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;padding:0 2px">&times;</button>
+    </span>`).join('');
+}
+
+async function addKeyword() {
+  const input = document.getElementById('keyword-input');
+  const kw = input.value.trim();
+  if (!kw) return;
+  if (!_pushPrefs.keywords) _pushPrefs.keywords = [];
+  if (_pushPrefs.keywords.includes(kw)) { showToast('Already added'); return; }
+  _pushPrefs.keywords.push(kw);
+  input.value = '';
+  updateKeywordUI();
+  await savePushPrefs();
+  showToast(`"${kw}" added`);
+}
+
+async function removeKeyword(kw) {
+  if (!_pushPrefs.keywords) return;
+  _pushPrefs.keywords = _pushPrefs.keywords.filter(k => k !== kw);
+  updateKeywordUI();
+  await savePushPrefs();
+}
+
+async function savePushPrefs() {
+  if (!_pushSubscription) return;
+  try {
+    await fetch(`${PUSH_API}/api/push/prefs`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: _pushSubscription.endpoint, prefs: _pushPrefs }),
+    });
+  } catch {}
+}
+
+async function testPush() {
+  if (!_pushSubscription) return;
+  const btn = document.getElementById('test-push-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Sending…';
+  try {
+    const r = await fetch(`${PUSH_API}/api/push/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: _pushSubscription.endpoint }),
+    }).then(r => r.json());
+    if (r.ok) showToast('✅ Test notification sent! Check your device.');
+    else showToast('Failed: ' + (r.error || 'unknown error'));
+  } catch (e) {
+    showToast('Error: ' + e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = '🧪 Send test notification';
+}
+
+// Helper: convert base64url to Uint8Array (required by pushManager.subscribe)
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 </script>
 </body>
