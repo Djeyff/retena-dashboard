@@ -103,22 +103,100 @@
 
       <!-- Billing -->
       <div class="settings-section" id="tab-billing">
+        <!-- Plan header -->
         <div class="card animate-in" style="margin-bottom:16px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
             <div>
-              <div style="font-size:18px;font-weight:700" id="plan-name">Starter</div>
-              <div style="font-size:14px;color:var(--text-muted)" id="plan-price">$39/mo</div>
+              <div style="font-size:18px;font-weight:700" id="plan-name">Pro</div>
+              <div style="font-size:14px;color:var(--text-muted)" id="plan-price">$79/mo · 3 seats · 15 groups</div>
             </div>
             <button class="btn btn-primary" onclick="showToast('Billing portal coming soon')">Change plan</button>
           </div>
         </div>
 
-        <div class="card animate-in animate-in-d1">
-          <div class="section-title">Usage</div>
+        <!-- Usage meters -->
+        <div class="card animate-in animate-in-d1" style="margin-bottom:16px">
+          <div class="section-title">Usage this month</div>
           <div id="billing-meters"></div>
         </div>
 
-        <div class="card animate-in animate-in-d2" style="margin-top:16px">
+        <!-- Voice Minutes Management -->
+        <div class="card animate-in animate-in-d2" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <span style="font-size:22px">🎤</span>
+            <div class="section-title" style="margin:0">Voice Minutes</div>
+          </div>
+
+          <!-- Progress bar -->
+          <div style="margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+              <span style="font-size:13px;color:var(--text-secondary)">Monthly plan minutes</span>
+              <span style="font-size:13px;font-weight:600"><span id="bv-plan-used">—</span> / <span id="bv-plan-limit" style="color:var(--text-muted)">—</span> min</span>
+            </div>
+            <div style="height:8px;background:var(--bg-tertiary);border-radius:4px;overflow:hidden;position:relative">
+              <div id="bv-bar-plan" style="height:100%;background:var(--accent);border-radius:4px;transition:width .4s;width:0%"></div>
+              <div id="bv-bar-overage" style="height:100%;background:#ef4444;border-radius:4px;position:absolute;top:0;width:0%;transition:width .4s"></div>
+            </div>
+            <div id="bv-pack-row" style="display:none;margin-top:6px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+                <span style="font-size:12px;color:var(--text-muted)">Pack minutes</span>
+                <span style="font-size:12px;font-weight:600;color:var(--accent)" id="bv-pack-balance">—</span>
+              </div>
+            </div>
+            <div id="bv-overage-cost" style="display:none;margin-top:6px;font-size:12px;color:#ef4444;font-weight:600"></div>
+          </div>
+
+          <!-- When limit hit: toggle -->
+          <div style="background:var(--bg-tertiary);border-radius:10px;padding:14px;margin-bottom:16px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px">When I hit my limit:</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px;border-radius:8px;transition:background .15s" id="bv-opt-pause">
+                <input type="radio" name="overage-mode" value="pause" style="accent-color:var(--accent)" onchange="saveOverageMode('pause')">
+                <div>
+                  <div style="font-size:13px;font-weight:500">⏸ Pause transcription</div>
+                  <div style="font-size:11px;color:var(--text-muted)">Voice notes stop transcribing until next billing cycle (default)</div>
+                </div>
+              </label>
+              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px;border-radius:8px;transition:background .15s" id="bv-opt-overage">
+                <input type="radio" name="overage-mode" value="overage" style="accent-color:var(--accent)" onchange="saveOverageMode('overage')">
+                <div>
+                  <div style="font-size:13px;font-weight:500">⚡ Auto-overage <span style="color:var(--accent);font-weight:700">$0.10/min</span></div>
+                  <div style="font-size:11px;color:var(--text-muted)">Never miss a transcription. Billed at end of month.</div>
+                </div>
+              </label>
+            </div>
+            <div id="bv-overage-live" style="display:none;margin-top:10px;padding:8px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:8px">
+              <div style="font-size:12px;color:#ef4444">⚡ Auto-overage active</div>
+              <div style="font-size:18px;font-weight:800;color:#ef4444;margin-top:2px" id="bv-overage-amount">$0.00</div>
+              <div style="font-size:11px;color:var(--text-muted)">accrued this month</div>
+            </div>
+          </div>
+
+          <!-- Minute packs -->
+          <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px">Buy a minute pack <span style="font-size:11px;color:var(--text-muted);font-weight:400">— added instantly, roll over 1 month</span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+              <div style="border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-weight:700;font-size:15px">Pack S</div>
+                <div style="font-size:22px;font-weight:800;color:var(--accent);margin:4px 0">$8</div>
+                <div style="font-size:12px;color:var(--text-secondary)">+100 minutes</div>
+                <div style="font-size:11px;color:var(--text-muted)">$0.08/min</div>
+                <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:12px" onclick="buyPack('S', 100, 8)">Buy Pack S</button>
+              </div>
+              <div style="border:2px solid var(--accent);border-radius:10px;padding:14px;text-align:center;position:relative">
+                <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px">BEST VALUE</div>
+                <div style="font-weight:700;font-size:15px">Pack L</div>
+                <div style="font-size:22px;font-weight:800;color:var(--accent);margin:4px 0">$35</div>
+                <div style="font-size:12px;color:var(--text-secondary)">+500 minutes</div>
+                <div style="font-size:11px;color:var(--text-muted)">$0.07/min</div>
+                <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:12px" onclick="buyPack('L', 500, 35)">Buy Pack L</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment method -->
+        <div class="card animate-in animate-in-d3">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
             <div class="section-title" style="margin:0">Payment method</div>
             <button class="btn btn-secondary btn-sm" onclick="showToast('Payment portal coming soon')">Manage</button>
@@ -521,15 +599,24 @@ async function loadTeam() {
   }
 }
 
+const PLAN_META = {
+  starter:  { name: 'Starter',  price: '$39/mo',  seats: 1,  groups: 5,  voice_min: 100,  ai_queries: 50,  storage_gb: 2,    label: '1 seat · 5 groups · 100 min/mo' },
+  pro:      { name: 'Pro',      price: '$79/mo',  seats: 3,  groups: 15, voice_min: 500,  ai_queries: 300, storage_gb: 10,   label: '3 seats · 15 groups · 500 min/mo' },
+  business: { name: 'Business', price: '$199/mo', seats: 5,  groups: Infinity, voice_min: 2000, ai_queries: Infinity, storage_gb: 50, label: '5 seats · Unlimited groups · 2,000 min/mo' },
+};
+
 async function loadBilling() {
   const el = document.getElementById('billing-meters');
   try {
     const data = await api('/api/rt/usage');
-    const plan = PLAN_LIMITS[data.plan || 'starter'];
-    const planNames = { starter: 'Starter — $39/mo', pro: 'Pro — $79/mo', business: 'Business — $199/mo' };
-    document.getElementById('plan-name').textContent = (data.plan || 'starter').charAt(0).toUpperCase() + (data.plan || 'starter').slice(1);
-    document.getElementById('plan-price').textContent = planNames[data.plan || 'starter']?.split('—')[1]?.trim() || '$39/mo';
+    const planKey = data.plan || 'pro';
+    const plan = PLAN_META[planKey] || PLAN_META.pro;
 
+    // Plan header
+    document.getElementById('plan-name').textContent = plan.name;
+    document.getElementById('plan-price').textContent = `${plan.price} · ${plan.label}`;
+
+    // Usage meters
     el.innerHTML = `
       ${largeMeter('Voice minutes', data.voice_minutes || 0, plan.voice_min)}
       ${largeMeter('AI queries', data.ai_queries || 0, plan.ai_queries)}
@@ -537,9 +624,71 @@ async function loadBilling() {
       ${largeMeter('Storage', data.storage_gb || 0, plan.storage_gb, 'GB')}
       ${largeMeter('Seats', data.seats || 1, plan.seats)}
     `;
+
+    // Voice minutes panel
+    loadVoiceMinutePanel(data, plan);
   } catch (e) {
     el.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">Could not load usage data</div>';
   }
+}
+
+function loadVoiceMinutePanel(data, plan) {
+  const used = data.voice_minutes || 0;
+  const limit = plan.voice_min || 100;
+  const packBal = data.pack_mins_balance || 0;
+  const overageMins = data.overage_mins_used || 0;
+  const overageEnabled = data.overage_enabled || false;
+
+  // Plan bar
+  const planPct = Math.min((used / limit) * 100, 100);
+  const overPct = overageMins > 0 ? Math.min((overageMins / limit) * 100, 20) : 0;
+  document.getElementById('bv-plan-used').textContent = used;
+  document.getElementById('bv-plan-limit').textContent = limit;
+  document.getElementById('bv-bar-plan').style.width = planPct + '%';
+  document.getElementById('bv-bar-plan').style.background = planPct >= 100 ? '#ef4444' : planPct > 80 ? '#f59e0b' : 'var(--accent)';
+  document.getElementById('bv-bar-overage').style.width = overPct + '%';
+  document.getElementById('bv-bar-overage').style.left = '100%';
+
+  // Pack balance
+  if (packBal > 0) {
+    document.getElementById('bv-pack-row').style.display = 'block';
+    document.getElementById('bv-pack-balance').textContent = `+${packBal} min available`;
+  }
+
+  // Overage cost
+  if (overageMins > 0) {
+    const cost = (overageMins * 0.10).toFixed(2);
+    document.getElementById('bv-overage-cost').style.display = 'block';
+    document.getElementById('bv-overage-cost').textContent = `⚡ ${overageMins} overage min = $${cost} this month`;
+    document.getElementById('bv-overage-live').style.display = 'block';
+    document.getElementById('bv-overage-amount').textContent = `$${cost}`;
+  }
+
+  // Overage mode radio
+  const mode = overageEnabled ? 'overage' : 'pause';
+  document.querySelectorAll('input[name="overage-mode"]').forEach(r => { r.checked = r.value === mode; });
+}
+
+async function saveOverageMode(mode) {
+  try {
+    await api('/api/billing/overage', { method: 'POST', body: JSON.stringify({ enabled: mode === 'overage' }) });
+    showToast(mode === 'overage' ? '⚡ Auto-overage enabled — $0.10/min' : '⏸ Transcription will pause at limit');
+    if (mode === 'overage') {
+      document.getElementById('bv-overage-live').style.display = 'block';
+    } else {
+      document.getElementById('bv-overage-live').style.display = 'none';
+    }
+  } catch (e) { showToast('Failed to save'); }
+}
+
+async function buyPack(size, minutes, price) {
+  if (!confirm(`Buy Pack ${size}: +${minutes} minutes for $${price}?\n\nThis will be charged to your payment method on file.`)) return;
+  try {
+    const r = await api('/api/billing/packs/buy', { method: 'POST', body: JSON.stringify({ pack: size }) });
+    showToast(`✅ Pack ${size} purchased! +${minutes} min added.`);
+    document.getElementById('bv-pack-row').style.display = 'block';
+    document.getElementById('bv-pack-balance').textContent = `+${r.new_balance || minutes} min available`;
+  } catch (e) { showToast('Purchase failed — no payment method on file'); }
 }
 
 function largeMeter(label, used, total, unit = '') {
