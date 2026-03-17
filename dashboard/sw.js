@@ -53,11 +53,9 @@ self.addEventListener('notificationclick', (e) => {
   const action = e.action || '';
 
   e.waitUntil((async () => {
-    // Action: "open_wa" → open WhatsApp app directly via Android Intent URI
-    // intent:// scheme bypasses the browser entirely — opens WhatsApp immediately
+    // Action: "open_wa" → open WhatsApp app via whatsapp:// scheme (works in Brave + Chrome)
     if (action === 'open_wa' && data.whatsapp_phone) {
-      const intentUrl = `intent://send/${data.whatsapp_phone}#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url=https%3A%2F%2Fwhatsapp.com;end`;
-      await clients.openWindow(intentUrl);
+      await clients.openWindow(`whatsapp://send?phone=${data.whatsapp_phone}`);
       return;
     }
 
