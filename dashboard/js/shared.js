@@ -67,7 +67,7 @@ function renderSidebar(activeId) {
   }
 
   el.innerHTML = `
-    <div class="sidebar-logo">${RT_LOGO}<span>Retena</span><span id="wa-status-dot" title="Checking…" style="margin-left:auto;width:10px;height:10px;border-radius:50%;background:#666;flex-shrink:0;transition:background 0.3s"></span></div>
+    <div class="sidebar-logo">${RT_LOGO}<span>Retena</span><span style="margin-left:auto;display:flex;gap:6px;align-items:center"><span id="rt-ws-dot" title="Connecting…" style="width:8px;height:8px;border-radius:50%;background:#f59e0b;flex-shrink:0;transition:background 0.3s" title="Live push"></span><span id="wa-status-dot" title="Checking…" style="width:8px;height:8px;border-radius:50%;background:#666;flex-shrink:0;transition:background 0.3s"></span></span></div>
     <nav class="sidebar-nav">${navHtml}</nav>
     <div class="sidebar-bottom">
       <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px;padding:0 4px">PRO PLAN</div>
@@ -344,62 +344,138 @@ async function loadUsage() {
   } catch (e) { /* silent */ }
 }
 
-// ── Background Polling ────────────────────────────────────────────────────────
+// ── Realtime Push (Supabase WebSocket) ───────────────────────────────────────
 // Pages register handlers via: window.addEventListener('retena:newData', e => { ... e.detail ... })
 // e.detail = { items: [...], since: ISO, hasNew: bool }
+// Falls back to 30s polling if WebSocket fails / isn't supported.
 // ---
 
-window._retenaLastSeen = null; // ISO timestamp of latest message we've fetched
+const _SUPA_URL = 'https://mfhdoiddbgpjqjukacnc.supabase.co';
+const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1maGRvaWRkYmdwanFqdWthY25jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NjEyNTIsImV4cCI6MjA4ODQzNzI1Mn0.fSL2d0gFjqyFLEPwCrzFI-r49oqCZNJiq4LJS3C0m50';
+
+window._retenaLastSeen = null;
 let _pollTimer = null;
-let _pollActive = false;
+let _realtimeConnected = false;
 
-async function _doPoll() {
-  if (_pollActive) return; // skip if previous poll still running
-  _pollActive = true;
+function _emitNewData(items, hasNew = true) {
+  if (!items?.length) return;
+  const newest = items.reduce((max, m) => {
+    const ts = m.timestamp || m.created_at || '';
+    return ts > max ? ts : max;
+  }, window._retenaLastSeen || '');
+  if (newest) window._retenaLastSeen = newest;
+  window.dispatchEvent(new CustomEvent('retena:newData', {
+    detail: { items, hasNew },
+  }));
+  loadUsage().catch(() => {}); // refresh sidebar meters
+}
+
+// ── Supabase Realtime (WebSocket push) ──
+function startRealtimePush() {
+  // Lazy-load Supabase JS from CDN
+  if (window.__supabaseLoaded) { _subscribeRealtime(); return; }
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+  script.onload = () => { window.__supabaseLoaded = true; _subscribeRealtime(); };
+  script.onerror = () => { console.warn('[retena] Supabase CDN failed — falling back to polling'); _startFallbackPoll(); };
+  document.head.appendChild(script);
+}
+
+function _subscribeRealtime() {
   try {
-    const since = window._retenaLastSeen;
-    const url = since
-      ? `/api/rt/activity?limit=20&since=${encodeURIComponent(since)}`
-      : `/api/rt/activity?limit=20`;
-    const data = await api(url);
-    const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+    const client = window.supabase.createClient(_SUPA_URL, _SUPA_KEY);
+    const channel = client
+      .channel('rewa_messages_push')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'rewa_messages' },
+        (payload) => {
+          if (!payload?.new) return;
+          _emitNewData([payload.new], !!window._retenaLastSeen);
+          _updateWsIndicator(true);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'rewa_messages' },
+        (payload) => {
+          // Transcription arrived for an existing voice note
+          if (payload?.new?.transcription && !payload?.old?.transcription) {
+            window.dispatchEvent(new CustomEvent('retena:transcribed', { detail: payload.new }));
+          }
+        }
+      )
+      .subscribe((status) => {
+        _realtimeConnected = status === 'SUBSCRIBED';
+        _updateWsIndicator(_realtimeConnected);
+        if (status === 'SUBSCRIBED') {
+          console.log('[retena] 🟢 Realtime push connected');
+          // Catch up on anything missed during page load
+          _catchUp();
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('[retena] Realtime error — switching to poll fallback');
+          _startFallbackPoll();
+        }
+      });
 
-    if (items.length > 0) {
-      // Advance the cursor to the newest item
-      const newest = items.reduce((max, m) => {
-        const ts = m.timestamp || m.created_at || '';
-        return ts > max ? ts : max;
-      }, window._retenaLastSeen || '');
-      if (newest) window._retenaLastSeen = newest;
-
-      window.dispatchEvent(new CustomEvent('retena:newData', {
-        detail: { items, since, hasNew: !!since },
-      }));
-    }
-
-    // Always refresh sidebar usage meters silently
-    loadUsage().catch(() => {});
+    // Reconnect on tab focus if WS dropped
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !_realtimeConnected) {
+        _catchUp();
+      }
+    });
   } catch (e) {
-    // Silent — don't log noise for offline/transient errors
-  } finally {
-    _pollActive = false;
+    console.warn('[retena] Realtime setup failed:', e.message);
+    _startFallbackPoll();
   }
 }
 
-function startBackgroundPoll(intervalMs = 30000) {
-  if (_pollTimer) return; // already running
-  // Initial poll to set baseline cursor (don't dispatch event on first load)
-  api('/api/rt/activity?limit=1').then(data => {
+// ── Catch-up: fetch anything missed while tab was hidden or during load ──
+async function _catchUp() {
+  try {
+    const since = window._retenaLastSeen;
+    const url = since
+      ? `/api/rt/activity?limit=30&since=${encodeURIComponent(since)}`
+      : `/api/rt/activity?limit=5`; // first load — just set cursor, don't emit
+    const data = await api(url);
     const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
-    if (items[0]) {
-      window._retenaLastSeen = items[0].timestamp || items[0].created_at || null;
+    if (since && items.length) _emitNewData(items, true);
+    else if (!since && items.length) {
+      // Set initial cursor without triggering UI update
+      const newest = items.reduce((max, m) => { const ts = m.timestamp || m.created_at || ''; return ts > max ? ts : max; }, '');
+      if (newest) window._retenaLastSeen = newest;
     }
-  }).catch(() => {});
-  _pollTimer = setInterval(_doPoll, intervalMs);
-  // Also poll when tab becomes visible again after being hidden
+  } catch (e) { /* silent */ }
+}
+
+// ── Fallback: 30s poll if WebSocket unavailable ──
+async function _pollOnce() {
+  try {
+    const since = window._retenaLastSeen;
+    if (!since) { await _catchUp(); return; }
+    const data = await api(`/api/rt/activity?limit=20&since=${encodeURIComponent(since)}`);
+    const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+    if (items.length) _emitNewData(items, true);
+    loadUsage().catch(() => {});
+  } catch (e) { /* silent */ }
+}
+
+function _startFallbackPoll() {
+  if (_pollTimer) return;
+  _pollOnce();
+  _pollTimer = setInterval(_pollOnce, 30000);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') _doPoll();
+    if (document.visibilityState === 'visible') _pollOnce();
   });
+}
+
+// ── WS status dot update ── (reuses the existing wa-status-dot logic)
+function _updateWsIndicator(connected) {
+  const dot = document.getElementById('rt-ws-dot');
+  if (dot) {
+    dot.title = connected ? 'Live updates active' : 'Reconnecting…';
+    dot.style.background = connected ? '#8b5cf6' : '#f59e0b'; // purple=live, amber=reconnecting
+  }
 }
 
 // ── New-message badge helper ──────────────────────────────────────────────────
@@ -433,5 +509,5 @@ function showNewMsgBadge(container, count, onClick) {
 // ── Init common ──
 document.addEventListener('DOMContentLoaded', () => {
   loadUsage();
-  startBackgroundPoll();
+  startRealtimePush(); // WebSocket push; falls back to 30s poll if unavailable
 });

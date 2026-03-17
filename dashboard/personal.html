@@ -186,6 +186,25 @@ window.addEventListener('retena:newData', async (e) => {
   } catch (e) { /* silent */ }
 });
 
+// ── Realtime: voice note transcription arrived (UPDATE event) ──
+window.addEventListener('retena:transcribed', (e) => {
+  const m = e.detail;
+  if (!m?.id || !m?.transcription) return;
+  const card = document.getElementById(`card-${m.id}`);
+  if (!card) return;
+  // Replace the "no transcription" placeholder with actual transcription
+  const placeholder = card.querySelector('[style*="font-style:italic"]');
+  if (placeholder) {
+    const div = document.createElement('div');
+    div.className = 'msg-bubble-text';
+    div.textContent = m.transcription;
+    placeholder.replaceWith(div);
+  }
+  // Update in allMessages cache
+  const cached = allMessages.find(x => x.id === m.id);
+  if (cached) cached.transcription = m.transcription;
+});
+
 // ── Load Data ──
 async function loadPersonal() {
   showLoading(document.getElementById('conv-list'));
