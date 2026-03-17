@@ -315,6 +315,57 @@
           <div class="section-title">Import History</div>
           <div id="import-history" style="font-size:13px;color:var(--text-muted)">No imports yet</div>
         </div>
+
+        <!-- Voice History Import -->
+        <div class="card animate-in animate-in-d2" style="margin-top:16px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <div style="font-size:32px">🎤</div>
+            <div>
+              <div style="font-size:18px;font-weight:700">Voice Note History</div>
+              <div style="font-size:13px;color:var(--text-secondary)">Scan and transcribe old voice notes from your WhatsApp chats</div>
+            </div>
+          </div>
+
+          <!-- Credit info bar -->
+          <div id="vh-credit-bar" style="background:var(--bg-tertiary);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px">
+            <div style="font-size:13px;color:var(--text-secondary)">Your plan: <span id="vh-plan-name" style="font-weight:600;color:var(--text-primary)">—</span></div>
+            <div style="font-size:13px">🕐 <span id="vh-mins-used" style="font-weight:700">—</span> / <span id="vh-mins-limit" style="color:var(--text-secondary)">—</span> min used this month</div>
+          </div>
+
+          <!-- Scan button + progress -->
+          <div id="vh-scan-area" style="margin-bottom:20px">
+            <button class="btn btn-primary" id="vh-scan-btn" onclick="startVoiceScan()" style="margin-bottom:12px">
+              🔍 Scan WhatsApp History
+            </button>
+            <div id="vh-scan-progress" style="display:none;background:var(--bg-input);border-radius:10px;padding:14px">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+                <div style="width:8px;height:8px;background:var(--accent);border-radius:50%;animation:pulse 1s infinite"></div>
+                <span style="font-size:13px;font-weight:600">Scanning...</span>
+                <span id="vh-scan-eta" style="font-size:12px;color:var(--text-muted)"></span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;font-size:12px;text-align:center">
+                <div><div style="font-weight:700;font-size:18px;color:var(--accent)" id="vh-prog-chats">0</div><div style="color:var(--text-muted)">chats</div></div>
+                <div><div style="font-weight:700;font-size:18px" id="vh-prog-found">0</div><div style="color:var(--text-muted)">found</div></div>
+                <div><div style="font-weight:700;font-size:18px;color:var(--green)" id="vh-prog-dl">0</div><div style="color:var(--text-muted)">downloaded</div></div>
+                <div><div style="font-weight:700;font-size:18px;color:var(--text-muted)" id="vh-prog-skip">0</div><div style="color:var(--text-muted)">expired</div></div>
+              </div>
+              <div style="margin-top:8px;font-size:11px;color:var(--text-muted);text-align:center" id="vh-current-chat"></div>
+            </div>
+          </div>
+
+          <!-- Chat list with voice notes -->
+          <div id="vh-chats-area" style="display:none">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div style="font-weight:600;font-size:14px">Voice Notes by Chat</div>
+              <div id="vh-totals" style="font-size:12px;color:var(--text-muted)"></div>
+            </div>
+            <div id="vh-chat-list"></div>
+          </div>
+
+          <div id="vh-empty" style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;display:none">
+            No voice notes found yet. Run a scan to discover your history.
+          </div>
+        </div>
       </div>
 
       <!-- VozClara Perk -->
@@ -373,7 +424,7 @@ function showTab(tabId) {
   if (tabId === 'groups') loadSettingsGroups();
   if (tabId === 'team') loadTeam();
   if (tabId === 'billing') loadBilling();
-  if (tabId === 'import') loadImportHistory();
+  if (tabId === 'import') { loadImportHistory(); loadVoiceHistory(); loadVoiceCredits(); }
 }
 
 async function loadSettings() {
@@ -815,6 +866,203 @@ function loadImportHistory() {
     });
   }
 })();
+
+// ── Voice History Import ──────────────────────────────────────────────────
+let _vhScanPoll = null;
+
+async function loadVoiceCredits() {
+  try {
+    const data = await api('/api/usage');
+    const plan = data.plan || {};
+    document.getElementById('vh-plan-name').textContent = plan.name || 'Starter';
+    document.getElementById('vh-mins-used').textContent = data.voice_minutes || 0;
+    document.getElementById('vh-mins-limit').textContent = plan.voice_min || '—';
+  } catch (e) { console.warn('[vh] credits load:', e.message); }
+}
+
+function minsFromSec(sec) { return Math.ceil((sec || 0) / 60); }
+function fmtDur(sec) {
+  if (!sec) return '0:00';
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+async function startVoiceScan() {
+  const btn = document.getElementById('vh-scan-btn');
+  btn.disabled = true; btn.textContent = '⏳ Starting...';
+  try {
+    await api('/api/import/voices/start', { method: 'POST' });
+    document.getElementById('vh-scan-progress').style.display = 'block';
+    pollVoiceScan();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = '🔍 Scan WhatsApp History';
+    alert('Failed to start scan: ' + e.message);
+  }
+}
+
+function pollVoiceScan() {
+  clearInterval(_vhScanPoll);
+  _vhScanPoll = setInterval(async () => {
+    try {
+      const s = await api('/api/import/voices/status');
+      document.getElementById('vh-prog-chats').textContent = `${s.chatsDone||0}/${s.chatsTotal||'?'}`;
+      document.getElementById('vh-prog-found').textContent = s.found || 0;
+      document.getElementById('vh-prog-dl').textContent = s.downloaded || 0;
+      document.getElementById('vh-prog-skip').textContent = s.skipped || 0;
+      if (s.currentChat) document.getElementById('vh-current-chat').textContent = `Scanning: ${s.currentChat}`;
+      if (!s.running && s.finishedAt) {
+        clearInterval(_vhScanPoll);
+        document.getElementById('vh-scan-progress').style.display = 'none';
+        const btn = document.getElementById('vh-scan-btn');
+        btn.disabled = false; btn.textContent = '🔄 Re-scan';
+        loadVoiceHistory();
+        loadVoiceCredits();
+      }
+    } catch(e) { console.warn('[vh] poll error', e.message); }
+  }, 2500);
+}
+
+async function loadVoiceHistory() {
+  try {
+    const data = await api('/api/import/voices');
+    const chats = data.chats || [];
+    if (chats.length === 0) {
+      document.getElementById('vh-empty').style.display = 'block';
+      document.getElementById('vh-chats-area').style.display = 'none';
+      return;
+    }
+    document.getElementById('vh-empty').style.display = 'none';
+    document.getElementById('vh-chats-area').style.display = 'block';
+
+    const totalNotes = chats.reduce((a,c) => a + c.notes.length, 0);
+    const totalPending = chats.reduce((a,c) => a + c.pending, 0);
+    document.getElementById('vh-totals').textContent = `${totalNotes} notes · ${totalPending} pending`;
+
+    const list = document.getElementById('vh-chat-list');
+    list.innerHTML = chats.map(chat => {
+      const pendingNotes = chat.notes.filter(n => n.status === 'pending' && n.audio_path);
+      const batchMins = pendingNotes.reduce((a,n) => a + minsFromSec(n.duration_sec), 0);
+      const hasAudio = pendingNotes.length > 0;
+
+      return `
+      <div class="vh-chat-card" style="border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden">
+        <!-- Chat header -->
+        <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;background:var(--bg-card)"
+             onclick="toggleVhChat('${esc(chat.chat_id)}')">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">
+            ${chat.is_group ? '👥' : '💬'}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(chat.chat_name)}</div>
+            <div style="font-size:12px;color:var(--text-muted)">
+              ${chat.notes.length} notes · 
+              <span style="color:var(--accent)">${chat.pending} pending</span>
+              ${chat.transcribed ? ` · ${chat.transcribed} done` : ''}
+              ${chat.expired ? ` · <span style="color:var(--text-muted)">${chat.expired} expired</span>` : ''}
+            </div>
+          </div>
+          ${hasAudio ? `
+          <button class="btn btn-primary" style="font-size:12px;padding:6px 14px;flex-shrink:0;white-space:nowrap"
+                  onclick="event.stopPropagation();transcribeChat('${esc(chat.chat_id)}', this, ${batchMins})">
+            ▶ Process chat · ${batchMins} min
+          </button>` : ''}
+          <span style="color:var(--text-muted);font-size:12px;flex-shrink:0">▾</span>
+        </div>
+
+        <!-- Notes list (collapsed by default) -->
+        <div id="vh-notes-${CSS.escape(chat.chat_id)}" style="display:none;border-top:1px solid var(--border)">
+          ${chat.notes.map(n => {
+            const mins = minsFromSec(n.duration_sec);
+            const canTranscribe = n.status === 'pending' && n.audio_path;
+            const isExpired = n.status === 'expired' || (!n.audio_path && n.status === 'pending');
+            return `
+            <div id="vh-note-${esc(n.id)}" style="display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-subtle,rgba(255,255,255,0.05))">
+              <div style="flex-shrink:0;margin-top:2px;color:var(--text-muted);font-size:18px">🎤</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:500">${esc(n.sender_name || (n.from_me ? 'You' : 'Contact'))}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">
+                  ${fmtDur(n.duration_sec)} · ${n.timestamp ? new Date(n.timestamp).toLocaleDateString() : ''}
+                </div>
+                ${n.status === 'transcribed' && n.transcription
+                  ? `<div style="font-size:13px;color:var(--text-secondary);line-height:1.5;background:var(--bg-input);border-radius:8px;padding:8px 10px">${esc(n.transcription)}</div>`
+                  : isExpired
+                  ? `<div style="font-size:12px;color:var(--text-muted);font-style:italic">⏳ Expired — no longer available from WhatsApp</div>`
+                  : n.status === 'failed'
+                  ? `<div style="font-size:12px;color:var(--red)">❌ Failed</div>`
+                  : ''}
+              </div>
+              <div style="flex-shrink:0;text-align:right">
+                ${canTranscribe ? `
+                <button class="btn" onclick="transcribeNote('${esc(n.id)}', this)"
+                        style="font-size:11px;padding:5px 12px;background:var(--bg-tertiary);white-space:nowrap">
+                  Transcribe → <span style="color:var(--accent)">${mins} min</span>
+                </button>` : n.status === 'transcribed' ? `<span style="font-size:11px;color:var(--green)">✓ Done</span>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) { console.error('[vh] load error', e.message); }
+}
+
+function toggleVhChat(chatId) {
+  const el = document.getElementById(`vh-notes-${CSS.escape(chatId)}`);
+  if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+async function transcribeNote(id, btn) {
+  const mins = parseInt(btn.textContent.match(/\d+/)?.[0] || '1');
+  // Check credits
+  const used = parseInt(document.getElementById('vh-mins-used').textContent) || 0;
+  const limit = parseInt(document.getElementById('vh-mins-limit').textContent) || 0;
+  if (limit && used + mins > limit) {
+    alert(`Not enough minutes. You have ${limit - used} min left, this note needs ${mins} min.`); return;
+  }
+  btn.disabled = true; btn.textContent = '⏳';
+  try {
+    const r = await api('/api/import/voices/transcribe', { method: 'POST', body: JSON.stringify({ id }) });
+    const card = document.getElementById(`vh-note-${id}`);
+    if (card) {
+      const transcriptEl = card.querySelector('[style*="background:var(--bg-input)"]');
+      const btnContainer = card.querySelector('button');
+      if (btnContainer) btnContainer.closest('div[style*="text-align:right"]').innerHTML = `<span style="font-size:11px;color:var(--green)">✓ Done</span>`;
+      // Insert transcription
+      const bodyDiv = card.querySelector('div[style*="flex:1"]');
+      if (bodyDiv && r.transcription) {
+        const t = document.createElement('div');
+        t.style.cssText = 'font-size:13px;color:var(--text-secondary);line-height:1.5;background:var(--bg-input);border-radius:8px;padding:8px 10px;margin-top:4px';
+        t.textContent = r.transcription;
+        bodyDiv.appendChild(t);
+      }
+    }
+    // Update credit display
+    document.getElementById('vh-mins-used').textContent = used + mins;
+    loadVoiceHistory();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = `Transcribe → ${mins} min`;
+    alert('Transcription failed: ' + e.message);
+  }
+}
+
+async function transcribeChat(chatId, btn, totalMins) {
+  const used = parseInt(document.getElementById('vh-mins-used').textContent) || 0;
+  const limit = parseInt(document.getElementById('vh-mins-limit').textContent) || 0;
+  if (limit && used + totalMins > limit) {
+    alert(`Not enough minutes. You have ${limit - used} min left, this batch needs ${totalMins} min.`); return;
+  }
+  if (!confirm(`Transcribe all pending voice notes in this chat?\nThis will use ${totalMins} minutes from your plan.`)) return;
+  btn.disabled = true; btn.textContent = '⏳ Processing...';
+  try {
+    const r = await api('/api/import/voices/transcribe-chat', { method: 'POST', body: JSON.stringify({ chat_id: chatId }) });
+    btn.textContent = `✅ ${r.transcribed} done`;
+    document.getElementById('vh-mins-used').textContent = used + totalMins;
+    setTimeout(() => loadVoiceHistory(), 800);
+  } catch(e) {
+    btn.disabled = false; btn.textContent = `▶ Process chat · ${totalMins} min`;
+    alert('Batch failed: ' + e.message);
+  }
+}
 </script>
 </body>
 </html>
