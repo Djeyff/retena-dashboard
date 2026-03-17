@@ -519,14 +519,23 @@ function langFlag(lang) {
 function detectLang(text) {
   if (!text || text.length < 3) return '';
   const t = ' ' + text.toLowerCase().replace(/[.,!?;:""''()\[\]]/g, ' ') + ' ';
-  const es = (t.match(/\s(el|la|los|las|un|una|de|en|que|y|no|se|lo|por|con|para|del|al|es|como|pero|más|todo|te|me|mi|tu|su|ya|si|hay|fue|ser|ir|va|le|bien|bueno|eso|ese|esa|qué|muy|sin|hoy|así|vamos|quiero|puede|tiene|dice|hola|donde|aquí|ahora|cómo|porque|cuando|nunca|nada|algo|sobre|hasta|otra|poco|mucho|puedes|hacer|poner|decir|saber|esto|sido|mañana|después|entre|solo|también|necesito)\s/g) || []).length;
-  const fr = (t.match(/\s(le|la|les|de|du|des|un|une|en|et|est|que|ne|pas|je|tu|il|nous|vous|ils|ce|qui|dans|pour|sur|avec|son|sa|ses|au|aux|mais|ou|donc|car|bien|fait|être|avoir|sont|très|tout|cette|ces|plus|chez|oui|non|merci|bonjour|comme|aussi|même|puis|après|avant|encore|jamais|rien)\s/g) || []).length;
-  const en = (t.match(/\s(the|and|is|are|was|were|have|has|this|that|with|from|they|their|would|could|should|about|been|just|also|not|but|will|can|had|all|when|there|what|your|more|some|into|than|its|our|out|very|only|then|them|here|where|still|after|each|much|both|which|who|how|why|yes|no|got|get|did|does|going|want|said|need)\s/g) || []).length;
+  // Shared words (low weight, in both ES+FR)
+  const esShared = (t.match(/\s(el|la|los|las|un|una|de|en|que|y|no|se|lo|por|con|para|del|al|es|como|pero|más|todo|te|me|mi|tu|su|ya|si|hay|fue|ser|va|le|bien)\s/g) || []).length;
+  const frShared = (t.match(/\s(le|la|les|de|du|des|un|une|en|et|est|que|ne|pas|je|tu|il|nous|vous|ils|ce|qui|dans|pour|sur|avec|son|sa|au|aux|mais|ou|bien)\s/g) || []).length;
+  // Unique ES words (high weight x2)
+  const esUnique = (t.match(/\s(bueno|eso|ese|esa|qué|muy|sin|hoy|así|vamos|quiero|puede|tiene|dice|hola|donde|aquí|ahora|cómo|porque|cuando|nunca|nada|algo|sobre|hasta|otra|poco|mucho|puedes|hacer|poner|decir|saber|esto|sido|mañana|después|entre|solo|también|necesito|pues|claro|estoy|estás|estamos|están|está|soy|eres|somos|son|tengo|tienes|tenemos|tienen|quieres|quiere|queremos|quieren|voy|vas|vaya|vengo|viene|vienen|venimos)\s/g) || []).length;
+  // Unique FR words (high weight x2)
+  const frUnique = (t.match(/\s(donc|car|fait|être|avoir|sont|très|tout|cette|ces|plus|chez|oui|non|merci|bonjour|comme|aussi|même|puis|après|avant|encore|jamais|rien|dit|dis|dire|suis|êtes|etes|avais|avait|avez|avons|était|étais|étaient|beaucoup|travail|mon|ton|votre|notre|nos|vos|leur|leurs|vais|allons|allez|quoi|dont|voilà|voila|alors|ici|là|bon|bonne|bien|ça|va|vas|tout|tous|toutes|fais|font|vient|viennent|venez|venons|pouvez|pouvons|peut|peuvent|voulez|voulons|veut|veulent|savez|savoir|sait|voir|vois|voit|voyez)\s/g) || []).length;
+  const en = (t.match(/\s(the|and|is|are|was|were|have|has|this|that|with|from|they|their|would|could|should|about|been|just|also|not|but|will|can|had|all|when|there|what|your|more|some|into|than|its|our|out|very|only|then|them|here|where|still|after|each|much|both|which|who|how|why|yes|got|get|did|does|going|want|said|need|you|we|he|she|it|at|by|or|so|if|up|do|my|me|its|im|dont|cant|wont|didnt|its)\s/g) || []).length;
   const esBonus = (t.match(/[áéíóúñ¿¡]/g) || []).length;
   const frBonus = (t.match(/[àâçèêëîïôùûüœæ]/g) || []).length;
-  const scores = { es: es + esBonus, fr: fr + frBonus, en };
+  const esScore = esShared + (esUnique * 2) + esBonus;
+  const frScore = frShared + (frUnique * 2) + frBonus;
+  const scores = { es: esScore, fr: frScore, en };
   const sorted = Object.entries(scores).sort((a, b) => b[1] - a[1]);
-  return sorted[0][1] > 0 ? sorted[0][0] : '';
+  // Require minimum score of 1 and clear winner (>= shared competitor)
+  if (sorted[0][1] === 0) return '';
+  return sorted[0][0];
 }
 
 // ── Translate ──
