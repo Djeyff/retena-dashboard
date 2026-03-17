@@ -214,7 +214,8 @@ async function loadSummaries(forceRegenerate = false) {
   const date = document.getElementById('summary-date').value;
   try {
     const forceParam = forceRegenerate ? '&force=true' : '';
-    const data = await api(`/api/summaries?date=${date}&type=${summaryType}${forceParam}`);
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Santo_Domingo';
+    const data = await api(`/api/summaries?date=${date}&type=${summaryType}${forceParam}&tz=${encodeURIComponent(tz)}`);
     const items = data.items || [];
 
     btn.disabled = false;
@@ -227,8 +228,12 @@ async function loadSummaries(forceRegenerate = false) {
       regenBtn.style.display = 'inline';
     } else if (items.length) {
       cacheBadge.style.display = 'inline';
-      cacheBadge.textContent = `✨ Generated (${data.ai_calls || 0} AI calls)`;
-      regenBtn.style.display = 'inline';
+      if (data.day_closed) {
+        cacheBadge.textContent = `✨ Generated & saved (${data.ai_calls || 0} AI calls)`;
+      } else {
+        cacheBadge.textContent = `🔴 Live — day in progress (${data.ai_calls || 0} AI calls, not cached)`;
+      }
+      regenBtn.style.display = data.day_closed ? 'inline' : 'none';
     }
 
     if (!items.length) {
