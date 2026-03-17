@@ -10,6 +10,7 @@ if (!document.querySelector('link[rel="manifest"]')) {
   document.head.appendChild(m);
   // iOS meta tags
   const meta = (n, c) => { const t = document.createElement('meta'); t.name = n; t.content = c; document.head.appendChild(t); };
+  meta('mobile-web-app-capable', 'yes');
   meta('apple-mobile-web-app-capable', 'yes');
   meta('apple-mobile-web-app-status-bar-style', 'black-translucent');
   meta('theme-color', '#E67E22');

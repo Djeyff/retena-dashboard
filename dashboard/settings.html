@@ -607,46 +607,35 @@ async function importGoogleContacts() {
     // Step 2: Open Google OAuth in popup
     const popup = window.open(auth_url, 'google-contacts', 'width=500,height=600,left=200,top=100');
 
-    // Step 3: Listen for the redirect with auth code
+    // Step 3: Listen for redirect via URL check (redirect-based flow)
     status.style.display = 'block';
     status.style.background = 'rgba(230,126,34,0.1)';
     status.style.color = 'var(--accent)';
-    status.textContent = '⏳ Waiting for Google authorization…';
+    status.textContent = '⏳ Waiting for Google authorization… (check the popup window)';
 
+    // Use a timer to check if popup closed (COOP-safe: just catch errors)
+    let popupDone = false;
     const checkPopup = setInterval(async () => {
+      if (popupDone) return;
       try {
+        // This may throw due to COOP — that's OK, means popup is still on Google
         if (popup.closed) {
           clearInterval(checkPopup);
-          status.textContent = '❌ Authorization cancelled';
-          status.style.color = 'var(--red)';
-          btn.disabled = false;
-          btn.textContent = 'Import from Google Contacts';
+          if (!popupDone) {
+            status.textContent = '❌ Authorization cancelled';
+            status.style.color = 'var(--red)';
+            btn.disabled = false;
+            btn.textContent = 'Import from Google Contacts';
+          }
           return;
         }
-        const popupUrl = popup.location.href;
-        if (popupUrl.includes('code=')) {
-          clearInterval(checkPopup);
-          const urlParams = new URLSearchParams(popup.location.search);
-          const code = urlParams.get('code');
-          popup.close();
-
-          status.textContent = '⏳ Importing contacts…';
-
-          // Step 4: Send code to our API
-          const result = await api('/api/contacts/google/import', {
-            method: 'POST',
-            body: JSON.stringify({ code, redirect_uri: window.location.href.split('?')[0] })
-          });
-
-          status.style.background = 'rgba(16,185,129,0.1)';
-          status.style.color = 'var(--green)';
-          status.textContent = `✅ Imported ${result.imported} contacts from Google`;
-          loadContacts();
-        }
       } catch (e) {
-        // Cross-origin — popup still on Google domain, keep waiting
+        // COOP blocks access — popup is still open on cross-origin, keep waiting
       }
-    }, 500);
+    }, 1500);
+
+    // Also listen for the redirect callback (page will reload with ?code=)
+    // The checkGoogleCallback() function below handles this case
 
   } catch (e) {
     status.style.display = 'block';

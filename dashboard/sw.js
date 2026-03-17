@@ -31,6 +31,9 @@ self.addEventListener('fetch', (e) => {
   // API calls: always network
   if (url.pathname.startsWith('/api/')) return;
 
+  // Skip non-http(s) schemes (chrome-extension://, etc.)
+  if (!url.protocol.startsWith('http')) return;
+
   // Static assets: cache-first, then network
   e.respondWith(
     caches.match(e.request).then(cached => {
