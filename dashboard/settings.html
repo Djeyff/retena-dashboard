@@ -27,6 +27,7 @@
         <div class="settings-tab" data-tab="api" onclick="showTab('api')">API Keys</div>
         <div class="settings-tab" data-tab="notifications" onclick="showTab('notifications')">Notifications</div>
         <div class="settings-tab" data-tab="security" onclick="showTab('security')">Security</div>
+        <div class="settings-tab" data-tab="import" onclick="showTab('import')">Import</div>
         <div class="settings-tab" data-tab="data" onclick="showTab('data')">Data & Privacy</div>
         <div class="settings-tab" data-tab="vozclara" onclick="showTab('vozclara')">VozClara Perk</div>
       </div>
@@ -247,6 +248,75 @@
         </div>
       </div>
 
+      <!-- Import -->
+      <div class="settings-section" id="tab-import">
+        <div class="card animate-in" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+            <div style="font-size:32px">📥</div>
+            <div>
+              <div style="font-size:18px;font-weight:700">Import WhatsApp History</div>
+              <div style="font-size:13px;color:var(--text-secondary)">Import your exported WhatsApp chat files to make them searchable in Retena</div>
+            </div>
+          </div>
+
+          <div style="background:var(--bg-tertiary);border-radius:10px;padding:16px;margin-bottom:20px">
+            <div style="font-weight:600;font-size:13px;margin-bottom:8px">How to export a WhatsApp chat:</div>
+            <ol style="font-size:12px;color:var(--text-secondary);margin:0;padding-left:18px;line-height:1.8">
+              <li>Open the WhatsApp chat you want to export</li>
+              <li>Tap <strong>⋮</strong> (menu) → <strong>More</strong> → <strong>Export chat</strong></li>
+              <li>Choose <strong>"Without media"</strong> (text only)</li>
+              <li>Save or share the <code>.txt</code> file</li>
+              <li>Upload it here ↓</li>
+            </ol>
+          </div>
+
+          <div style="margin-bottom:16px">
+            <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Chat label (name for this import)</label>
+            <input class="input" id="import-label" placeholder="e.g. Family Group, Work Chat, John Doe">
+          </div>
+
+          <div id="import-dropzone" style="border:2px dashed var(--border);border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s" onclick="document.getElementById('import-file').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='rgba(230,126,34,0.05)'" ondragleave="this.style.borderColor='var(--border)';this.style.background=''" ondrop="handleImportDrop(event)">
+            <div style="font-size:28px;margin-bottom:8px">📄</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:4px">Drop .txt file here or click to browse</div>
+            <div style="font-size:12px;color:var(--text-muted)">WhatsApp chat export file (.txt)</div>
+            <input type="file" id="import-file" accept=".txt,.zip" style="display:none" onchange="handleImportFile(this.files[0])">
+          </div>
+
+          <div id="import-preview" style="display:none;margin-top:16px">
+            <div style="background:var(--bg-input);border-radius:10px;padding:14px;margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <span style="font-weight:600;font-size:13px" id="import-filename"></span>
+                <button class="btn" style="background:var(--bg-tertiary);color:var(--red);font-size:11px;padding:4px 10px" onclick="clearImport()">✕ Remove</button>
+              </div>
+              <div style="font-size:12px;color:var(--text-muted)" id="import-stats"></div>
+            </div>
+            <button class="btn btn-primary" id="import-btn" onclick="startImport()" style="width:100%">
+              📥 Import messages
+            </button>
+          </div>
+
+          <div id="import-progress" style="display:none;margin-top:16px">
+            <div style="background:var(--bg-input);border-radius:10px;padding:20px;text-align:center">
+              <div style="font-size:24px;margin-bottom:8px" id="import-progress-icon">⏳</div>
+              <div style="font-weight:600;font-size:14px" id="import-progress-title">Importing...</div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:4px" id="import-progress-detail"></div>
+            </div>
+          </div>
+
+          <div id="import-result" style="display:none;margin-top:16px">
+            <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:16px">
+              <div style="font-weight:600;font-size:14px;color:var(--green);margin-bottom:8px">✅ Import complete!</div>
+              <div style="font-size:12px;color:var(--text-secondary)" id="import-result-detail"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card animate-in animate-in-d1">
+          <div class="section-title">Import History</div>
+          <div id="import-history" style="font-size:13px;color:var(--text-muted)">No imports yet</div>
+        </div>
+      </div>
+
       <!-- VozClara Perk -->
       <div class="settings-section" id="tab-vozclara">
         <div class="card animate-in" style="text-align:center;padding:32px">
@@ -302,6 +372,7 @@ function showTab(tabId) {
   if (tabId === 'groups') loadSettingsGroups();
   if (tabId === 'team') loadTeam();
   if (tabId === 'billing') loadBilling();
+  if (tabId === 'import') loadImportHistory();
 }
 
 async function loadSettings() {
@@ -595,6 +666,129 @@ showTab = function(tabId) {
   origShowTab(tabId);
   if (tabId === 'contacts') loadContacts();
 };
+
+// ── WhatsApp Import ──
+let importText = null;
+let importFileName = null;
+
+function handleImportDrop(e) {
+  e.preventDefault();
+  e.target.closest('#import-dropzone').style.borderColor = 'var(--border)';
+  e.target.closest('#import-dropzone').style.background = '';
+  const file = e.dataTransfer?.files?.[0];
+  if (file) handleImportFile(file);
+}
+
+function handleImportFile(file) {
+  if (!file) return;
+  if (!file.name.endsWith('.txt')) {
+    showToast('Please select a .txt file (WhatsApp chat export)');
+    return;
+  }
+  importFileName = file.name;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    importText = e.target.result;
+    // Count lines and detect messages
+    const lines = importText.split('\n').filter(l => l.trim());
+    const msgPattern = /^[\[\d].*?[:]\s/;
+    const msgCount = lines.filter(l => msgPattern.test(l)).length;
+    const sizeKB = Math.round(file.size / 1024);
+
+    document.getElementById('import-filename').textContent = file.name;
+    document.getElementById('import-stats').textContent = `${sizeKB} KB · ~${msgCount} messages detected · ${lines.length} lines`;
+    document.getElementById('import-dropzone').style.display = 'none';
+    document.getElementById('import-preview').style.display = 'block';
+    document.getElementById('import-result').style.display = 'none';
+
+    // Auto-fill label from filename
+    const labelInput = document.getElementById('import-label');
+    if (!labelInput.value) {
+      const autoLabel = file.name.replace(/\.txt$/i, '').replace(/WhatsApp Chat with /i, '').replace(/_/g, ' ');
+      labelInput.value = autoLabel;
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearImport() {
+  importText = null;
+  importFileName = null;
+  document.getElementById('import-file').value = '';
+  document.getElementById('import-dropzone').style.display = '';
+  document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('import-progress').style.display = 'none';
+  document.getElementById('import-result').style.display = 'none';
+}
+
+async function startImport() {
+  if (!importText) { showToast('No file selected'); return; }
+  const label = document.getElementById('import-label').value.trim() || importFileName || 'WhatsApp Import';
+
+  document.getElementById('import-preview').style.display = 'none';
+  document.getElementById('import-progress').style.display = 'block';
+  document.getElementById('import-progress-icon').textContent = '⏳';
+  document.getElementById('import-progress-title').textContent = 'Importing messages...';
+  document.getElementById('import-progress-detail').textContent = 'This may take a moment for large chats';
+
+  try {
+    const result = await api('/api/import/whatsapp', {
+      method: 'POST',
+      body: JSON.stringify({ text: importText, source_label: label }),
+    });
+
+    document.getElementById('import-progress').style.display = 'none';
+    document.getElementById('import-result').style.display = 'block';
+
+    const senderList = (result.senders || []).slice(0, 5).join(', ');
+    const dateFrom = result.date_range?.from ? new Date(result.date_range.from).toLocaleDateString() : '?';
+    const dateTo = result.date_range?.to ? new Date(result.date_range.to).toLocaleDateString() : '?';
+
+    document.getElementById('import-result-detail').innerHTML =
+      `<strong>${result.imported}</strong> messages imported` +
+      (result.skipped ? ` · ${result.skipped} skipped` : '') +
+      `<br>Participants: ${senderList}` +
+      `<br>Date range: ${dateFrom} → ${dateTo}` +
+      `<br>Chat label: <strong>${esc(label)}</strong>`;
+
+    // Save to import history (localStorage)
+    const history = JSON.parse(localStorage.getItem('retena_imports') || '[]');
+    history.unshift({
+      label,
+      imported: result.imported,
+      senders: result.senders,
+      date: new Date().toISOString(),
+      dateRange: result.date_range,
+    });
+    localStorage.setItem('retena_imports', JSON.stringify(history.slice(0, 20)));
+    loadImportHistory();
+
+    showToast(`✅ ${result.imported} messages imported!`);
+    importText = null;
+  } catch (e) {
+    document.getElementById('import-progress-icon').textContent = '❌';
+    document.getElementById('import-progress-title').textContent = 'Import failed';
+    document.getElementById('import-progress-detail').textContent = e.message || 'Unknown error';
+    showToast('Import failed: ' + e.message);
+  }
+}
+
+function loadImportHistory() {
+  const el = document.getElementById('import-history');
+  const history = JSON.parse(localStorage.getItem('retena_imports') || '[]');
+  if (!history.length) {
+    el.innerHTML = '<div style="padding:12px 0;color:var(--text-muted)">No imports yet</div>';
+    return;
+  }
+  el.innerHTML = history.map(h => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div>
+        <div style="font-weight:600;font-size:13px">${esc(h.label)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${h.imported} messages · ${(h.senders || []).slice(0,3).join(', ')} · ${timeAgo(h.date)}</div>
+      </div>
+      <span class="pill" style="background:rgba(16,185,129,0.15);color:var(--green)">Imported</span>
+    </div>`).join('');
+}
 
 // Check if redirected from Google OAuth
 (function checkGoogleCallback() {
