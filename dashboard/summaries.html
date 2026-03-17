@@ -29,9 +29,13 @@
           <button class="btn btn-sm summary-toggle active" id="toggle-daily" onclick="setType('daily')" style="border-radius:0;border:none">Daily</button>
           <button class="btn btn-sm summary-toggle" id="toggle-weekly" onclick="setType('weekly')" style="border-radius:0;border:none">Weekly</button>
         </div>
-        <button class="btn btn-sm" id="generate-btn" onclick="loadSummaries()" style="background:var(--accent);color:white">
+        <button class="btn btn-sm" id="generate-btn" onclick="loadSummaries(false)" style="background:var(--accent);color:white">
           ✨ Generate
         </button>
+        <button class="btn btn-sm" id="regen-btn" onclick="loadSummaries(true)" style="background:var(--bg-tertiary);color:var(--text-secondary);display:none">
+          🔄 Regenerate
+        </button>
+        <span id="cache-badge" style="display:none;font-size:11px;color:var(--text-muted);padding:6px 10px">⚡ Cached</span>
       </div>
 
       <!-- Stats bar -->
@@ -193,23 +197,39 @@ function speakerAvatar(name, idx) {
   return `<div class="speaker-dot" style="background:${color}">${initial}</div>`;
 }
 
-async function loadSummaries() {
+async function loadSummaries(forceRegenerate = false) {
   const el = document.getElementById('summaries-content');
   const statsBar = document.getElementById('summary-stats');
   const btn = document.getElementById('generate-btn');
+  const regenBtn = document.getElementById('regen-btn');
+  const cacheBadge = document.getElementById('cache-badge');
 
   btn.disabled = true;
-  btn.textContent = '⏳ Generating...';
+  btn.textContent = forceRegenerate ? '⏳ Regenerating...' : '⏳ Loading...';
+  regenBtn.style.display = 'none';
+  cacheBadge.style.display = 'none';
   showLoading(el);
   statsBar.style.display = 'none';
 
   const date = document.getElementById('summary-date').value;
   try {
-    const data = await api(`/api/summaries?date=${date}&type=${summaryType}`);
+    const forceParam = forceRegenerate ? '&force=true' : '';
+    const data = await api(`/api/summaries?date=${date}&type=${summaryType}${forceParam}`);
     const items = data.items || [];
 
     btn.disabled = false;
     btn.textContent = '✨ Generate';
+
+    // Show cache status
+    if (data.cached) {
+      cacheBadge.style.display = 'inline';
+      cacheBadge.textContent = '⚡ Cached — instant load';
+      regenBtn.style.display = 'inline';
+    } else if (items.length) {
+      cacheBadge.style.display = 'inline';
+      cacheBadge.textContent = `✨ Generated (${data.ai_calls || 0} AI calls)`;
+      regenBtn.style.display = 'inline';
+    }
 
     if (!items.length) {
       showEmpty(el, 'No conversations found', `No messages were captured on ${date}. Try a different date or check that your WhatsApp is connected.`);
