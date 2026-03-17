@@ -385,10 +385,10 @@ function _subscribeRealtime() {
   try {
     const client = window.supabase.createClient(_SUPA_URL, _SUPA_KEY);
     const channel = client
-      .channel('rewa_messages_push')
+      .channel('retena_messages_push')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'rewa_messages' },
+        { event: 'INSERT', schema: 'public', table: 'retena_messages' },
         (payload) => {
           if (!payload?.new) return;
           _emitNewData([payload.new], !!window._retenaLastSeen);
@@ -397,7 +397,7 @@ function _subscribeRealtime() {
       )
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'rewa_messages' },
+        { event: 'UPDATE', schema: 'public', table: 'retena_messages' },
         (payload) => {
           // Transcription arrived for an existing voice note
           if (payload?.new?.transcription && !payload?.old?.transcription) {

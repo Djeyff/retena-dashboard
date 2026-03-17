@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
     if (chatFilter) {
       // Single chat mode: load messages for one chat_id
       const limit = Math.min(Number(req.query.limit) || 200, 1000);
-      const qs = `rewa_messages?select=id,chat_id,chat_name,sender_id,sender_name,from_me,is_group,message_type,body,text_content,transcription,summary,duration_seconds,language,has_media,timestamp,created_at&chat_id=eq.${encodeURIComponent(chatFilter)}&order=timestamp.desc&limit=${limit}`;
+      const qs = `retena_messages?select=id,chat_id,chat_name,sender_id,sender_name,from_me,is_group,message_type,body,text_content,transcription,summary,duration_seconds,language,has_media,timestamp,created_at&chat_id=eq.${encodeURIComponent(chatFilter)}&order=timestamp.desc&limit=${limit}`;
       const resp = await fetch(`${SUPA_URL}/rest/v1/${qs}`, { headers });
       if (!resp.ok) throw new Error(`Supabase ${resp.status}: ${await resp.text()}`);
       const rows = await resp.json();
@@ -38,7 +38,7 @@ module.exports = async function handler(req, res) {
     const maxTotal = 10000;
 
     while (offset < maxTotal) {
-      const qs = `rewa_messages?select=id,chat_id,chat_name,sender_id,sender_name,from_me,is_group,message_type,body,text_content,transcription,summary,duration_seconds,language,has_media,timestamp,created_at&is_group=eq.false&chat_id=neq.status@broadcast&order=timestamp.desc&limit=${pageSize}&offset=${offset}`;
+      const qs = `retena_messages?select=id,chat_id,chat_name,sender_id,sender_name,from_me,is_group,message_type,body,text_content,transcription,summary,duration_seconds,language,has_media,timestamp,created_at&is_group=eq.false&chat_id=neq.status@broadcast&order=timestamp.desc&limit=${pageSize}&offset=${offset}`;
       const resp = await fetch(`${SUPA_URL}/rest/v1/${qs}`, { headers });
       if (!resp.ok) throw new Error(`Supabase ${resp.status}: ${await resp.text()}`);
       const rows = await resp.json();
