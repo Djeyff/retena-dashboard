@@ -42,11 +42,50 @@
 <script>
 let allGroups = [];
 let selectedGroupId = null;
+let _groupsLastUpdated = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   renderSidebar('groups');
   renderMobileTabs('groups');
   loadGroups();
+});
+
+// ── Background poll: refresh group list + active group detail ──
+window.addEventListener('retena:newData', async (e) => {
+  if (!e.detail?.hasNew) return;
+  // Silently refresh the group list (message counts, last activity)
+  try {
+    const data = await api('/api/rt/groups');
+    if (Array.isArray(data?.groups || data)) {
+      allGroups = data?.groups || data;
+      renderGroupList(document.getElementById('group-search')?.value?.toLowerCase() || '');
+    }
+  } catch (e) { /* silent */ }
+
+  // If a group detail is open, refresh it without collapsing sections
+  if (!selectedGroupId) return;
+  try {
+    const data = await api(`/api/rt/groups/${selectedGroupId}`);
+    // Only update message list + stats, not the whole panel (preserve open sections)
+    const msgs = data?.messages || data?.recent_messages || [];
+    if (!msgs.length) return;
+    const msgList = document.getElementById('group-msg-list');
+    if (msgList) {
+      const existingIds = new Set([...msgList.querySelectorAll('[data-id]')].map(el => el.dataset.id));
+      const newMsgs = msgs.filter(m => !existingIds.has(String(m.id)));
+      if (!newMsgs.length) return;
+
+      const wasAtBottom = msgList.scrollHeight - msgList.scrollTop - msgList.clientHeight < 60;
+      newMsgs.reverse().forEach(m => {
+        const d = document.createElement('div');
+        d.dataset.id = m.id;
+        d.innerHTML = buildGroupMsgRow(m);
+        msgList.appendChild(d.firstElementChild || d);
+      });
+      if (wasAtBottom) msgList.scrollTop = msgList.scrollHeight;
+      else showNewMsgBadge(msgList, newMsgs.length, () => { msgList.scrollTop = msgList.scrollHeight; });
+    }
+  } catch (e) { /* silent */ }
 });
 
 async function loadGroups() {

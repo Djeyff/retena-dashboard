@@ -56,6 +56,25 @@ document.addEventListener('DOMContentLoaded', () => {
   loadActivity();
 });
 
+// ── Background poll: prepend new activity rows silently ──
+window.addEventListener('retena:newData', (e) => {
+  if (!e.detail?.hasNew) return;
+  const newItems = (e.detail.items || []).filter(m => !allMessages.find(x => x.id === m.id));
+  if (!newItems.length) return;
+  const el = document.getElementById('activity-content');
+  if (!el) return;
+  // Prepend new rows at top
+  newItems.reverse().forEach(m => {
+    const row = document.createElement('div');
+    row.innerHTML = renderActivityRow(m);
+    el.insertBefore(row.firstElementChild || row, el.firstChild);
+    allMessages.unshift(m);
+  });
+  groupNames = new Set(allMessages.filter(m => m.is_group).map(m => m.chat_name || m.group_name).filter(Boolean));
+  // Flash a subtle indicator
+  el.firstChild && (el.firstChild.style.animation = 'none') && (el.firstChild.offsetHeight) && (el.firstChild.style.animation = '');
+});
+
 async function loadActivity() {
   page = 1;
   const el = document.getElementById('activity-content');
@@ -110,29 +129,30 @@ function renderActivity() {
     return;
   }
 
-  el.innerHTML = items.map(m => {
-    const isVoice = m.message_type === 'voice' || m.type === 'voice';
-    const text = m.text || m.message_text || m.content || m.transcription || '';
-    const expanded = isVoice && text.length > 150;
-    const id = m.id || Math.random().toString(36).slice(2);
+  el.innerHTML = items.map(m => renderActivityRow(m)).join('');
+}
 
-    return `
-      <div class="activity-item">
-        ${renderAvatar(m.sender || m.sender_name || 'Unknown')}
-        <div class="activity-content">
-          <div class="activity-meta">
-            <span class="activity-sender">${m.sender || m.sender_name || 'Unknown'}</span>
-            ${m.group_name ? groupPill(m.group_name) : ''}
-            <span class="activity-time">${timeAgo(m.timestamp || m.created_at)}</span>
-          </div>
-          <div class="activity-text">
-            ${isVoice ? `<span class="voice-badge">🎤 ${formatDuration(m.duration || m.voice_duration_sec || 0)}</span> ` : ''}
-            <span id="text-${id}">${expanded ? truncate(text, 150) : text}</span>
-            ${expanded ? `<button class="btn-sm" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="expandText('${id}', \`${text.replace(/`/g,'\\`').replace(/\\/g,'\\\\')}\`)">Show more</button>` : ''}
-          </div>
+function renderActivityRow(m) {
+  const isVoice = m.message_type === 'voice' || m.type === 'voice';
+  const text = m.text || m.message_text || m.content || m.transcription || '';
+  const expanded = isVoice && text.length > 150;
+  const id = m.id || Math.random().toString(36).slice(2);
+  return `
+    <div class="activity-item" data-id="${id}">
+      ${renderAvatar(m.sender || m.sender_name || 'Unknown')}
+      <div class="activity-content">
+        <div class="activity-meta">
+          <span class="activity-sender">${m.sender || m.sender_name || 'Unknown'}</span>
+          ${m.group_name ? groupPill(m.group_name) : ''}
+          <span class="activity-time">${timeAgo(m.timestamp || m.created_at)}</span>
         </div>
-      </div>`;
-  }).join('');
+        <div class="activity-text">
+          ${isVoice ? `<span class="voice-badge">🎤 ${formatDuration(m.duration || m.voice_duration_sec || 0)}</span> ` : ''}
+          <span id="text-${id}">${expanded ? truncate(text, 150) : text}</span>
+          ${expanded ? `<button class="btn-sm" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px" onclick="expandText('${id}', \`${text.replace(/`/g,'\\`').replace(/\\/g,'\\\\')}\`)">Show more</button>` : ''}
+        </div>
+      </div>
+    </div>`;
 }
 
 function expandText(id, fullText) {

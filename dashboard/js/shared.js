@@ -344,7 +344,94 @@ async function loadUsage() {
   } catch (e) { /* silent */ }
 }
 
+// ── Background Polling ────────────────────────────────────────────────────────
+// Pages register handlers via: window.addEventListener('retena:newData', e => { ... e.detail ... })
+// e.detail = { items: [...], since: ISO, hasNew: bool }
+// ---
+
+window._retenaLastSeen = null; // ISO timestamp of latest message we've fetched
+let _pollTimer = null;
+let _pollActive = false;
+
+async function _doPoll() {
+  if (_pollActive) return; // skip if previous poll still running
+  _pollActive = true;
+  try {
+    const since = window._retenaLastSeen;
+    const url = since
+      ? `/api/rt/activity?limit=20&since=${encodeURIComponent(since)}`
+      : `/api/rt/activity?limit=20`;
+    const data = await api(url);
+    const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+
+    if (items.length > 0) {
+      // Advance the cursor to the newest item
+      const newest = items.reduce((max, m) => {
+        const ts = m.timestamp || m.created_at || '';
+        return ts > max ? ts : max;
+      }, window._retenaLastSeen || '');
+      if (newest) window._retenaLastSeen = newest;
+
+      window.dispatchEvent(new CustomEvent('retena:newData', {
+        detail: { items, since, hasNew: !!since },
+      }));
+    }
+
+    // Always refresh sidebar usage meters silently
+    loadUsage().catch(() => {});
+  } catch (e) {
+    // Silent — don't log noise for offline/transient errors
+  } finally {
+    _pollActive = false;
+  }
+}
+
+function startBackgroundPoll(intervalMs = 30000) {
+  if (_pollTimer) return; // already running
+  // Initial poll to set baseline cursor (don't dispatch event on first load)
+  api('/api/rt/activity?limit=1').then(data => {
+    const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+    if (items[0]) {
+      window._retenaLastSeen = items[0].timestamp || items[0].created_at || null;
+    }
+  }).catch(() => {});
+  _pollTimer = setInterval(_doPoll, intervalMs);
+  // Also poll when tab becomes visible again after being hidden
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') _doPoll();
+  });
+}
+
+// ── New-message badge helper ──────────────────────────────────────────────────
+// Call showNewMsgBadge(count, onClick) to show a "↓ N new" pill.
+// onClick is called when user taps it (typically scrolls to bottom).
+function showNewMsgBadge(container, count, onClick) {
+  let badge = container.querySelector('.rt-new-badge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.className = 'rt-new-badge';
+    badge.style.cssText = [
+      'position:sticky', 'bottom:16px', 'left:50%', 'transform:translateX(-50%)',
+      'display:inline-flex', 'align-items:center', 'gap:6px',
+      'background:var(--accent)', 'color:#fff',
+      'font-size:12px', 'font-weight:600',
+      'padding:6px 14px', 'border-radius:999px',
+      'cursor:pointer', 'z-index:10', 'box-shadow:0 2px 8px rgba(0,0,0,.3)',
+      'transition:opacity .2s', 'width:fit-content', 'margin:0 auto',
+    ].join(';');
+    container.appendChild(badge);
+  }
+  badge.textContent = `↓ ${count} new`;
+  badge.style.opacity = '1';
+  badge.onclick = () => {
+    badge.style.opacity = '0';
+    setTimeout(() => badge.remove(), 200);
+    if (onClick) onClick();
+  };
+}
+
 // ── Init common ──
 document.addEventListener('DOMContentLoaded', () => {
   loadUsage();
+  startBackgroundPoll();
 });

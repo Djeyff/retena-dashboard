@@ -133,6 +133,59 @@ document.addEventListener('DOMContentLoaded', () => {
   loadPersonal();
 });
 
+// ── Background poll handler ──
+window.addEventListener('retena:newData', async (e) => {
+  if (!e.detail?.hasNew) return;
+  // Refresh conversation list (unread counts, last message preview)
+  try {
+    let data;
+    try { data = await api('/api/data/personal?limit=200'); }
+    catch { data = await api('/api/rt/personal?limit=200'); }
+    if (data?.conversations?.length) {
+      conversations = data.conversations;
+      renderConversationList(document.getElementById('conv-search')?.value?.toLowerCase() || '');
+    }
+  } catch (e) { /* silent */ }
+
+  // If a chat is open, fetch only new messages for that chat
+  if (!selectedChatId) return;
+  try {
+    const lastTs = allMessages
+      .filter(m => m.chat_id === selectedChatId)
+      .reduce((max, m) => (m.timestamp > max ? m.timestamp : max), '');
+    const since = lastTs ? `&since=${encodeURIComponent(lastTs)}` : '';
+    let data;
+    try { data = await api(`/api/data/personal?chat=${encodeURIComponent(selectedChatId)}&limit=50${since}`); }
+    catch { data = await api(`/api/rt/personal?chat=${encodeURIComponent(selectedChatId)}&limit=50${since}`); }
+
+    const newMsgs = (data?.items || []).filter(m => !allMessages.find(x => x.id === m.id));
+    if (!newMsgs.length) return;
+
+    // Merge into cache
+    const existingIds = new Set(allMessages.map(m => m.id));
+    for (const m of newMsgs) { if (!existingIds.has(m.id)) { allMessages.push(m); existingIds.add(m.id); } }
+
+    // Smart-append: preserve scroll if user is reading history
+    const thread = document.getElementById('chat-thread');
+    if (!thread) return;
+    const wasAtBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 60;
+
+    // Append new message bubbles
+    newMsgs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    newMsgs.forEach((m, idx) => {
+      const wrap = document.createElement('div');
+      wrap.innerHTML = renderSingleBubble(m, idx);
+      while (wrap.firstChild) thread.appendChild(wrap.firstChild);
+    });
+
+    if (wasAtBottom) {
+      thread.scrollTop = thread.scrollHeight;
+    } else {
+      showNewMsgBadge(thread, newMsgs.length, () => { thread.scrollTop = thread.scrollHeight; });
+    }
+  } catch (e) { /* silent */ }
+});
+
 // ── Load Data ──
 async function loadPersonal() {
   showLoading(document.getElementById('conv-list'));
@@ -298,6 +351,59 @@ async function selectConversation(chatId) {
 }
 
 // ── Render Thread ──
+// ── Single message bubble (extracted for reuse in live poll) ──
+function renderSingleBubble(m, idx) {
+  const d = new Date(m.timestamp || m.created_at);
+  const isMe = m.from_me === true;
+  const side = isMe ? 'me' : 'them';
+  const text = m.transcription || m.text_content || m.text || m.body || m.content || '';
+  const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
+  const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const msgId = m.id || `msg-${idx}`;
+  const senderLabel = isMe ? '' : `<div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:2px">${esc(m.sender_name || '')}</div>`;
+
+  let html = `<div class="msg-row ${side}"><div class="msg-bubble ${side}" id="card-${msgId}">`;
+  if (!isMe) html += senderLabel;
+  if (isVoice) {
+    const dur = m.duration || m.duration_seconds || 0;
+    html += `<div class="voice-badge">🎤 ${dur > 0 ? formatDuration(dur) : 'Voice'}</div>`;
+  }
+  const bullets = parseBullets(m.summary);
+  if (bullets.length > 0) {
+    html += `<div class="msg-summary"><div class="msg-summary-title">Summary</div>`;
+    html += bullets.map(b => `<div class="bullet"><span>${esc(b)}</span></div>`).join('');
+    html += `</div>`;
+  }
+  if (text) {
+    html += `<div class="msg-bubble-text">${esc(text)}</div>`;
+  } else if (!text && isVoice) {
+    const dur = m.duration || m.duration_seconds || 0;
+    html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🎤 Voice note${dur > 0 ? ' · ' + formatDuration(dur) : ''} — no transcription</div>`;
+  } else if (m.message_type === 'image') {
+    html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📷 ${m.media_caption ? esc(m.media_caption) : 'Photo'}</div>`;
+  } else if (m.message_type === 'video') {
+    html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🎥 Video</div>`;
+  } else if (m.message_type === 'document') {
+    html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📄 Document</div>`;
+  } else if (m.message_type === 'media') {
+    html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📎 Media</div>`;
+  }
+  const lang = m.language || (text ? detectLang(text) : '');
+  const flag = lang ? langFlag(lang) : '';
+  html += `<div class="msg-bubble-time">${flag ? flag + ' ' : ''}${timeStr}${isMe ? ' ✓' : ''}</div>`;
+  if (text && text.length > 5) {
+    html += `<div class="translate-toggle" onclick="toggleTranslate('${msgId}')"><span id="arrow-${msgId}" style="font-size:9px">▼</span> Translate</div>`;
+    html += `<div class="translate-panel" id="tpanel-${msgId}">`;
+    const defaultTarget = getDefaultLang();
+    html += `<select id="lang-sel-${msgId}">`;
+    TRANSLATE_LANGS.forEach(l => { html += `<option value="${l.code}" ${l.code === defaultTarget ? 'selected' : ''}>${l.flag} ${l.name}</option>`; });
+    html += `</select><button class="btn-translate" onclick="translateMsg('${msgId}')">Go</button></div>`;
+    html += `<div id="translation-${msgId}" style="display:none" class="translation-result"></div>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
 function renderThread(messages) {
   const thread = document.getElementById('chat-thread');
   thread.style.display = 'flex';
@@ -307,84 +413,11 @@ function renderThread(messages) {
   messages.forEach((m, idx) => {
     const d = new Date(m.timestamp || m.created_at);
     const dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-
     if (dateStr !== lastDate) {
       html += `<div class="chat-date-divider">${dateStr}</div>`;
       lastDate = dateStr;
     }
-
-    const isMe = m.from_me === true;
-    const side = isMe ? 'me' : 'them';
-    const text = m.transcription || m.text_content || m.text || m.body || m.content || '';
-    const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
-    const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
-    const msgId = m.id || `msg-${idx}`;
-    const senderLabel = isMe ? '' : `<div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:2px">${esc(m.sender_name || '')}</div>`;
-
-    html += `<div class="msg-row ${side}">`;
-    html += `<div class="msg-bubble ${side}" id="card-${msgId}">`;
-
-    // Sender label (only for "them" messages)
-    if (!isMe) html += senderLabel;
-
-    // Voice badge
-    if (isVoice) {
-      const dur = m.duration || m.duration_seconds || 0;
-      if (dur > 0) html += `<div class="voice-badge">🎤 ${formatDuration(dur)}</div>`;
-      else html += `<div class="voice-badge">🎤 Voice</div>`;
-    }
-
-    // Summary
-    const bullets = parseBullets(m.summary);
-    if (bullets.length > 0) {
-      html += `<div class="msg-summary">`;
-      html += `<div class="msg-summary-title">Summary</div>`;
-      html += bullets.map(b => `<div class="bullet"><span>${esc(b)}</span></div>`).join('');
-      html += `</div>`;
-    }
-
-    // Text content
-    if (text) {
-      html += `<div class="msg-bubble-text">${esc(text)}</div>`;
-    } else if (m.message_type === 'image' || m.message_type === 'album') {
-      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📷 ${m.media_caption ? esc(m.media_caption) : 'Photo'}</div>`;
-    } else if (m.message_type === 'video') {
-      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🎥 Video</div>`;
-    } else if (m.message_type === 'document') {
-      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📄 Document</div>`;
-    } else if (m.message_type === 'sticker') {
-      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🏷️ Sticker</div>`;
-    } else if (m.message_type === 'media') {
-      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📎 Media</div>`;
-    } else if (!text && isVoice) {
-      const dur = m.duration || m.duration_seconds || 0;
-      const durLabel = dur > 0 ? ` · ${formatDuration(dur)}` : '';
-      html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🎤 Voice note${durLabel} — no transcription</div>`;
-    }
-
-    // Time + language
-    const lang = m.language || (text ? detectLang(text) : '');
-    const flag = lang ? langFlag(lang) : '';
-    html += `<div class="msg-bubble-time">${flag ? flag + ' ' : ''}${timeStr}${isMe ? ' ✓' : ''}</div>`;
-
-    // Translate toggle (only for messages with text)
-    if (text && text.length > 5) {
-      html += `<div class="translate-toggle" onclick="toggleTranslate('${msgId}')">`;
-      html += `<span id="arrow-${msgId}" style="font-size:9px">▼</span> Translate`;
-      html += `</div>`;
-      html += `<div class="translate-panel" id="tpanel-${msgId}">`;
-      const defaultTarget = getDefaultLang();
-      html += `<select id="lang-sel-${msgId}">`;
-      TRANSLATE_LANGS.forEach(l => {
-        html += `<option value="${l.code}" ${l.code === defaultTarget ? 'selected' : ''}>${l.flag} ${l.name}</option>`;
-      });
-      html += `</select>`;
-      html += `<button class="btn-translate" onclick="translateMsg('${msgId}')">Go</button>`;
-      html += `</div>`;
-      html += `<div id="translation-${msgId}" style="display:none" class="translation-result"></div>`;
-    }
-
-    html += `</div></div>`; // close bubble + row
+    html += renderSingleBubble(m, idx);
   });
 
   thread.innerHTML = html;
