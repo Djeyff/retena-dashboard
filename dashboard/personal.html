@@ -257,7 +257,7 @@ function renderConversationList(filter = '') {
 }
 
 // ── Select Conversation ──
-function selectConversation(chatId) {
+async function selectConversation(chatId) {
   selectedChatId = chatId;
   renderConversationList(document.getElementById('conv-search').value.toLowerCase());
 
@@ -277,11 +277,32 @@ function selectConversation(chatId) {
   document.getElementById('chat-meta').textContent =
     `${conv.message_count} messages · ${conv.voice_count} voice · ${conv.text_count} text`;
 
-  // Filter messages for this chat
-  const msgs = allMessages
-    .filter(m => m.chat_id === chatId)
-    .sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
+  // Check if we already have messages for this chat in allMessages
+  let msgs = allMessages.filter(m => m.chat_id === chatId);
 
+  // If we have fewer messages than expected, lazy-load from API
+  if (msgs.length < conv.message_count && conv.message_count > msgs.length) {
+    const thread = document.getElementById('chat-thread');
+    thread.style.display = 'flex';
+    thread.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Loading messages...</div>';
+    try {
+      let data;
+      try { data = await api(`/api/data/personal?chat=${encodeURIComponent(chatId)}&limit=500`); }
+      catch { data = await api(`/api/rt/personal?chat=${encodeURIComponent(chatId)}&limit=500`); }
+      if (data.items && data.items.length > 0) {
+        msgs = data.items;
+        // Merge into allMessages cache (avoid duplicates)
+        const existingIds = new Set(allMessages.map(m => m.id));
+        for (const m of msgs) {
+          if (!existingIds.has(m.id)) allMessages.push(m);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to lazy-load chat messages:', e);
+    }
+  }
+
+  msgs.sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
   renderThread(msgs);
 
   // Scroll to bottom

@@ -1,4 +1,4 @@
-// Personal inbox API — queries Supabase directly for chat_id + from_me
+// Personal inbox API — queries Supabase directly, returns full conversation list
 module.exports = async function handler(req, res) {
   // CORS
   res.setHeader('Access-Control-Allow-Origin', 'https://qr-dashboard.retena.app');
@@ -12,32 +12,47 @@ module.exports = async function handler(req, res) {
   const SUPA_KEY = process.env.SUPABASE_SERVICE_KEY;
   if (!SUPA_URL || !SUPA_KEY) return res.status(500).json({ error: 'Supabase not configured' });
 
+  const headers = {
+    'apikey': SUPA_KEY,
+    'Authorization': `Bearer ${SUPA_KEY}`,
+    'Content-Type': 'application/json',
+  };
+
   try {
-    const limit = Math.min(Number(req.query.limit) || 500, 1000);
-    const chatFilter = req.query.chat ? `&chat_id=eq.${req.query.chat}` : '';
+    const chatFilter = req.query.chat;
 
-    const qs = `rewa_messages?select=id,chat_id,chat_name,sender_id,sender_name,from_me,is_group,message_type,body,text_content,transcription,summary,duration_seconds,language,has_media,timestamp,created_at&is_group=eq.false&chat_id=neq.status@broadcast&order=timestamp.desc&limit=${limit}${chatFilter}`;
-
-    const resp = await fetch(`${SUPA_URL}/rest/v1/${qs}`, {
-      headers: {
-        'apikey': SUPA_KEY,
-        'Authorization': `Bearer ${SUPA_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!resp.ok) {
-      const err = await resp.text();
-      throw new Error(`Supabase ${resp.status}: ${err}`);
+    if (chatFilter) {
+      // Single chat mode: load messages for one chat_id
+      const limit = Math.min(Number(req.query.limit) || 200, 1000);
+      const qs = `rewa_messages?select=id,chat_id,chat_name,sender_id,sender_name,from_me,is_group,message_type,body,text_content,transcription,summary,duration_seconds,language,has_media,timestamp,created_at&chat_id=eq.${encodeURIComponent(chatFilter)}&order=timestamp.desc&limit=${limit}`;
+      const resp = await fetch(`${SUPA_URL}/rest/v1/${qs}`, { headers });
+      if (!resp.ok) throw new Error(`Supabase ${resp.status}: ${await resp.text()}`);
+      const rows = await resp.json();
+      return res.json({ items: rows });
     }
 
-    const rows = await resp.json();
+    // Full conversation list: paginate through ALL personal messages
+    const allRows = [];
+    let offset = 0;
+    const pageSize = 1000;
+    const maxTotal = 10000;
 
-    // Build conversation map
+    while (offset < maxTotal) {
+      const qs = `rewa_messages?select=id,chat_id,chat_name,sender_id,sender_name,from_me,is_group,message_type,body,text_content,transcription,summary,duration_seconds,language,has_media,timestamp,created_at&is_group=eq.false&chat_id=neq.status@broadcast&order=timestamp.desc&limit=${pageSize}&offset=${offset}`;
+      const resp = await fetch(`${SUPA_URL}/rest/v1/${qs}`, { headers });
+      if (!resp.ok) throw new Error(`Supabase ${resp.status}: ${await resp.text()}`);
+      const rows = await resp.json();
+      if (!rows.length) break;
+      allRows.push(...rows);
+      if (rows.length < pageSize) break;
+      offset += pageSize;
+    }
+
+    // Build conversation map from ALL messages
     const convMap = {};
-    for (const msg of rows) {
+    for (const msg of allRows) {
       const cid = msg.chat_id;
-      if (!cid) continue;
+      if (!cid || cid.includes('broadcast') || cid.includes('status')) continue;
       if (!convMap[cid]) {
         convMap[cid] = {
           chat_id: cid,
@@ -48,19 +63,28 @@ module.exports = async function handler(req, res) {
           text_count: 0,
         };
       }
+      // Resolve contact name from received messages
       if (!msg.from_me && msg.sender_name) {
         convMap[cid].contact_name = msg.sender_name;
+      } else if (!msg.from_me && msg.chat_name) {
+        convMap[cid].contact_name = msg.chat_name;
       }
       convMap[cid].message_count++;
       if (msg.message_type === 'voice' || msg.message_type === 'audio') convMap[cid].voice_count++;
       else convMap[cid].text_count++;
     }
 
-    // Resolve missing contact names
+    // Fill missing contact names from chat_name of any message in the chat
     for (const conv of Object.values(convMap)) {
       if (!conv.contact_name) {
-        const phone = conv.chat_id.replace(/@.*/, '');
-        conv.contact_name = phone;
+        // Try to find a chat_name from any message in this chat
+        const anyMsg = allRows.find(m => m.chat_id === conv.chat_id && m.chat_name);
+        if (anyMsg) {
+          conv.contact_name = anyMsg.chat_name;
+        } else {
+          const phone = conv.chat_id.replace(/@.*/, '');
+          conv.contact_name = conv.chat_id.endsWith('@lid') ? phone : '+' + phone;
+        }
       }
     }
 
@@ -69,7 +93,9 @@ module.exports = async function handler(req, res) {
                 new Date(a.last_message.timestamp || a.last_message.created_at)
     );
 
-    res.json({ items: rows, conversations });
+    // Return latest 500 items for detail view + full conversations list
+    const items = allRows.slice(0, 500);
+    res.json({ items, conversations });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
