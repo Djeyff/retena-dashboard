@@ -344,12 +344,14 @@ async function selectConversation(chatId) {
   document.getElementById('chat-meta').textContent =
     `${conv.message_count} messages · ${conv.voice_count} voice · ${conv.text_count} text`;
 
-  // WhatsApp deep link — phone is the chat_id without @c.us / @lid
+  // WhatsApp deep link — intent:// opens WhatsApp directly without browser hop
   const waBar = document.getElementById('chat-wa-bar');
   const waLink = document.getElementById('chat-wa-link');
   const phone = (conv.chat_id || '').split('@')[0].replace(/\D/g, '');
   if (phone && waBar && waLink) {
-    waLink.href = `https://wa.me/${phone}`;
+    // intent:// scheme: Android opens WhatsApp immediately, no api.whatsapp.com page
+    // S.browser_fallback_url kicks in if WhatsApp isn't installed
+    waLink.href = `intent://send/${phone}#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url=https%3A%2F%2Fwa.me%2F${phone};end`;
     waBar.style.display = 'block';
   }
 
