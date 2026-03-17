@@ -49,22 +49,33 @@ self.addEventListener('push', (e) => {
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const targetUrl = e.notification.data?.url || '/dashboard/';
+  const data = e.notification.data || {};
+  const action = e.action || '';
 
-  e.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      // If a Retena tab is already open, focus it and navigate
-      for (const client of windowClients) {
-        if (client.url.includes('/dashboard') && 'focus' in client) {
-          client.focus();
-          client.navigate(targetUrl);
-          return;
-        }
+  e.waitUntil((async () => {
+    // Action: "open_wa" → open WhatsApp app directly via Android Intent URI
+    // intent:// scheme bypasses the browser entirely — opens WhatsApp immediately
+    if (action === 'open_wa' && data.whatsapp_phone) {
+      const intentUrl = `intent://send/${data.whatsapp_phone}#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url=https%3A%2F%2Fwhatsapp.com;end`;
+      await clients.openWindow(intentUrl);
+      return;
+    }
+
+    // Default: open Retena dashboard
+    const targetUrl = data.url || '/dashboard/';
+    const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+
+    // If a Retena tab is already open, focus + navigate it
+    for (const client of windowClients) {
+      if (client.url.includes('/dashboard') && 'focus' in client) {
+        await client.focus();
+        client.navigate(targetUrl);
+        return;
       }
-      // Otherwise open a new tab
-      if (clients.openWindow) return clients.openWindow(targetUrl);
-    })
-  );
+    }
+    // Otherwise open new tab
+    if (clients.openWindow) await clients.openWindow(targetUrl);
+  })());
 });
 
 // ── Fetch: network-first for API, cache-first for static ──
