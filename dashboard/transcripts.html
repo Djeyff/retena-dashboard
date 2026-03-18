@@ -135,7 +135,8 @@ function formatSummaryObj(s) {
 }
 
 function langFlag(lang) {
-  const flags = { en:'🇬🇧', es:'🇪🇸', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', ja:'🇯🇵', zh:'🇨🇳', ar:'🇸🇦', ru:'🇷🇺' };
+  // Fallback only — DB language_flag is country-aware (no es→🇪🇸 hardcode)
+  const flags = { en:'🇬🇧', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', ja:'🇯🇵', zh:'🇨🇳', ar:'🇸🇦', ru:'🇷🇺' };
   if (!lang) return '';
   return flags[lang.slice(0,2).toLowerCase()] || '🌐';
 }
