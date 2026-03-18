@@ -200,44 +200,52 @@
   <div id="s2-error"></div>
 </div>
 
-<!-- ── STEP 3: Connect WhatsApp ── -->
+<!-- ── STEP 3: Connect WhatsApp via QR ── -->
 <div class="card" id="step3" style="display:none">
-  <div class="card-title">Connect your first group</div>
-  <div class="card-sub">Add Retena to any WhatsApp group — your team changes nothing.</div>
+  <div class="card-title">Connect your WhatsApp</div>
+  <div class="card-sub">Scan this QR code with WhatsApp to start capturing your voice notes.</div>
 
-  <div class="wa-number">
-    <div class="wa-number-label">Retena's WhatsApp number</div>
-    <div class="wa-number-val" id="retena-number">+1 (555) RETENA</div>
-    <div class="wa-number-copy" onclick="copyNumber()">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-      <span id="copy-label">Copy number</span>
+  <!-- QR container -->
+  <div id="qr-container" style="text-align:center;margin:24px 0">
+    <div id="qr-loading" style="padding:40px 0;color:var(--text2)">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="animation:spin 1s linear infinite;display:inline-block"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+      <p style="margin-top:12px;font-size:.9rem">Generating QR code...</p>
+    </div>
+    <img id="qr-image" src="" alt="QR Code" style="display:none;border-radius:12px;max-width:260px;width:100%;border:3px solid var(--border2)">
+    <div id="qr-connected" style="display:none;padding:32px 0">
+      <div class="success-icon" style="margin:0 auto 16px">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="font-size:1.1rem;font-weight:700;color:var(--green)">WhatsApp Connected!</div>
+      <div id="qr-number" style="color:var(--text2);font-size:.85rem;margin-top:6px"></div>
+    </div>
+    <div id="qr-error" style="display:none;padding:20px;color:#fca5a5;font-size:.85rem">
+      Could not load QR. <span onclick="startQrPoll()" style="color:var(--accent);cursor:pointer">Try again →</span>
     </div>
   </div>
 
-  <div class="steps-list">
+  <!-- Instructions (shown while waiting for QR scan) -->
+  <div id="qr-instructions" class="steps-list" style="margin-top:0">
     <div class="step-item">
       <div class="step-num">1</div>
-      <div class="step-text"><strong>Save the number</strong> in your phone contacts as "Retena"</div>
+      <div class="step-text">Open <strong>WhatsApp</strong> on your phone</div>
     </div>
     <div class="step-item">
       <div class="step-num">2</div>
-      <div class="step-text"><strong>Open any WhatsApp group</strong> where you want transcription</div>
+      <div class="step-text">Tap <strong>Settings → Linked Devices → Link a Device</strong></div>
     </div>
     <div class="step-item">
       <div class="step-num">3</div>
-      <div class="step-text"><strong>Add Retena</strong> as a participant — it needs admin rights to receive voice notes</div>
-    </div>
-    <div class="step-item">
-      <div class="step-num">4</div>
-      <div class="step-text"><strong>Send a voice note</strong> in the group — you'll see it transcribed in your dashboard within 10 seconds</div>
+      <div class="step-text"><strong>Scan the QR code</strong> above — Retena connects instantly</div>
     </div>
   </div>
 
-  <button class="btn btn-primary" onclick="goToDashboard()">Open my dashboard →</button>
-  <div style="text-align:center;margin-top:12px">
-    <span style="font-size:.8rem;color:var(--text3)">You can also connect groups from the Groups page in your dashboard</span>
-  </div>
+  <button class="btn btn-primary" id="s3-skip" onclick="goToDashboard()" style="margin-top:16px;background:var(--bg3);color:var(--text2);border:1px solid var(--border2)">Skip for now →</button>
 </div>
+
+<style>
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
 
 <!-- ── STEP 4: Done ── -->
 <div class="card" id="step4" style="display:none;text-align:center">
@@ -352,6 +360,7 @@
     }
     currentStep = n;
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (n === 3) startQrPoll();
   }
 
   // ── Copy number ──
@@ -366,6 +375,64 @@
 
   // ── Go to dashboard ──
   function goToDashboard() { window.location.href = '/dashboard/'; }
+
+  // ── QR polling for step 3 ──
+  let _qrTimer = null;
+  let _qrAttempts = 0;
+
+  async function startQrPoll() {
+    _qrAttempts = 0;
+    document.getElementById('qr-loading').style.display = 'block';
+    document.getElementById('qr-image').style.display = 'none';
+    document.getElementById('qr-connected').style.display = 'none';
+    document.getElementById('qr-error').style.display = 'none';
+    await pollQr();
+    if (_qrTimer) clearInterval(_qrTimer);
+    _qrTimer = setInterval(pollQr, 5000);
+  }
+
+  async function pollQr() {
+    _qrAttempts++;
+    try {
+      const res = await fetch('https://dashboard-api.voz-clara.com/api/onboard/qr', { credentials: 'include' });
+      const d = await res.json();
+
+      if (d.status === 'connected') {
+        clearInterval(_qrTimer);
+        document.getElementById('qr-loading').style.display = 'none';
+        document.getElementById('qr-image').style.display = 'none';
+        document.getElementById('qr-instructions').style.display = 'none';
+        document.getElementById('qr-connected').style.display = 'block';
+        if (d.number) document.getElementById('qr-number').textContent = `Connected: +${d.number}`;
+        document.getElementById('s3-skip').textContent = 'Open my dashboard →';
+        document.getElementById('s3-skip').style.background = 'var(--accent)';
+        document.getElementById('s3-skip').style.color = '#fff';
+        document.getElementById('s3-skip').style.border = 'none';
+        setTimeout(() => goToDashboard(), 2500);
+        return;
+      }
+
+      if (d.qr) {
+        document.getElementById('qr-loading').style.display = 'none';
+        document.getElementById('qr-image').src = d.qr;
+        document.getElementById('qr-image').style.display = 'inline-block';
+        document.getElementById('qr-error').style.display = 'none';
+        return;
+      }
+
+      // Still starting — show loader (give up after 60s)
+      if (_qrAttempts > 12) {
+        clearInterval(_qrTimer);
+        document.getElementById('qr-loading').style.display = 'none';
+        document.getElementById('qr-error').style.display = 'block';
+      }
+    } catch (e) {
+      if (_qrAttempts > 5) {
+        document.getElementById('qr-loading').style.display = 'none';
+        document.getElementById('qr-error').style.display = 'block';
+      }
+    }
+  }
 
   // ── Check for Paddle return ──
   (function() {
