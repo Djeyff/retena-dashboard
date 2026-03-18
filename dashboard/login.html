@@ -201,11 +201,16 @@ window.doForgot = async () => {
   const email = document.getElementById('signin-email').value.trim();
   if (!email) { showErr('Enter your email first, then click Forgot password.'); return; }
   clear();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${location.origin}/dashboard/login.html`
-  });
-  if (error) { showErr(error.message); return; }
-  showOk('Password reset email sent — check your inbox.');
+  try {
+    await fetch('https://dashboard-api.voz-clara.com/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    showOk('If this email exists, a reset link was sent — check your inbox.');
+  } catch (e) {
+    showErr('Could not send reset email. Try again.');
+  }
 };
 </script>
 </body>
