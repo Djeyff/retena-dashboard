@@ -126,6 +126,9 @@
   <label>Work email</label>
   <input type="email" id="s1-email" placeholder="you@company.com" autocomplete="email" />
 
+  <label>Password</label>
+  <input type="password" id="s1-password" placeholder="Min. 8 characters" autocomplete="new-password" />
+
   <label>Your name</label>
   <input type="text" id="s1-name" placeholder="Juan García" autocomplete="name" />
 
@@ -265,6 +268,7 @@
   // ── Step 1: Account ──
   async function step1Next() {
     const email = document.getElementById('s1-email').value.trim();
+    const password = document.getElementById('s1-password').value;
     const name = document.getElementById('s1-name').value.trim();
     const company = document.getElementById('s1-company').value.trim();
     const errEl = document.getElementById('s1-error');
@@ -272,6 +276,10 @@
 
     if (!email || !email.includes('@')) {
       errEl.innerHTML = '<div class="alert alert-err">Please enter a valid work email.</div>';
+      return;
+    }
+    if (!password || password.length < 8) {
+      errEl.innerHTML = '<div class="alert alert-err">Password must be at least 8 characters.</div>';
       return;
     }
     if (!name) {
@@ -283,14 +291,25 @@
     btn.disabled = true; btn.textContent = 'Creating account…';
 
     try {
-      const res = await fetch('https://dashboard-api.voz-clara.com/api/rt/onboard/start', {
+      // 1. Create Supabase Auth account
+      const SUPA_URL = 'https://mfhdoiddbgpjqjukacnc.supabase.co';
+      const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1maGRvaWRkYmdwanFqdWthY25jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NjEyNTIsImV4cCI6MjA4ODQzNzI1Mn0.fSL2d0gFjqyFLEPwCrzFI-r49oqCZNJiq4LJS3C0m50';
+      const authRes = await fetch(`${SUPA_URL}/auth/v1/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPA_KEY },
+        body: JSON.stringify({ email, password, options: { data: { full_name: name } } }),
+      });
+      const authData = await authRes.json();
+      if (authData.error) throw new Error(authData.error.message || authData.msg || 'Could not create account');
+
+      // 2. Register in retena_users (for plan/billing)
+      await fetch('https://dashboard-api.voz-clara.com/api/onboard/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, company }),
         credentials: 'include',
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Server error');
+
       userEmail = email;
       goToStep(2);
     } catch (e) {
