@@ -122,9 +122,10 @@
               <button onclick="requestWACode()" class="btn btn-primary" style="width:100%">Get Pairing Code</button>
               <div id="wa-code-err" style="color:#fca5a5;font-size:12px;margin-top:8px;display:none"></div>
             </div>
-            <div id="wa-code-spinner" style="display:none;text-align:center;padding:24px 0;color:var(--text-secondary);font-size:13px">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
-              Requesting code...
+            <div id="wa-code-spinner" style="display:none;text-align:center;padding:28px 0">
+              <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px"></div>
+              <div style="font-size:13px;color:var(--text-secondary)">Requesting code<span id="wa-code-dots">...</span></div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px">This may take up to 15 seconds</div>
             </div>
             <div id="wa-code-result" style="display:none;text-align:center">
               <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Open WhatsApp → Settings → Linked Devices → Link with phone number → Enter:</p>
@@ -1764,8 +1765,29 @@ async function requestWACode() {
   document.getElementById('wa-code-err').style.display = 'none';
   document.getElementById('wa-code-form').style.display = 'none';
   document.getElementById('wa-code-spinner').style.display = 'block';
+
+  // Animate dots
+  const dotsEl = document.getElementById('wa-code-dots');
+  let dotCount = 0;
+  const dotsTimer = setInterval(() => {
+    dotCount = (dotCount + 1) % 4;
+    if (dotsEl) dotsEl.textContent = '.'.repeat(dotCount || 1);
+  }, 500);
+
+  // 35s timeout
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 35000);
+
   try {
-    const r = await api('/api/onboard/request-code', { method: 'POST', body: JSON.stringify({ phoneNumber: phone }) });
+    const resp = await fetch('/api/onboard/request-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ phoneNumber: phone }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout); clearInterval(dotsTimer);
+    const r = await resp.json();
     document.getElementById('wa-code-spinner').style.display = 'none';
     if (r.code) {
       document.getElementById('wa-code-value').textContent = r.code;
@@ -1793,10 +1815,12 @@ async function requestWACode() {
       err.textContent = r.error || 'Failed to get code. Try again.'; err.style.display = 'block';
     }
   } catch (e) {
+    clearTimeout(timeout); clearInterval(dotsTimer);
     document.getElementById('wa-code-spinner').style.display = 'none';
     document.getElementById('wa-code-form').style.display = 'block';
     const err = document.getElementById('wa-code-err');
-    err.textContent = 'Network error. Try again.'; err.style.display = 'block';
+    err.textContent = e.name === 'AbortError' ? 'Timed out. Try again.' : 'Network error. Try again.';
+    err.style.display = 'block';
   }
 }
 
