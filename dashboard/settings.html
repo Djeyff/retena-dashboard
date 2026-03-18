@@ -93,7 +93,7 @@
           </div>
 
           <!-- QR / Phone code toggle -->
-          <div style="display:flex;gap:8px;margin-bottom:16px">
+          <div id="wa-tabs-row" style="display:flex;gap:8px;margin-bottom:16px">
             <button id="wa-tab-qr" onclick="switchWATab('qr')" style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📷 Scan QR</button>
             <button id="wa-tab-code" onclick="switchWATab('code')" style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">📱 Phone code</button>
           </div>
@@ -1727,6 +1727,8 @@ async function pollWAQR() {
     if (d.status === 'connected') {
       clearInterval(_waQrTimer);
       document.getElementById('wa-qr-block').style.display = 'none';
+      document.getElementById('wa-code-block').style.display = 'none';
+      document.getElementById('wa-tabs-row').style.display = 'none';
       document.getElementById('wa-connected-block').style.display = 'block';
       if (d.number) document.getElementById('wa-connected-number').textContent = `+${d.number}`;
       return;
@@ -1903,6 +1905,7 @@ function startWACodeCountdown(phone) {
         clearWACodeTimers();
         document.getElementById('wa-qr-block').style.display = 'none';
         document.getElementById('wa-code-block').style.display = 'none';
+        document.getElementById('wa-tabs-row').style.display = 'none';
         document.getElementById('wa-connected-number').textContent = '+' + s.number;
         document.getElementById('wa-connected-block').style.display = 'block';
         showToast('✅ WhatsApp connected!');
