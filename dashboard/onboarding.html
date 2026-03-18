@@ -275,7 +275,7 @@
     btn.disabled = true; btn.textContent = 'Creating account…';
 
     try {
-      const res = await fetch('/api/rt/onboard/start', {
+      const res = await fetch('https://dashboard-api.voz-clara.com/api/rt/onboard/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, name, company }),
@@ -317,7 +317,7 @@
     errEl.innerHTML = '';
 
     try {
-      const res = await fetch('/api/rt/onboard/checkout', {
+      const res = await fetch('https://dashboard-api.voz-clara.com/api/rt/onboard/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: selectedPlan, email: userEmail }),
@@ -372,7 +372,7 @@
     const params = new URLSearchParams(location.search);
     if (params.get('checkout') === 'success') {
       // Load Retena number
-      fetch('/api/rt/onboard/complete', { method: 'POST', credentials: 'include' })
+      fetch('https://dashboard-api.voz-clara.com/api/rt/onboard/complete', { method: 'POST', credentials: 'include' })
         .then(r => r.json())
         .then(d => {
           if (d.wa_number) document.getElementById('retena-number').textContent = d.wa_number;
