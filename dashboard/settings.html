@@ -129,11 +129,16 @@
             </div>
             <div id="wa-code-result" style="display:none;text-align:center">
               <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Open WhatsApp → Settings → Linked Devices → Link with phone number → Enter:</p>
-              <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;padding:20px;display:inline-block;min-width:180px">
-                <div id="wa-code-value" style="font-size:28px;font-weight:700;letter-spacing:5px;color:#22c55e;margin-bottom:4px">--------</div>
-                <div style="font-size:11px;color:var(--text-muted)">Expires in ~60 seconds</div>
+              <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;padding:20px;display:inline-block;min-width:200px">
+                <div id="wa-code-value" style="font-size:28px;font-weight:700;letter-spacing:5px;color:#22c55e;margin-bottom:6px">--------</div>
+                <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--text-muted)">
+                  <span>Expires in</span>
+                  <span id="wa-code-countdown" style="color:var(--accent);font-weight:600">60s</span>
+                  <span id="wa-code-refreshing" style="display:none;color:var(--text-muted)">· refreshing...</span>
+                </div>
               </div>
-              <p style="margin-top:14px"><a href="#" onclick="resetWACode()" style="color:var(--text-muted);font-size:12px">← Try a different number</a></p>
+              <p style="margin-top:10px;font-size:12px;color:var(--text-muted)">Code auto-refreshes if it expires</p>
+              <p style="margin-top:8px"><a href="#" onclick="resetWACode()" style="color:var(--text-muted);font-size:12px">← Try a different number</a></p>
             </div>
           </div>
         </div>
@@ -1790,25 +1795,9 @@ async function requestWACode() {
     const r = await resp.json();
     document.getElementById('wa-code-spinner').style.display = 'none';
     if (r.code) {
-      document.getElementById('wa-code-value').textContent = r.code;
+      showWACode(r.code, phone);
       document.getElementById('wa-code-result').style.display = 'block';
-      // Poll for connection
-      let attempts = 0;
-      const poll = setInterval(async () => {
-        attempts++;
-        try {
-          const s = await api('/api/onboard/qr');
-          if (s.status === 'connected') {
-            clearInterval(poll);
-            document.getElementById('wa-qr-block').style.display = 'none';
-            document.getElementById('wa-code-block').style.display = 'none';
-            document.getElementById('wa-connected-number').textContent = '+' + s.number;
-            document.getElementById('wa-connected-block').style.display = 'block';
-            showToast('✅ WhatsApp connected!');
-          }
-        } catch {}
-        if (attempts >= 20) clearInterval(poll);
-      }, 3000);
+      startWACodeCountdown(phone);
     } else {
       document.getElementById('wa-code-form').style.display = 'block';
       const err = document.getElementById('wa-code-err');
@@ -1825,9 +1814,75 @@ async function requestWACode() {
 }
 
 function resetWACode() {
+  clearWACodeTimers();
   document.getElementById('wa-code-result').style.display = 'none';
   document.getElementById('wa-code-form').style.display = 'block';
   document.getElementById('wa-code-err').style.display = 'none';
+}
+
+let _waCountdownTimer = null;
+let _waPollTimer = null;
+let _waCurrentPhone = null;
+
+function clearWACodeTimers() {
+  if (_waCountdownTimer) { clearInterval(_waCountdownTimer); _waCountdownTimer = null; }
+  if (_waPollTimer)      { clearInterval(_waPollTimer);      _waPollTimer = null; }
+}
+
+function showWACode(code, phone) {
+  _waCurrentPhone = phone;
+  document.getElementById('wa-code-value').textContent = code;
+  document.getElementById('wa-code-refreshing').style.display = 'none';
+}
+
+function startWACodeCountdown(phone) {
+  clearWACodeTimers();
+  let secs = 58; // slightly less than WA's 60s to refresh before it expires
+  const cdEl = document.getElementById('wa-code-countdown');
+  if (cdEl) cdEl.textContent = secs + 's';
+
+  _waCountdownTimer = setInterval(async () => {
+    secs--;
+    if (cdEl) cdEl.textContent = Math.max(secs, 0) + 's';
+
+    if (secs <= 0) {
+      clearInterval(_waCountdownTimer);
+      _waCountdownTimer = null;
+      // Auto-refresh: show "refreshing..." and request a new code silently
+      const refEl = document.getElementById('wa-code-refreshing');
+      if (refEl) refEl.style.display = 'inline';
+      try {
+        const resp = await fetch('/api/onboard/request-code', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          credentials: 'include', body: JSON.stringify({ phoneNumber: phone }),
+          signal: AbortSignal.timeout(35000),
+        });
+        const d = await resp.json();
+        if (d.code) {
+          showWACode(d.code, phone);
+          startWACodeCountdown(phone); // restart countdown with new code
+        }
+      } catch {}
+    }
+  }, 1000);
+
+  // Poll for connection (runs independently)
+  let pollAttempts = 0;
+  _waPollTimer = setInterval(async () => {
+    pollAttempts++;
+    try {
+      const s = await api('/api/onboard/qr');
+      if (s.status === 'connected') {
+        clearWACodeTimers();
+        document.getElementById('wa-qr-block').style.display = 'none';
+        document.getElementById('wa-code-block').style.display = 'none';
+        document.getElementById('wa-connected-number').textContent = '+' + s.number;
+        document.getElementById('wa-connected-block').style.display = 'block';
+        showToast('✅ WhatsApp connected!');
+      }
+    } catch {}
+    if (pollAttempts >= 40) clearInterval(_waPollTimer);
+  }, 3000);
 }
 
 async function disconnectWA() {
