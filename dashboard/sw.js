@@ -53,9 +53,9 @@ self.addEventListener('notificationclick', (e) => {
   const action = e.action || '';
 
   e.waitUntil((async () => {
-    // Action: "open_wa" → open WhatsApp via wa.me (universal: iOS Safari, Android, Brave, Firefox)
+    // Action: "open_wa" → open WhatsApp app via whatsapp:// scheme (works in Brave + Chrome)
     if (action === 'open_wa' && data.whatsapp_phone) {
-      await clients.openWindow(`https://wa.me/${data.whatsapp_phone}`);
+      await clients.openWindow(`whatsapp://send?phone=${data.whatsapp_phone}`);
       return;
     }
 
