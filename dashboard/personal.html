@@ -345,35 +345,17 @@ async function selectConversation(chatId) {
   document.getElementById('chat-meta').textContent =
     `${conv.message_count} messages · ${conv.voice_count} voice · ${conv.text_count} text`;
 
-  // WhatsApp deep link — iframe trick: fires custom scheme without navigating the page
-  // Fallback: wa.me (works in all browsers including Brave)
+  // WhatsApp link — wa.me is the universal standard (works on iOS Safari, Android Chrome,
+  // Firefox, Brave, etc.). wa.me redirects to the app on mobile, web.whatsapp.com on desktop.
   const waBar = document.getElementById('chat-wa-bar');
   const waLink = document.getElementById('chat-wa-link');
   const phone = (conv.chat_id || '').split('@')[0].replace(/\D/g, '');
   if (phone && waBar && waLink) {
-    waLink.href = `whatsapp://send?phone=${phone}`;
-    waLink.onclick = (e) => {
-      e.preventDefault();
-      const isAndroid = /android/i.test(navigator.userAgent);
-      const isBrave = navigator.brave !== undefined;
-
-      if (isAndroid) {
-        window.location.href = `intent://send/${phone}#Intent;scheme=whatsapp;package=com.whatsapp;end`;
-      } else if (isBrave) {
-        // Brave intercepts location.href on custom schemes and opens api.whatsapp.com as fallback
-        // Using a temporary hidden anchor + click avoids the fallback navigation
-        const a = document.createElement('a');
-        a.href = `whatsapp://send?phone=${phone}`;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => document.body.removeChild(a), 500);
-      } else {
-        window.location.href = `whatsapp://send?phone=${phone}`;
-      }
-    };
+    waLink.href = `https://wa.me/${phone}`;
+    waLink.target = '_blank';
+    waLink.rel = 'noopener noreferrer';
+    waLink.onclick = null;
     waBar.style.display = 'block';
-
   }
 
   // Check if we already have messages for this chat in allMessages
