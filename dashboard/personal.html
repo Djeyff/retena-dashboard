@@ -514,9 +514,9 @@ function getDefaultLang() { return localStorage.getItem('retena_default_lang') |
 
 function langFlag(lang) {
   // Fallback only — DB language_flag should always be set by backend (country-aware)
-  // No es→🇪🇸 here: Spanish flag depends on sender's country (🇩🇴/🇲🇽/🇨🇴/etc)
-  const flags = { en:'🇬🇧', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', nl:'🇳🇱', ja:'🇯🇵', zh:'🇨🇳', ko:'🇰🇷', ar:'🇸🇦', ru:'🇷🇺', hi:'🇮🇳', ht:'🇭🇹', unknown:'🏳️' };
-  const nameMap = { english:'en', french:'fr', german:'de', portuguese:'pt', italian:'it', dutch:'nl', japanese:'ja', chinese:'zh', korean:'ko', arabic:'ar', russian:'ru', hindi:'hi', creole:'ht' };
+  // Spanish → 🌐 (neutral) since real flag depends on country (🇩🇴/🇲🇽/🇨🇴/🇪🇸)
+  const flags = { en:'🇬🇧', es:'🌐', fr:'🇫🇷', de:'🇩🇪', pt:'🇧🇷', it:'🇮🇹', nl:'🇳🇱', ja:'🇯🇵', zh:'🇨🇳', ko:'🇰🇷', ar:'🇸🇦', ru:'🇷🇺', hi:'🇮🇳', ht:'🇭🇹', unknown:'🏳️' };
+  const nameMap = { spanish:'es', english:'en', french:'fr', german:'de', portuguese:'pt', italian:'it', dutch:'nl', japanese:'ja', chinese:'zh', korean:'ko', arabic:'ar', russian:'ru', hindi:'hi', creole:'ht' };
   if (!lang) return '🏳️';
   const lower = lang.toLowerCase().trim();
   const code = nameMap[lower] || lower.slice(0, 2);
