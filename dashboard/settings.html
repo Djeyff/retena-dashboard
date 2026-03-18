@@ -1786,9 +1786,9 @@ async function requestWACode() {
     if (dotsEl) dotsEl.textContent = '.'.repeat(dotCount || 1);
   }, 500);
 
-  // 35s timeout
+  // 130s timeout — backend needs up to 120s (socket init + 3s delay + requestPairingCode)
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 35000);
+  const timeout = setTimeout(() => controller.abort(), 130000);
 
   try {
     const resp = await fetch('/api/onboard/request-code', {
@@ -1884,7 +1884,7 @@ function startWACodeCountdown(phone) {
         const resp = await fetch('/api/onboard/request-code', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           credentials: 'include', body: JSON.stringify({ phoneNumber: phone }),
-          signal: AbortSignal.timeout(35000),
+          signal: AbortSignal.timeout(130000),
         });
         const d = await resp.json();
         if (d.code) {
