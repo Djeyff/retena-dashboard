@@ -431,7 +431,7 @@ function renderSingleBubble(m, idx) {
     html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">📎 Media</div>`;
   }
   const lang = m.language || (text ? detectLang(text) : '');
-  const flag = lang ? langFlag(lang) : '';
+  const flag = m.language_flag || (lang ? langFlag(lang) : '');
   html += `<div class="msg-bubble-time">${flag ? flag + ' ' : ''}${timeStr}${isMe ? ' ✓' : ''}</div>`;
   if (text && text.length > 5) {
     html += `<div class="translate-toggle" onclick="toggleTranslate('${msgId}')"><span id="arrow-${msgId}" style="font-size:9px">▼</span> Translate</div>`;
