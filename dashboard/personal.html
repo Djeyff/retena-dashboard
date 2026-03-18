@@ -349,8 +349,9 @@ async function selectConversation(chatId) {
   // Fallback: wa.me (works in all browsers including Brave)
   const waBar = document.getElementById('chat-wa-bar');
   const waLink = document.getElementById('chat-wa-link');
-  const phone = (conv.chat_id || '').split('@')[0].replace(/\D/g, '');
-  if (phone && waBar && waLink) {
+  // Use real_phone (resolves @lid → actual number), fallback to chat_id digits
+  const phone = conv.real_phone || ((conv.chat_id || '').endsWith('@lid') ? '' : (conv.chat_id || '').split('@')[0].replace(/\D/g, ''));
+  if (phone && phone.length >= 7 && phone.length <= 15 && waBar && waLink) {
     waLink.href = `whatsapp://send?phone=${phone}`;
     waLink.onclick = (e) => {
       e.preventDefault();
