@@ -354,11 +354,20 @@ async function selectConversation(chatId) {
     waLink.onclick = (e) => {
       e.preventDefault();
       const isAndroid = /android/i.test(navigator.userAgent);
+      const isBrave = navigator.brave !== undefined;
+
       if (isAndroid) {
-        // Android: intent:// opens WA directly without browser page
         window.location.href = `intent://send/${phone}#Intent;scheme=whatsapp;package=com.whatsapp;end`;
+      } else if (isBrave) {
+        // Brave intercepts location.href on custom schemes and opens api.whatsapp.com as fallback
+        // Using a temporary hidden anchor + click avoids the fallback navigation
+        const a = document.createElement('a');
+        a.href = `whatsapp://send?phone=${phone}`;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => document.body.removeChild(a), 500);
       } else {
-        // macOS / iOS / desktop: whatsapp:// protocol opens app directly, no web redirect
         window.location.href = `whatsapp://send?phone=${phone}`;
       }
     };
