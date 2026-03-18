@@ -1,5 +1,33 @@
 /* Retena Dashboard — Shared JS */
 
+// ── Auth: Supabase session guard ──
+const _SUPA_URL = 'https://mfhdoiddbgpjqjukacnc.supabase.co';
+const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1maGRvaWRkYmdwanFqdWthY25jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NjEyNTIsImV4cCI6MjA4ODQzNzI1Mn0.fSL2d0gFjqyFLEPwCrzFI-r49oqCZNJiq4LJS3C0m50';
+
+(async function checkAuth() {
+  // Don't guard the login page itself
+  if (location.pathname.includes('login.html')) return;
+
+  // Lazy-load Supabase to check session
+  await new Promise((resolve, reject) => {
+    if (window.supabase) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js';
+    s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+
+  const client = window.supabase.createClient(_SUPA_URL, _SUPA_KEY);
+  const { data: { session } } = await client.auth.getSession();
+  if (!session) {
+    location.href = `/dashboard/login.html?next=${encodeURIComponent(location.pathname + location.search)}`;
+    return;
+  }
+  // Store JWT for API calls
+  window._retenaJWT = session.access_token;
+  window._retenaUser = session.user;
+})();
+
 // ── PWA: Register service worker + inject manifest ──
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/dashboard/sw.js').catch(() => {});
@@ -77,6 +105,10 @@ function renderSidebar(activeId) {
         ${usageMeter('Groups', '👥', 0, 15)}
       </div>
       <a class="sidebar-crosssell" href="https://voz-clara.com" target="_blank">🎤 Personal use → VozClara</a>
+      <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between">
+        <span id="sidebar-user-email" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px">${window._retenaUser?.email || ''}</span>
+        <button onclick="signOut()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;transition:.2s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Sign out</button>
+      </div>
     </div>
   `;
 
@@ -192,10 +224,11 @@ async function api(path, opts = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
+    const authHeader = window._retenaJWT ? { 'Authorization': `Bearer ${window._retenaJWT}` } : {};
     const res = await fetch(path, {
       ...opts,
       signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      headers: { 'Content-Type': 'application/json', ...authHeader, ...(opts.headers || {}) },
       credentials: 'include',
     });
     clearTimeout(timeout);
@@ -350,9 +383,6 @@ async function loadUsage() {
 // Falls back to 30s polling if WebSocket fails / isn't supported.
 // ---
 
-const _SUPA_URL = 'https://mfhdoiddbgpjqjukacnc.supabase.co';
-const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1maGRvaWRkYmdwanFqdWthY25jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NjEyNTIsImV4cCI6MjA4ODQzNzI1Mn0.fSL2d0gFjqyFLEPwCrzFI-r49oqCZNJiq4LJS3C0m50';
-
 window._retenaLastSeen = null;
 let _pollTimer = null;
 let _realtimeConnected = false;
@@ -504,6 +534,19 @@ function showNewMsgBadge(container, count, onClick) {
     setTimeout(() => badge.remove(), 200);
     if (onClick) onClick();
   };
+}
+
+// ── Sign Out ──
+async function signOut() {
+  try {
+    if (window.supabase) {
+      const client = window.supabase.createClient(_SUPA_URL, _SUPA_KEY);
+      await client.auth.signOut();
+    }
+  } catch {}
+  window._retenaJWT = null;
+  window._retenaUser = null;
+  location.href = '/dashboard/login.html';
 }
 
 // ── Init common ──

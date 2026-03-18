@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign In — Retena</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/dashboard/styles.css">
+  <style>
+    body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); }
+    .auth-card {
+      width:100%; max-width:380px; padding:2rem;
+      background:var(--surface); border-radius:16px;
+      border:1px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,.4);
+    }
+    .auth-logo { text-align:center; margin-bottom:2rem; }
+    .auth-logo .logo-text { font-size:1.8rem; font-weight:700; color:var(--accent); }
+    .auth-logo p { color:var(--text-secondary); font-size:.875rem; margin-top:.25rem; }
+    .auth-tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; border-bottom:1px solid var(--border); }
+    .auth-tab {
+      padding:.5rem 1rem; cursor:pointer; font-size:.875rem; font-weight:500;
+      color:var(--text-secondary); border-bottom:2px solid transparent; transition:.2s;
+    }
+    .auth-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
+    .form-group { margin-bottom:1rem; }
+    .form-group label { display:block; font-size:.8rem; color:var(--text-secondary); margin-bottom:.4rem; font-weight:500; }
+    .form-group input {
+      width:100%; padding:.75rem 1rem; background:var(--bg); border:1px solid var(--border);
+      border-radius:8px; color:var(--text); font-family:inherit; font-size:.9rem;
+      outline:none; transition:.2s; box-sizing:border-box;
+    }
+    .form-group input:focus { border-color:var(--accent); }
+    .btn-primary {
+      width:100%; padding:.875rem; background:var(--accent); color:#fff;
+      border:none; border-radius:8px; font-size:.95rem; font-weight:600;
+      cursor:pointer; transition:.2s; font-family:inherit; margin-top:.5rem;
+    }
+    .btn-primary:hover { opacity:.9; }
+    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+    .auth-error {
+      background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3);
+      color:#ef4444; padding:.75rem 1rem; border-radius:8px;
+      font-size:.85rem; margin-bottom:1rem; display:none;
+    }
+    .auth-success {
+      background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3);
+      color:#22c55e; padding:.75rem 1rem; border-radius:8px;
+      font-size:.85rem; margin-bottom:1rem; display:none;
+    }
+    .magic-link-note { font-size:.8rem; color:var(--text-muted); text-align:center; margin-top:1rem; }
+  </style>
+</head>
+<body>
+<div class="auth-card">
+  <div class="auth-logo">
+    <div class="logo-text">Retena</div>
+    <p>WhatsApp team memory</p>
+  </div>
+
+  <div class="auth-tabs">
+    <div class="auth-tab active" onclick="switchTab('signin')" id="tab-signin">Sign In</div>
+    <div class="auth-tab" onclick="switchTab('signup')" id="tab-signup">Sign Up</div>
+  </div>
+
+  <div id="auth-error" class="auth-error"></div>
+  <div id="auth-success" class="auth-success"></div>
+
+  <!-- Sign In Form -->
+  <div id="form-signin">
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="signin-email" placeholder="you@company.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="signin-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doSignIn()">
+    </div>
+    <button class="btn-primary" id="btn-signin" onclick="doSignIn()">Sign In</button>
+  </div>
+
+  <!-- Sign Up Form -->
+  <div id="form-signup" style="display:none">
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="signup-email" placeholder="you@company.com" autocomplete="email">
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="signup-password" placeholder="Min. 8 characters" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label>Full Name</label>
+      <input type="text" id="signup-name" placeholder="Your name">
+    </div>
+    <button class="btn-primary" id="btn-signup" onclick="doSignUp()">Create Account</button>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const SUPABASE_URL = 'https://mfhdoiddbgpjqjukacnc.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1maGRvaWRkYmdwanFqdWthY25jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NjEyNTIsImV4cCI6MjA4ODQzNzI1Mn0.fSL2d0gFjqyFLEPwCrzFI-r49oqCZNJiq4LJS3C0m50';
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// Check if already logged in
+const { data: { session } } = await supabase.auth.getSession();
+if (session) {
+  const redir = new URLSearchParams(location.search).get('next') || '/dashboard/';
+  location.href = redir;
+}
+
+function showError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.style.display = 'block';
+  document.getElementById('auth-success').style.display = 'none';
+}
+function showSuccess(msg) {
+  const el = document.getElementById('auth-success');
+  el.textContent = msg; el.style.display = 'block';
+  document.getElementById('auth-error').style.display = 'none';
+}
+function clearMsgs() {
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('auth-success').style.display = 'none';
+}
+
+window.switchTab = (tab) => {
+  clearMsgs();
+  document.getElementById('form-signin').style.display = tab === 'signin' ? 'block' : 'none';
+  document.getElementById('form-signup').style.display = tab === 'signup' ? 'block' : 'none';
+  document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
+  document.getElementById('tab-signup').classList.toggle('active', tab === 'signup');
+};
+
+window.doSignIn = async () => {
+  clearMsgs();
+  const email = document.getElementById('signin-email').value.trim();
+  const password = document.getElementById('signin-password').value;
+  if (!email || !password) { showError('Email and password required'); return; }
+  const btn = document.getElementById('btn-signin');
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = 'Sign In';
+  if (error) { showError(error.message); return; }
+  const redir = new URLSearchParams(location.search).get('next') || '/dashboard/';
+  location.href = redir;
+};
+
+window.doSignUp = async () => {
+  clearMsgs();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const name = document.getElementById('signup-name').value.trim();
+  if (!email || !password) { showError('Email and password required'); return; }
+  if (password.length < 8) { showError('Password must be at least 8 characters'); return; }
+  const btn = document.getElementById('btn-signup');
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  const { error } = await supabase.auth.signUp({
+    email, password,
+    options: { data: { full_name: name } }
+  });
+  btn.disabled = false; btn.textContent = 'Create Account';
+  if (error) { showError(error.message); return; }
+  showSuccess('Account created! Check your email to confirm, then sign in.');
+};
+</script>
+</body>
+</html>
