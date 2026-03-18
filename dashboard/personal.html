@@ -354,21 +354,7 @@ async function selectConversation(chatId) {
     waLink.href = `whatsapp://send?phone=${phone}`;
     waLink.onclick = (e) => {
       e.preventDefault();
-      const isAndroid = /android/i.test(navigator.userAgent);
-      const isBrave = navigator.brave !== undefined;
-
-      if (isAndroid) {
-        window.location.href = `intent://send/${phone}#Intent;scheme=whatsapp;package=com.whatsapp;end`;
-      } else if (isBrave) {
-        const a = document.createElement('a');
-        a.href = `whatsapp://send?phone=${phone}`;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        setTimeout(() => document.body.removeChild(a), 500);
-      } else {
-        window.location.href = `whatsapp://send?phone=${phone}`;
-      }
+      openWA(phone);
     };
     waBar.style.display = 'block';
   }

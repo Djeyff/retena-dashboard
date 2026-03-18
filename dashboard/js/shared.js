@@ -549,6 +549,32 @@ async function signOut() {
   location.href = '/dashboard/login.html';
 }
 
+// ── openWA — universal WhatsApp deep link (Brave mobile/desktop, Android Chrome, iOS Safari) ──
+// Brave check must come FIRST — Brave Android would otherwise fall into intent://, which Brave
+// intercepts differently. Hidden anchor click is the most reliable method across all Brave versions.
+function openWA(phone) {
+  const clean = phone.replace(/[^\d]/g, '');
+  const isBrave   = typeof navigator.brave !== 'undefined';
+  const isAndroid = /android/i.test(navigator.userAgent);
+  const isIOS     = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  const scheme = isAndroid
+    ? `intent://send/${clean}#Intent;scheme=whatsapp;package=com.whatsapp;end`
+    : `whatsapp://send?phone=${clean}`;
+
+  if (isBrave || isAndroid || isIOS) {
+    // Hidden anchor click: works in Brave (all), Chrome Android, Safari iOS
+    const a = document.createElement('a');
+    a.href = scheme;
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => document.body.removeChild(a), 500);
+  } else {
+    window.open(`https://wa.me/${clean}`, '_blank');
+  }
+}
+
 // ── Init common ──
 document.addEventListener('DOMContentLoaded', () => {
   loadUsage();
