@@ -5,128 +5,164 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sign In — Retena</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/dashboard/styles.css">
   <style>
-    body { display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); }
-    .auth-card {
-      width:100%; max-width:380px; padding:2rem;
-      background:var(--surface); border-radius:16px;
-      border:1px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,.4);
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --bg2: #1a1d27; --bg3: #22263a;
+      --border: #2e3248; --border2: #3d4266;
+      --text: #f0f2ff; --text2: #9ba3c7; --text3: #6b7499;
+      --accent: #E67E22; --accent2: #d4701a;
+      --green: #22c55e; --red: #ef4444;
+      --radius: 14px; --radius-sm: 9px;
     }
-    .auth-logo { text-align:center; margin-bottom:2rem; }
-    .auth-logo .logo-text { font-size:1.8rem; font-weight:700; color:var(--accent); }
-    .auth-logo p { color:var(--text-secondary); font-size:.875rem; margin-top:.25rem; }
-    .auth-tabs { display:flex; gap:.5rem; margin-bottom:1.5rem; border-bottom:1px solid var(--border); }
-    .auth-tab {
-      padding:.5rem 1rem; cursor:pointer; font-size:.875rem; font-weight:500;
-      color:var(--text-secondary); border-bottom:2px solid transparent; transition:.2s;
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
     }
-    .auth-tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-    .form-group { margin-bottom:1rem; }
-    .form-group label { display:block; font-size:.8rem; color:var(--text-secondary); margin-bottom:.4rem; font-weight:500; }
-    .form-group input {
-      width:100%; padding:.75rem 1rem; background:var(--bg); border:1px solid var(--border);
-      border-radius:8px; color:var(--text); font-family:inherit; font-size:.9rem;
-      outline:none; transition:.2s; box-sizing:border-box;
+
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 420px;
     }
-    .form-group input:focus { border-color:var(--accent); }
-    .btn-primary {
-      width:100%; padding:.875rem; background:var(--accent); color:#fff;
-      border:none; border-radius:8px; font-size:.95rem; font-weight:600;
-      cursor:pointer; transition:.2s; font-family:inherit; margin-top:.5rem;
+
+    /* Logo */
+    .logo { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 6px; }
+    .logo svg { flex-shrink: 0; }
+    .logo-name { font-weight: 700; font-size: 1.5rem; color: var(--accent); }
+    .logo-sub { text-align: center; color: var(--text3); font-size: .85rem; margin-bottom: 28px; }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .tab {
+      flex: 1; text-align: center; padding: 10px 0;
+      font-size: .88rem; font-weight: 600; cursor: pointer;
+      color: var(--text3); border-bottom: 2px solid transparent;
+      transition: all .2s; margin-bottom: -1px;
     }
-    .btn-primary:hover { opacity:.9; }
-    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
-    .auth-error {
-      background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.3);
-      color:#ef4444; padding:.75rem 1rem; border-radius:8px;
-      font-size:.85rem; margin-bottom:1rem; display:none;
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    /* Form */
+    label {
+      display: block; font-size: .8rem; font-weight: 600;
+      color: var(--text2); margin-bottom: 6px; margin-top: 16px;
     }
-    .auth-success {
-      background:rgba(34,197,94,.1); border:1px solid rgba(34,197,94,.3);
-      color:#22c55e; padding:.75rem 1rem; border-radius:8px;
-      font-size:.85rem; margin-bottom:1rem; display:none;
+    label:first-of-type { margin-top: 0; }
+    input[type=email], input[type=password], input[type=text] {
+      width: 100%; padding: 12px 14px;
+      background: var(--bg3); border: 1px solid var(--border2);
+      border-radius: var(--radius-sm); color: var(--text);
+      font-family: inherit; font-size: .95rem;
+      outline: none; transition: border-color .2s;
     }
-    .magic-link-note { font-size:.8rem; color:var(--text-muted); text-align:center; margin-top:1rem; }
+    input:focus { border-color: var(--accent); }
+    input::placeholder { color: var(--text3); }
+
+    /* Button */
+    .btn {
+      width: 100%; padding: 13px;
+      background: var(--accent); color: #fff;
+      border: none; border-radius: var(--radius-sm);
+      font-family: inherit; font-size: .95rem; font-weight: 600;
+      cursor: pointer; transition: background .2s;
+      margin-top: 22px;
+    }
+    .btn:hover { background: var(--accent2); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Alerts */
+    .alert { padding: 11px 14px; border-radius: var(--radius-sm); font-size: .85rem; margin-bottom: 16px; display: none; }
+    .alert-err { background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #fca5a5; }
+    .alert-ok  { background: rgba(34,197,94,.1);  border: 1px solid rgba(34,197,94,.3);  color: #86efac; }
+
+    /* Forgot link */
+    .forgot { text-align: right; margin-top: 8px; }
+    .forgot a { font-size: .78rem; color: var(--text3); text-decoration: none; }
+    .forgot a:hover { color: var(--accent); }
+
+    /* Divider to onboarding */
+    .alt-action { text-align: center; margin-top: 20px; font-size: .8rem; color: var(--text3); }
+    .alt-action a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    .alt-action a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-<div class="auth-card">
-  <div class="auth-logo">
-    <div class="logo-text">Retena</div>
-    <p>WhatsApp team memory</p>
+
+<div class="card">
+  <div class="logo">
+    <svg width="30" height="30" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#1E3A5F"/><text x="16" y="22" text-anchor="middle" fill="white" font-family="DM Sans" font-weight="700" font-size="18">R</text></svg>
+    <span class="logo-name">Retena</span>
+  </div>
+  <div class="logo-sub">WhatsApp team memory</div>
+
+  <div class="tabs">
+    <div class="tab active" id="tab-signin" onclick="switchTab('signin')">Sign In</div>
+    <div class="tab" id="tab-signup" onclick="switchTab('signup')">Sign Up</div>
   </div>
 
-  <div class="auth-tabs">
-    <div class="auth-tab active" onclick="switchTab('signin')" id="tab-signin">Sign In</div>
-    <div class="auth-tab" onclick="switchTab('signup')" id="tab-signup">Sign Up</div>
-  </div>
+  <div id="auth-error" class="alert alert-err"></div>
+  <div id="auth-success" class="alert alert-ok"></div>
 
-  <div id="auth-error" class="auth-error"></div>
-  <div id="auth-success" class="auth-success"></div>
-
-  <!-- Sign In Form -->
+  <!-- ── Sign In ── -->
   <div id="form-signin">
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="signin-email" placeholder="you@company.com" autocomplete="email">
-    </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="signin-password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doSignIn()">
-    </div>
-    <button class="btn-primary" id="btn-signin" onclick="doSignIn()">Sign In</button>
+    <label>Email</label>
+    <input type="email" id="signin-email" placeholder="you@company.com" autocomplete="email">
+
+    <label style="margin-top:14px">Password</label>
+    <input type="password" id="signin-password" placeholder="••••••••" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter')doSignIn()">
+
+    <div class="forgot"><a href="#" onclick="doForgot(); return false;">Forgot password?</a></div>
+    <button class="btn" id="btn-signin" onclick="doSignIn()">Sign In</button>
   </div>
 
-  <!-- Sign Up Form -->
+  <!-- ── Sign Up ── -->
   <div id="form-signup" style="display:none">
-    <div class="form-group">
-      <label>Email</label>
-      <input type="email" id="signup-email" placeholder="you@company.com" autocomplete="email">
+    <label>Email</label>
+    <input type="email" id="signup-email" placeholder="you@company.com" autocomplete="email">
+
+    <label style="margin-top:14px">Password</label>
+    <input type="password" id="signup-password" placeholder="Min. 8 characters" autocomplete="new-password">
+
+    <label style="margin-top:14px">Full name</label>
+    <input type="text" id="signup-name" placeholder="Your name">
+
+    <button class="btn" id="btn-signup" onclick="doSignUp()">Create Account</button>
+    <div class="alt-action" style="margin-top:14px">
+      New user? <a href="/dashboard/onboarding.html">Start with onboarding →</a>
     </div>
-    <div class="form-group">
-      <label>Password</label>
-      <input type="password" id="signup-password" placeholder="Min. 8 characters" autocomplete="new-password">
-    </div>
-    <div class="form-group">
-      <label>Full Name</label>
-      <input type="text" id="signup-name" placeholder="Your name">
-    </div>
-    <button class="btn-primary" id="btn-signup" onclick="doSignUp()">Create Account</button>
   </div>
 </div>
 
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-const SUPABASE_URL = 'https://mfhdoiddbgpjqjukacnc.supabase.co';
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1maGRvaWRkYmdwanFqdWthY25jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NjEyNTIsImV4cCI6MjA4ODQzNzI1Mn0.fSL2d0gFjqyFLEPwCrzFI-r49oqCZNJiq4LJS3C0m50';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+const SUPA_URL  = 'https://mfhdoiddbgpjqjukacnc.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1maGRvaWRkYmdwanFqdWthY25jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NjEyNTIsImV4cCI6MjA4ODQzNzI1Mn0.fSL2d0gFjqyFLEPwCrzFI-r49oqCZNJiq4LJS3C0m50';
+const supabase = createClient(SUPA_URL, SUPA_ANON);
 
-// Check if already logged in
 const { data: { session } } = await supabase.auth.getSession();
 if (session) {
-  const redir = new URLSearchParams(location.search).get('next') || '/dashboard/';
-  location.href = redir;
+  location.href = new URLSearchParams(location.search).get('next') || '/dashboard/';
 }
 
-function showError(msg) {
-  const el = document.getElementById('auth-error');
-  el.textContent = msg; el.style.display = 'block';
-  document.getElementById('auth-success').style.display = 'none';
-}
-function showSuccess(msg) {
-  const el = document.getElementById('auth-success');
-  el.textContent = msg; el.style.display = 'block';
-  document.getElementById('auth-error').style.display = 'none';
-}
-function clearMsgs() {
-  document.getElementById('auth-error').style.display = 'none';
-  document.getElementById('auth-success').style.display = 'none';
-}
+const err = document.getElementById('auth-error');
+const ok  = document.getElementById('auth-success');
+const showErr = m => { err.textContent = m; err.style.display = 'block'; ok.style.display = 'none'; };
+const showOk  = m => { ok.textContent  = m; ok.style.display  = 'block'; err.style.display = 'none'; };
+const clear   = () => { err.style.display = 'none'; ok.style.display = 'none'; };
 
-window.switchTab = (tab) => {
-  clearMsgs();
+window.switchTab = tab => {
+  clear();
   document.getElementById('form-signin').style.display = tab === 'signin' ? 'block' : 'none';
   document.getElementById('form-signup').style.display = tab === 'signup' ? 'block' : 'none';
   document.getElementById('tab-signin').classList.toggle('active', tab === 'signin');
@@ -134,35 +170,42 @@ window.switchTab = (tab) => {
 };
 
 window.doSignIn = async () => {
-  clearMsgs();
-  const email = document.getElementById('signin-email').value.trim();
+  clear();
+  const email    = document.getElementById('signin-email').value.trim();
   const password = document.getElementById('signin-password').value;
-  if (!email || !password) { showError('Email and password required'); return; }
+  if (!email || !password) { showErr('Email and password required'); return; }
   const btn = document.getElementById('btn-signin');
   btn.disabled = true; btn.textContent = 'Signing in…';
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   btn.disabled = false; btn.textContent = 'Sign In';
-  if (error) { showError(error.message); return; }
-  const redir = new URLSearchParams(location.search).get('next') || '/dashboard/';
-  location.href = redir;
+  if (error) { showErr(error.message); return; }
+  location.href = new URLSearchParams(location.search).get('next') || '/dashboard/';
 };
 
 window.doSignUp = async () => {
-  clearMsgs();
-  const email = document.getElementById('signup-email').value.trim();
+  clear();
+  const email    = document.getElementById('signup-email').value.trim();
   const password = document.getElementById('signup-password').value;
-  const name = document.getElementById('signup-name').value.trim();
-  if (!email || !password) { showError('Email and password required'); return; }
-  if (password.length < 8) { showError('Password must be at least 8 characters'); return; }
+  const name     = document.getElementById('signup-name').value.trim();
+  if (!email || !password) { showErr('Email and password required'); return; }
+  if (password.length < 8) { showErr('Password must be at least 8 characters'); return; }
   const btn = document.getElementById('btn-signup');
   btn.disabled = true; btn.textContent = 'Creating account…';
-  const { error } = await supabase.auth.signUp({
-    email, password,
-    options: { data: { full_name: name } }
-  });
+  const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
   btn.disabled = false; btn.textContent = 'Create Account';
-  if (error) { showError(error.message); return; }
-  showSuccess('Account created! Check your email to confirm, then sign in.');
+  if (error) { showErr(error.message); return; }
+  showOk('Account created! Check your email to confirm, then sign in.');
+};
+
+window.doForgot = async () => {
+  const email = document.getElementById('signin-email').value.trim();
+  if (!email) { showErr('Enter your email first, then click Forgot password.'); return; }
+  clear();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${location.origin}/dashboard/login.html`
+  });
+  if (error) { showErr(error.message); return; }
+  showOk('Password reset email sent — check your inbox.');
 };
 </script>
 </body>
