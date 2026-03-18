@@ -350,19 +350,17 @@ async function selectConversation(chatId) {
   const waLink = document.getElementById('chat-wa-link');
   const phone = (conv.chat_id || '').split('@')[0].replace(/\D/g, '');
   if (phone && waBar && waLink) {
-    waLink.href = `https://wa.me/${phone}`;
+    waLink.href = `whatsapp://send?phone=${phone}`;
     waLink.onclick = (e) => {
       e.preventDefault();
-      // Try to open via hidden iframe (doesn't navigate the page, just fires the intent)
-      const iframe = document.createElement('iframe');
-      iframe.style.cssText = 'display:none;width:0;height:0;border:0';
-      iframe.src = `whatsapp://send?phone=${phone}`;
-      document.body.appendChild(iframe);
-      // After 1.5s, if app didn't open, fallback to wa.me in new tab
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-        window.open(`https://wa.me/${phone}`, '_blank');
-      }, 1500);
+      const isAndroid = /android/i.test(navigator.userAgent);
+      if (isAndroid) {
+        // Android: intent:// opens WA directly without browser page
+        window.location.href = `intent://send/${phone}#Intent;scheme=whatsapp;package=com.whatsapp;end`;
+      } else {
+        // macOS / iOS / desktop: whatsapp:// protocol opens app directly, no web redirect
+        window.location.href = `whatsapp://send?phone=${phone}`;
+      }
     };
     waBar.style.display = 'block';
   }
