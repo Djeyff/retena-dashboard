@@ -129,15 +129,20 @@
             </div>
             <div id="wa-code-result" style="display:none;text-align:center">
               <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Open WhatsApp → Settings → Linked Devices → Link with phone number → Enter:</p>
-              <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;padding:20px;display:inline-block;min-width:200px">
-                <div id="wa-code-value" style="font-size:28px;font-weight:700;letter-spacing:5px;color:#22c55e;margin-bottom:6px">--------</div>
+              <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;padding:20px;display:inline-block;min-width:200px" id="wa-code-box">
+                <div id="wa-code-new-badge" style="display:none;font-size:10px;font-weight:700;color:#fff;background:#22c55e;border-radius:4px;padding:2px 7px;margin-bottom:6px;letter-spacing:1px">NEW CODE</div>
+                <div id="wa-code-value" style="font-size:28px;font-weight:700;letter-spacing:5px;color:#22c55e;margin-bottom:8px">--------</div>
+                <button onclick="copyWACode()" id="wa-copy-btn" style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;font-family:inherit;margin-bottom:8px">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  Copy code
+                </button>
                 <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;color:var(--text-muted)">
-                  <span>Expires in</span>
-                  <span id="wa-code-countdown" style="color:var(--accent);font-weight:600">60s</span>
-                  <span id="wa-code-refreshing" style="display:none;color:var(--text-muted)">· refreshing...</span>
+                  <span>Refreshes in</span>
+                  <span id="wa-code-countdown" style="color:var(--accent);font-weight:600">58s</span>
+                  <span id="wa-code-refreshing" style="display:none;color:var(--text-muted)">· getting new code...</span>
                 </div>
               </div>
-              <p style="margin-top:10px;font-size:12px;color:var(--text-muted)">Code auto-refreshes if it expires</p>
+              <p style="margin-top:10px;font-size:12px;color:var(--text-muted)">⚠️ Always use the code shown above — it auto-refreshes</p>
               <p style="margin-top:8px"><a href="#" onclick="resetWACode()" style="color:var(--text-muted);font-size:12px">← Try a different number</a></p>
             </div>
           </div>
@@ -1829,10 +1834,32 @@ function clearWACodeTimers() {
   if (_waPollTimer)      { clearInterval(_waPollTimer);      _waPollTimer = null; }
 }
 
-function showWACode(code, phone) {
+function showWACode(code, phone, isRefresh) {
   _waCurrentPhone = phone;
   document.getElementById('wa-code-value').textContent = code;
   document.getElementById('wa-code-refreshing').style.display = 'none';
+  // Flash "NEW CODE" badge on refresh so user knows to use this one
+  if (isRefresh) {
+    const badge = document.getElementById('wa-code-new-badge');
+    const box = document.getElementById('wa-code-box');
+    if (badge) { badge.style.display = 'block'; setTimeout(() => badge.style.display = 'none', 4000); }
+    if (box) { box.style.transition = 'border-color .3s'; box.style.borderColor = '#22c55e'; setTimeout(() => { box.style.borderColor = ''; }, 1500); }
+  }
+}
+
+function copyWACode() {
+  const code = document.getElementById('wa-code-value').textContent;
+  if (!code || code === '--------') return;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.getElementById('wa-copy-btn');
+    if (btn) { btn.textContent = '✓ Copied!'; btn.style.color = '#22c55e'; setTimeout(() => { btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy code'; btn.style.color = ''; }, 2000); }
+  }).catch(() => {
+    // Fallback for browsers without clipboard API
+    const el = document.createElement('textarea');
+    el.value = code; el.style.position = 'fixed'; el.style.opacity = '0';
+    document.body.appendChild(el); el.select(); document.execCommand('copy');
+    document.body.removeChild(el);
+  });
 }
 
 function startWACodeCountdown(phone) {
@@ -1859,7 +1886,7 @@ function startWACodeCountdown(phone) {
         });
         const d = await resp.json();
         if (d.code) {
-          showWACode(d.code, phone);
+          showWACode(d.code, phone, true); // true = isRefresh → flash NEW CODE badge
           startWACodeCountdown(phone); // restart countdown with new code
         }
       } catch {}
