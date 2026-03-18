@@ -92,6 +92,12 @@
             <button onclick="disconnectWA()" style="margin-top:12px;padding:6px 14px;background:transparent;border:1px solid rgba(239,68,68,.4);color:#ef4444;border-radius:7px;font-size:12px;cursor:pointer;font-family:inherit">Disconnect</button>
           </div>
 
+          <!-- QR / Phone code toggle -->
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button id="wa-tab-qr" onclick="switchWATab('qr')" style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">📷 Scan QR</button>
+            <button id="wa-tab-code" onclick="switchWATab('code')" style="flex:1;padding:8px 0;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:13px;font-weight:500;cursor:pointer;font-family:inherit">📱 Phone code</button>
+          </div>
+
           <!-- QR block -->
           <div id="wa-qr-block">
             <div id="wa-qr-loading" style="text-align:center;padding:32px 0;color:var(--text-secondary);font-size:13px">
@@ -105,6 +111,28 @@
             </div>
             <div id="wa-qr-error" style="display:none;text-align:center;padding:20px;color:#fca5a5;font-size:13px">
               Could not load QR. <span onclick="startWAQR()" style="color:var(--accent);cursor:pointer">Try again →</span>
+            </div>
+          </div>
+
+          <!-- Phone code block -->
+          <div id="wa-code-block" style="display:none">
+            <div id="wa-code-form">
+              <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Enter your WhatsApp number to receive a pairing code.</p>
+              <input id="wa-code-phone" type="tel" class="input" placeholder="+1 555 000 0000" autocomplete="tel" style="margin-bottom:10px">
+              <button onclick="requestWACode()" class="btn btn-primary" style="width:100%">Get Pairing Code</button>
+              <div id="wa-code-err" style="color:#fca5a5;font-size:12px;margin-top:8px;display:none"></div>
+            </div>
+            <div id="wa-code-spinner" style="display:none;text-align:center;padding:24px 0;color:var(--text-secondary);font-size:13px">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="animation:spin 1s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+              Requesting code...
+            </div>
+            <div id="wa-code-result" style="display:none;text-align:center">
+              <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Open WhatsApp → Settings → Linked Devices → Link with phone number → Enter:</p>
+              <div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:10px;padding:20px;display:inline-block;min-width:180px">
+                <div id="wa-code-value" style="font-size:28px;font-weight:700;letter-spacing:5px;color:#22c55e;margin-bottom:4px">--------</div>
+                <div style="font-size:11px;color:var(--text-muted)">Expires in ~60 seconds</div>
+              </div>
+              <p style="margin-top:14px"><a href="#" onclick="resetWACode()" style="color:var(--text-muted);font-size:12px">← Try a different number</a></p>
             </div>
           </div>
         </div>
@@ -1712,6 +1740,71 @@ async function pollWAQR() {
 }
 
 function refreshQR() { startWAQR(); }
+
+function switchWATab(tab) {
+  const isQR = tab === 'qr';
+  document.getElementById('wa-tab-qr').style.background = isQR ? 'var(--accent)' : 'transparent';
+  document.getElementById('wa-tab-qr').style.color = isQR ? '#fff' : 'var(--text-secondary)';
+  document.getElementById('wa-tab-qr').style.borderColor = isQR ? 'var(--accent)' : 'var(--border)';
+  document.getElementById('wa-tab-qr').style.fontWeight = isQR ? '600' : '500';
+  document.getElementById('wa-tab-code').style.background = !isQR ? 'var(--accent)' : 'transparent';
+  document.getElementById('wa-tab-code').style.color = !isQR ? '#fff' : 'var(--text-secondary)';
+  document.getElementById('wa-tab-code').style.borderColor = !isQR ? 'var(--accent)' : 'var(--border)';
+  document.getElementById('wa-tab-code').style.fontWeight = !isQR ? '600' : '500';
+  document.getElementById('wa-qr-block').style.display = isQR ? 'block' : 'none';
+  document.getElementById('wa-code-block').style.display = !isQR ? 'block' : 'none';
+}
+
+async function requestWACode() {
+  const phone = (document.getElementById('wa-code-phone').value || '').replace(/[^\d+]/g, '');
+  if (phone.replace(/\+/g,'').length < 7) {
+    const err = document.getElementById('wa-code-err');
+    err.textContent = 'Enter a valid phone number'; err.style.display = 'block'; return;
+  }
+  document.getElementById('wa-code-err').style.display = 'none';
+  document.getElementById('wa-code-form').style.display = 'none';
+  document.getElementById('wa-code-spinner').style.display = 'block';
+  try {
+    const r = await api('/api/onboard/request-code', { method: 'POST', body: JSON.stringify({ phoneNumber: phone }) });
+    document.getElementById('wa-code-spinner').style.display = 'none';
+    if (r.code) {
+      document.getElementById('wa-code-value').textContent = r.code;
+      document.getElementById('wa-code-result').style.display = 'block';
+      // Poll for connection
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        try {
+          const s = await api('/api/onboard/qr');
+          if (s.status === 'connected') {
+            clearInterval(poll);
+            document.getElementById('wa-qr-block').style.display = 'none';
+            document.getElementById('wa-code-block').style.display = 'none';
+            document.getElementById('wa-connected-number').textContent = '+' + s.number;
+            document.getElementById('wa-connected-block').style.display = 'block';
+            showToast('✅ WhatsApp connected!');
+          }
+        } catch {}
+        if (attempts >= 20) clearInterval(poll);
+      }, 3000);
+    } else {
+      document.getElementById('wa-code-form').style.display = 'block';
+      const err = document.getElementById('wa-code-err');
+      err.textContent = r.error || 'Failed to get code. Try again.'; err.style.display = 'block';
+    }
+  } catch (e) {
+    document.getElementById('wa-code-spinner').style.display = 'none';
+    document.getElementById('wa-code-form').style.display = 'block';
+    const err = document.getElementById('wa-code-err');
+    err.textContent = 'Network error. Try again.'; err.style.display = 'block';
+  }
+}
+
+function resetWACode() {
+  document.getElementById('wa-code-result').style.display = 'none';
+  document.getElementById('wa-code-form').style.display = 'block';
+  document.getElementById('wa-code-err').style.display = 'none';
+}
 
 async function disconnectWA() {
   if (!confirm('Disconnect WhatsApp? You will need to scan a QR code again.')) return;
