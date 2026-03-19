@@ -359,8 +359,12 @@ async function selectConversation(chatId) {
   const waBar = document.getElementById('chat-wa-bar');
   const waLink = document.getElementById('chat-wa-link');
   // Use real_phone (resolves @lid → actual number), fallback to chat_id digits
-  const phone = conv.real_phone || ((conv.chat_id || '').endsWith('@lid') ? '' : (conv.chat_id || '').split('@')[0].replace(/\D/g, ''));
-  if (phone && phone.length >= 7 && phone.length <= 15 && waBar && waLink) {
+  // Never use raw LID numbers (>14 digits) — they're WhatsApp internal IDs, not real phones
+  const isLid = (conv.chat_id || '').endsWith('@lid');
+  const rawDigits = (conv.chat_id || '').split('@')[0].replace(/\D/g, '');
+  const phone = conv.real_phone || (isLid ? '' : rawDigits);
+  const isValidPhone = phone && phone.length >= 7 && phone.length <= 15 && !/^\d{15,}$/.test(phone);
+  if (isValidPhone && waBar && waLink) {
     waLink.href = `whatsapp://send?phone=${phone}`;
     waLink.onclick = (e) => {
       e.preventDefault();
