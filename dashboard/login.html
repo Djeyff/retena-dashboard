@@ -135,6 +135,9 @@
     <label style="margin-top:14px">Password</label>
     <input type="password" id="signup-password" placeholder="Min. 8 characters" autocomplete="new-password">
 
+    <label style="margin-top:14px">Confirm password</label>
+    <input type="password" id="signup-password2" placeholder="Repeat your password" autocomplete="new-password">
+
     <label style="margin-top:14px">Full name</label>
     <input type="text" id="signup-name" placeholder="Your name">
 
@@ -191,6 +194,8 @@ window.doSignUp = async () => {
   const name     = document.getElementById('signup-name').value.trim();
   if (!email || !password) { showErr('Email and password required'); return; }
   if (password.length < 8) { showErr('Password must be at least 8 characters'); return; }
+  const password2 = document.getElementById('signup-password2').value;
+  if (password !== password2) { showErr('Passwords don\'t match'); return; }
   const btn = document.getElementById('btn-signup');
   btn.disabled = true; btn.textContent = 'Creating account…';
   const { data: signUpData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
