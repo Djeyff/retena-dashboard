@@ -1955,6 +1955,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Reconciliation Tab ──────────────────────────────────────────────────────
 let _reconcileData = null;
+const RC_API = window._API_BASE || 'https://dashboard-api.voz-clara.com';
 
 async function loadReconciliation() {
   const listEl = document.getElementById('reconcile-list');
@@ -1965,8 +1966,8 @@ async function loadReconciliation() {
   try {
     // Fetch pending reviews + lid-map stats
     const [reviewRes, mapRes] = await Promise.all([
-      fetch(`${API}/api/lid-reconciliation`, { headers: authHeaders() }),
-      fetch(`${API}/api/lid-map`, { headers: authHeaders() }),
+      fetch(`${RC_API}/api/lid-reconciliation`, { headers: authHeaders() }),
+      fetch(`${RC_API}/api/lid-map`, { headers: authHeaders() }),
     ]);
     const reviewData = await reviewRes.json();
     const mapData = await mapRes.json();
@@ -1980,7 +1981,7 @@ async function loadReconciliation() {
 
     // Fetch unresolved count from audit
     try {
-      const auditRes = await fetch(`${API}/api/audit?hours=168`, { headers: authHeaders() });
+      const auditRes = await fetch(`${RC_API}/api/audit?hours=168`, { headers: authHeaders() });
       const auditData = await auditRes.json();
       document.getElementById('rc-unresolved').textContent = auditData.summary?.unresolved_lids || 0;
     } catch { document.getElementById('rc-unresolved').textContent = '?'; }
@@ -2052,7 +2053,7 @@ function esc(s) {
 
 async function approveMatch(lid, phone, name) {
   try {
-    const r = await fetch(`${API}/api/lid-reconciliation/approve`, {
+    const r = await fetch(`${RC_API}/api/lid-reconciliation/approve`, {
       method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ lid, phone, name }),
     });
@@ -2068,7 +2069,7 @@ async function approveMatch(lid, phone, name) {
 
 async function dismissMatch(lid, idx) {
   try {
-    const r = await fetch(`${API}/api/lid-reconciliation/dismiss`, {
+    const r = await fetch(`${RC_API}/api/lid-reconciliation/dismiss`, {
       method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ lid }),
     });
@@ -2090,7 +2091,7 @@ async function submitManual(lid) {
   const phone = document.getElementById(`manual-phone-${lid}`)?.value?.replace(/[^\d]/g, '');
   if (!phone || phone.length < 7) { showToast('Enter a valid phone number', 'error'); return; }
   try {
-    const r = await fetch(`${API}/api/lid-reconciliation/manual`, {
+    const r = await fetch(`${RC_API}/api/lid-reconciliation/manual`, {
       method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ lid, phone }),
     });
@@ -2108,7 +2109,7 @@ async function runAutoMatch() {
   const btn = document.getElementById('reconcile-scan-btn');
   btn.disabled = true; btn.textContent = '⏳ Scanning...';
   try {
-    const r = await fetch(`${API}/api/lid-reconciliation/run`, {
+    const r = await fetch(`${RC_API}/api/lid-reconciliation/run`, {
       method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     });
