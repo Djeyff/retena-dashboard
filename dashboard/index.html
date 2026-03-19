@@ -52,6 +52,15 @@
 </div>
 <nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
 
+<script>
+  // Redirect to user's preferred landing page (before anything loads)
+  (function() {
+    const landing = localStorage.getItem('retena_landing');
+    if (landing && window.location.pathname !== landing) {
+      window.location.replace(landing);
+    }
+  })();
+</script>
 <script src="/dashboard/js/shared.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {

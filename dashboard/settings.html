@@ -73,6 +73,19 @@
             <span style="font-size:11px;color:var(--text-muted)">Pre-selects the target language for translations across all pages</span>
           </div>
           <div style="margin-bottom:16px">
+            <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Default landing page</label>
+            <select class="input" id="ws-landing">
+              <option value="">🏠 Home (default)</option>
+              <option value="/dashboard/personal.html">📬 Personal Inbox</option>
+              <option value="/dashboard/groups.html">👥 Groups</option>
+              <option value="/dashboard/activity.html">🕐 Activity</option>
+              <option value="/dashboard/search.html">🔍 AI Search</option>
+              <option value="/dashboard/summaries.html">📄 Summaries</option>
+              <option value="/dashboard/transcripts.html">🎤 Transcripts</option>
+            </select>
+            <span style="font-size:11px;color:var(--text-muted)">Where you land when you open Retena</span>
+          </div>
+          <div style="margin-bottom:16px">
             <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Workspace ID</label>
             <input class="input" id="ws-id" readonly style="opacity:0.6">
           </div>
@@ -757,6 +770,11 @@ document.addEventListener('DOMContentLoaded', () => { setTimeout(loadDefaultLang
 
 async function saveWorkspace() {
   try {
+    // Save landing page preference to localStorage
+    const landing = document.getElementById('ws-landing').value;
+    if (landing) localStorage.setItem('retena_landing', landing);
+    else localStorage.removeItem('retena_landing');
+
     await api('/api/rt/settings', {
       method: 'POST',
       body: JSON.stringify({
@@ -767,6 +785,13 @@ async function saveWorkspace() {
     showToast('Settings saved');
   } catch (e) { showToast('Failed to save'); }
 }
+
+function loadLandingPref() {
+  const v = localStorage.getItem('retena_landing') || '';
+  const sel = document.getElementById('ws-landing');
+  if (sel) sel.value = v;
+}
+document.addEventListener('DOMContentLoaded', () => { setTimeout(loadLandingPref, 100); });
 
 async function loadSettingsGroups() {
   const el = document.getElementById('settings-groups');
