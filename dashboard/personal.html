@@ -365,8 +365,14 @@ async function selectConversation(chatId) {
   const phone = conv.real_phone || (isLid ? '' : rawDigits);
   const isValidPhone = phone && phone.length >= 7 && phone.length <= 15 && !/^\d{15,}$/.test(phone);
   if (isValidPhone && waBar && waLink) {
-    waLink.href = `https://wa.me/${phone}`;
-    waLink.target = '_blank';
+    // Use intent:// for Android (works in Brave/Chrome), wa.me fallback for iOS/desktop
+    const isAndroid = /android/i.test(navigator.userAgent);
+    if (isAndroid) {
+      waLink.href = `intent://send/${phone}#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url=https%3A%2F%2Fwa.me%2F${phone};end;`;
+    } else {
+      waLink.href = `https://wa.me/${phone}`;
+      waLink.target = '_blank';
+    }
     waBar.style.display = 'block';
   }
 
