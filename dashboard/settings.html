@@ -2155,6 +2155,7 @@ function renderReconcileList(items) {
             <span style="font-size:11px;color:var(--text-muted);margin-left:8px">${item.msg_count || '?'} messages</span>
           </div>
           <div style="display:flex;gap:6px">
+            <button onclick="viewLidMessages('${item.lid}','${esc(item.lid_name)}')" style="padding:4px 10px;border-radius:5px;border:1px solid rgba(99,102,241,.3);background:rgba(99,102,241,.08);color:#818cf8;font-size:11px;cursor:pointer;font-family:inherit">💬 View</button>
             <button onclick="showManualInput('${item.lid}')" style="padding:4px 10px;border-radius:5px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:11px;cursor:pointer;font-family:inherit">✏️ Enter phone</button>
             <button onclick="dismissMatch('${item.lid}',${idx})" style="padding:4px 10px;border-radius:5px;border:1px solid rgba(239,68,68,.3);background:transparent;color:#ef4444;font-size:11px;cursor:pointer;font-family:inherit">✕ Dismiss</button>
           </div>
@@ -2193,6 +2194,51 @@ async function approveMatch(lid, phone, name) {
       showToast(`❌ Error: ${data.error}`, 'error');
     }
   } catch (e) { showToast(`❌ ${e.message}`, 'error'); }
+}
+
+async function viewLidMessages(lid, lidName) {
+  // Show a modal with the last messages from this LID so we can identify who it is
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  modal.innerHTML = `
+    <div style="background:var(--bg-primary);border-radius:16px 16px 0 0;width:100%;max-width:540px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-weight:700;font-size:15px">${esc(lidName)}</div>
+          <div style="font-size:11px;color:var(--text-muted)">LID: ${lid}</div>
+        </div>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="background:var(--bg-tertiary);border:none;border-radius:50%;width:28px;height:28px;cursor:pointer;color:var(--text-secondary);font-size:16px;display:flex;align-items:center;justify-content:center">×</button>
+      </div>
+      <div id="lid-msgs-${lid}" style="flex:1;overflow-y:auto;padding:16px">
+        <div style="color:var(--text-muted);text-align:center">Loading messages…</div>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  try {
+    const data = await api(`/api/personal?chat_id=${encodeURIComponent(lid + '@lid')}&limit=10`);
+    const msgs = data.messages || data.items || [];
+    const el = document.getElementById(`lid-msgs-${lid}`);
+    if (!el) return;
+    if (!msgs.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:20px">No messages found</div>';
+      return;
+    }
+    el.innerHTML = msgs.reverse().map(m => {
+      const time = m.timestamp ? new Date(m.timestamp).toLocaleString() : '';
+      const isMe = m.from_me;
+      return `<div style="margin-bottom:12px;display:flex;flex-direction:column;align-items:${isMe ? 'flex-end' : 'flex-start'}">
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:3px">${isMe ? 'You' : esc(m.sender || lidName)} · ${time}</div>
+        <div style="background:${isMe ? 'rgba(230,126,34,.15)' : 'var(--bg-secondary)'};border-radius:10px;padding:8px 12px;max-width:85%;font-size:13px">
+          ${m.transcription ? `<div style="font-size:10px;color:#f59e0b;margin-bottom:4px">🎙 Voice note</div><div>${esc(m.transcription)}</div>` : esc(m.text_content || m.body || '(media)')}
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    const el = document.getElementById(`lid-msgs-${lid}`);
+    if (el) el.innerHTML = `<div style="color:#fca5a5;padding:12px">Error: ${e.message}</div>`;
+  }
 }
 
 async function dismissMatch(lid, idx) {
