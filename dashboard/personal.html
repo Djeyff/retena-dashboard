@@ -60,7 +60,16 @@
     .translate-toggle:hover { color: var(--accent); }
     .translate-panel { display: none; align-items: center; gap: 6px; margin-top: 6px; }
     .translate-panel.open { display: flex; flex-wrap: wrap; }
-    .translate-panel select { background: var(--bg-sidebar); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-family: inherit; max-height: 200px; overflow-y: auto; }
+    .translate-panel select { background: var(--bg-sidebar); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; font-size: 11px; font-family: inherit; }
+    .lang-picker { position: relative; display: inline-block; }
+    .lang-picker-btn { background: var(--bg-sidebar); color: var(--text-secondary); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer; min-width: 120px; text-align: left; font-family: inherit; }
+    .lang-picker-drop { display: none; position: absolute; bottom: 100%; left: 0; background: var(--bg-sidebar); border: 1px solid var(--border); border-radius: 8px; width: 220px; max-height: 260px; overflow: hidden; z-index: 999; box-shadow: 0 4px 16px rgba(0,0,0,0.3); flex-direction: column; margin-bottom: 4px; }
+    .lang-picker-drop.open { display: flex; }
+    .lang-picker-search { background: var(--bg-main); color: var(--text-primary); border: none; border-bottom: 1px solid var(--border); padding: 8px 10px; font-size: 12px; outline: none; font-family: inherit; }
+    .lang-picker-list { overflow-y: auto; max-height: 220px; }
+    .lang-picker-item { padding: 6px 10px; font-size: 11px; cursor: pointer; color: var(--text-secondary); }
+    .lang-picker-item:hover { background: rgba(230,126,34,0.15); color: var(--text-primary); }
+    .lang-picker-item.selected { background: rgba(230,126,34,0.1); font-weight: 600; }
     .translate-panel .btn-translate { font-size: 11px; padding: 4px 10px; border-radius: 6px; background: rgba(230,126,34,0.15); color: var(--accent); border: none; cursor: pointer; font-weight: 600; }
     .translate-panel .btn-translate:hover { background: rgba(230,126,34,0.25); }
     .translation-result { margin-top: 6px; padding: 8px 10px; border-left: 3px solid #60a5fa; background: rgba(59,130,246,0.06); border-radius: 0 8px 8px 0; font-size: 12px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
@@ -438,9 +447,16 @@ function renderSingleBubble(m, idx) {
     html += `<div class="translate-toggle" onclick="toggleTranslate('${msgId}')"><span id="arrow-${msgId}" style="font-size:9px">▼</span> Translate</div>`;
     html += `<div class="translate-panel" id="tpanel-${msgId}">`;
     const defaultTarget = getDefaultLang();
-    html += `<select id="lang-sel-${msgId}">`;
-    TRANSLATE_LANGS.forEach(l => { html += `<option value="${l.code}" ${l.code === defaultTarget ? 'selected' : ''}>${l.flag} ${l.name}</option>`; });
-    html += `</select><button class="btn-translate" onclick="translateMsg('${msgId}')">Go</button></div>`;
+    const defLang = TRANSLATE_LANGS.find(l => l.code === defaultTarget) || TRANSLATE_LANGS[0];
+    html += `<div class="lang-picker" id="lp-${msgId}">`;
+    html += `<button class="lang-picker-btn" onclick="toggleLangPicker('${msgId}')">${defLang.flag} ${defLang.name} ▾</button>`;
+    html += `<div class="lang-picker-drop" id="lpd-${msgId}">`;
+    html += `<input class="lang-picker-search" placeholder="Search language..." oninput="filterLangs('${msgId}', this.value)">`;
+    html += `<div class="lang-picker-list" id="lpl-${msgId}">`;
+    TRANSLATE_LANGS.forEach(l => { html += `<div class="lang-picker-item${l.code === defaultTarget ? ' selected' : ''}" data-code="${l.code}" onclick="selectLang('${msgId}','${l.code}')">${l.flag} ${l.name}</div>`; });
+    html += `</div></div></div>`;
+    html += `<input type="hidden" id="lang-sel-${msgId}" value="${defaultTarget}">`;
+    html += `<button class="btn-translate" onclick="translateMsg('${msgId}')">Go</button></div>`;
     html += `<div id="translation-${msgId}" style="display:none" class="translation-result"></div>`;
   }
   html += `</div></div>`;
@@ -508,9 +524,136 @@ const TRANSLATE_LANGS = [
   { code: 'ar', flag: '🇸🇦', name: 'Arabic' },
   { code: 'hi', flag: '🇮🇳', name: 'Hindi' },
   { code: 'ht', flag: '🇭🇹', name: 'Creole' },
+  { code: 'af', flag: '🇿🇦', name: 'Afrikaans' },
+  { code: 'sq', flag: '🇦🇱', name: 'Albanian' },
+  { code: 'am', flag: '🇪🇹', name: 'Amharic' },
+  { code: 'hy', flag: '🇦🇲', name: 'Armenian' },
+  { code: 'as', flag: '🇮🇳', name: 'Assamese' },
+  { code: 'az', flag: '🇦🇿', name: 'Azerbaijani' },
+  { code: 'ba', flag: '🌐', name: 'Bashkir' },
+  { code: 'eu', flag: '🌐', name: 'Basque' },
+  { code: 'be', flag: '🇧🇾', name: 'Belarusian' },
+  { code: 'bn', flag: '🇧🇩', name: 'Bengali' },
+  { code: 'bs', flag: '🇧🇦', name: 'Bosnian' },
+  { code: 'br', flag: '🌐', name: 'Breton' },
+  { code: 'bg', flag: '🇧🇬', name: 'Bulgarian' },
+  { code: 'my', flag: '🇲🇲', name: 'Burmese' },
+  { code: 'ca', flag: '🌐', name: 'Catalan' },
+  { code: 'hr', flag: '🇭🇷', name: 'Croatian' },
+  { code: 'cs', flag: '🇨🇿', name: 'Czech' },
+  { code: 'da', flag: '🇩🇰', name: 'Danish' },
+  { code: 'et', flag: '🇪🇪', name: 'Estonian' },
+  { code: 'fo', flag: '🇫🇴', name: 'Faroese' },
+  { code: 'fi', flag: '🇫🇮', name: 'Finnish' },
+  { code: 'gl', flag: '🌐', name: 'Galician' },
+  { code: 'ka', flag: '🇬🇪', name: 'Georgian' },
+  { code: 'el', flag: '🇬🇷', name: 'Greek' },
+  { code: 'gu', flag: '🇮🇳', name: 'Gujarati' },
+  { code: 'ha', flag: '🇳🇬', name: 'Hausa' },
+  { code: 'haw', flag: '🌺', name: 'Hawaiian' },
+  { code: 'he', flag: '🇮🇱', name: 'Hebrew' },
+  { code: 'hu', flag: '🇭🇺', name: 'Hungarian' },
+  { code: 'is', flag: '🇮🇸', name: 'Icelandic' },
+  { code: 'id', flag: '🇮🇩', name: 'Indonesian' },
+  { code: 'ga', flag: '🇮🇪', name: 'Irish' },
+  { code: 'jw', flag: '🇮🇩', name: 'Javanese' },
+  { code: 'kn', flag: '🇮🇳', name: 'Kannada' },
+  { code: 'kk', flag: '🇰🇿', name: 'Kazakh' },
+  { code: 'km', flag: '🇰🇭', name: 'Khmer' },
+  { code: 'lo', flag: '🇱🇦', name: 'Lao' },
+  { code: 'la', flag: '🏛️', name: 'Latin' },
+  { code: 'lv', flag: '🇱🇻', name: 'Latvian' },
+  { code: 'ln', flag: '🇨🇩', name: 'Lingala' },
+  { code: 'lt', flag: '🇱🇹', name: 'Lithuanian' },
+  { code: 'lb', flag: '🇱🇺', name: 'Luxembourgish' },
+  { code: 'mk', flag: '🇲🇰', name: 'Macedonian' },
+  { code: 'mg', flag: '🇲🇬', name: 'Malagasy' },
+  { code: 'ms', flag: '🇲🇾', name: 'Malay' },
+  { code: 'ml', flag: '🇮🇳', name: 'Malayalam' },
+  { code: 'mt', flag: '🇲🇹', name: 'Maltese' },
+  { code: 'mi', flag: '🇳🇿', name: 'Maori' },
+  { code: 'mr', flag: '🇮🇳', name: 'Marathi' },
+  { code: 'mn', flag: '🇲🇳', name: 'Mongolian' },
+  { code: 'ne', flag: '🇳🇵', name: 'Nepali' },
+  { code: 'no', flag: '🇳🇴', name: 'Norwegian' },
+  { code: 'nn', flag: '🇳🇴', name: 'Nynorsk' },
+  { code: 'oc', flag: '🌐', name: 'Occitan' },
+  { code: 'ps', flag: '🇦🇫', name: 'Pashto' },
+  { code: 'fa', flag: '🇮🇷', name: 'Persian' },
+  { code: 'pl', flag: '🇵🇱', name: 'Polish' },
+  { code: 'pa', flag: '🇮🇳', name: 'Punjabi' },
+  { code: 'ro', flag: '🇷🇴', name: 'Romanian' },
+  { code: 'sa', flag: '🇮🇳', name: 'Sanskrit' },
+  { code: 'sr', flag: '🇷🇸', name: 'Serbian' },
+  { code: 'sn', flag: '🇿🇼', name: 'Shona' },
+  { code: 'sd', flag: '🇵🇰', name: 'Sindhi' },
+  { code: 'si', flag: '🇱🇰', name: 'Sinhala' },
+  { code: 'sk', flag: '🇸🇰', name: 'Slovak' },
+  { code: 'sl', flag: '🇸🇮', name: 'Slovenian' },
+  { code: 'so', flag: '🇸🇴', name: 'Somali' },
+  { code: 'su', flag: '🇮🇩', name: 'Sundanese' },
+  { code: 'sw', flag: '🇰🇪', name: 'Swahili' },
+  { code: 'sv', flag: '🇸🇪', name: 'Swedish' },
+  { code: 'tl', flag: '🇵🇭', name: 'Tagalog' },
+  { code: 'tg', flag: '🇹🇯', name: 'Tajik' },
+  { code: 'ta', flag: '🇮🇳', name: 'Tamil' },
+  { code: 'tt', flag: '🌐', name: 'Tatar' },
+  { code: 'te', flag: '🇮🇳', name: 'Telugu' },
+  { code: 'th', flag: '🇹🇭', name: 'Thai' },
+  { code: 'bo', flag: '🌐', name: 'Tibetan' },
+  { code: 'tr', flag: '🇹🇷', name: 'Turkish' },
+  { code: 'tk', flag: '🇹🇲', name: 'Turkmen' },
+  { code: 'uk', flag: '🇺🇦', name: 'Ukrainian' },
+  { code: 'ur', flag: '🇵🇰', name: 'Urdu' },
+  { code: 'uz', flag: '🇺🇿', name: 'Uzbek' },
+  { code: 'vi', flag: '🇻🇳', name: 'Vietnamese' },
+  { code: 'cy', flag: '🏴󠁧󠁢󠁷󠁬󠁳󠁿', name: 'Welsh' },
+  { code: 'yi', flag: '🌐', name: 'Yiddish' },
+  { code: 'yo', flag: '🇳🇬', name: 'Yoruba' },
 ];
 
 function getDefaultLang() { return localStorage.getItem('retena_default_lang') || 'en'; }
+
+// Searchable language picker functions
+function toggleLangPicker(msgId) {
+  const drop = document.getElementById('lpd-' + msgId);
+  const isOpen = drop.classList.contains('open');
+  // Close all other pickers
+  document.querySelectorAll('.lang-picker-drop.open').forEach(d => d.classList.remove('open'));
+  if (!isOpen) {
+    drop.classList.add('open');
+    const input = drop.querySelector('.lang-picker-search');
+    input.value = '';
+    input.focus();
+    filterLangs(msgId, '');
+  }
+}
+
+function filterLangs(msgId, query) {
+  const list = document.getElementById('lpl-' + msgId);
+  const q = query.toLowerCase();
+  list.querySelectorAll('.lang-picker-item').forEach(item => {
+    item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+function selectLang(msgId, code) {
+  const lang = TRANSLATE_LANGS.find(l => l.code === code);
+  if (!lang) return;
+  document.getElementById('lang-sel-' + msgId).value = code;
+  const btn = document.querySelector('#lp-' + msgId + ' .lang-picker-btn');
+  btn.textContent = lang.flag + ' ' + lang.name + ' ▾';
+  document.getElementById('lpd-' + msgId).classList.remove('open');
+  // Save as default
+  localStorage.setItem('retena_default_lang', code);
+}
+
+// Close picker on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.lang-picker')) {
+    document.querySelectorAll('.lang-picker-drop.open').forEach(d => d.classList.remove('open'));
+  }
+});
 
 function langFlag(lang) {
   // Fallback only — DB language_flag should always be set by backend (country-aware)
