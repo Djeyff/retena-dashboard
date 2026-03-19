@@ -56,6 +56,17 @@
             </select>
           </div>
           <div style="margin-bottom:16px">
+            <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Summary language</label>
+            <select class="input" id="ws-summary-lang">
+              <option value="auto">🔄 Auto (same as audio)</option>
+              <option value="english">🇬🇧 English</option>
+              <option value="spanish">🇪🇸 Spanish</option>
+              <option value="french">🇫🇷 French</option>
+              <option value="portuguese">🇧🇷 Portuguese</option>
+            </select>
+            <span style="font-size:11px;color:var(--text-muted)">Language for AI-generated bullet summaries — transcription always stays in the original language</span>
+          </div>
+          <div style="margin-bottom:16px">
             <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Default translation language</label>
             <select class="input" id="ws-default-lang" onchange="saveDefaultLang()">
               <option value="en">🇬🇧 English</option>
@@ -793,6 +804,7 @@ async function loadSettings() {
     const data = await api('/api/rt/settings');
     if (data.name) document.getElementById('ws-name').value = data.name;
     if (data.timezone) document.getElementById('ws-timezone').value = data.timezone;
+    if (data.summary_language) { const sl = document.getElementById('ws-summary-lang'); if (sl) sl.value = data.summary_language; }
     if (data.id) {
       document.getElementById('ws-id').value = data.id;
       localStorage.setItem('retena_account_id', data.id);
@@ -829,7 +841,8 @@ async function saveWorkspace() {
       method: 'POST',
       body: JSON.stringify({
         name: document.getElementById('ws-name').value,
-        timezone: document.getElementById('ws-timezone').value
+        timezone: document.getElementById('ws-timezone').value,
+        summary_language: document.getElementById('ws-summary-lang').value
       })
     });
     showToast('Settings saved');
