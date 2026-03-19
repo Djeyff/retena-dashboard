@@ -61,15 +61,16 @@ self.addEventListener('notificationclick', (e) => {
       return;
     }
 
-    // Default: open Retena dashboard
-    const targetUrl = data.url || '/dashboard/';
+    // Default: open Retena dashboard (use absolute URL — client.navigate requires it)
+    const relUrl = data.url || '/dashboard/';
+    const targetUrl = relUrl.startsWith('http') ? relUrl : (self.location.origin + relUrl);
     const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
 
     // If a Retena tab is already open, focus + navigate it
     for (const client of windowClients) {
-      if (client.url.includes('/dashboard') && 'focus' in client) {
+      if (client.url.includes('/dashboard') && 'navigate' in client) {
         await client.focus();
-        client.navigate(targetUrl);
+        await client.navigate(targetUrl);
         return;
       }
     }
