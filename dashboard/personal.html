@@ -365,14 +365,23 @@ async function selectConversation(chatId) {
   const phone = conv.real_phone || (isLid ? '' : rawDigits);
   const isValidPhone = phone && phone.length >= 7 && phone.length <= 15 && !/^\d{15,}$/.test(phone);
   if (isValidPhone && waBar && waLink) {
-    // Use intent:// for Android (works in Brave/Chrome), wa.me fallback for iOS/desktop
-    const isAndroid = /android/i.test(navigator.userAgent);
-    if (isAndroid) {
-      waLink.href = `intent://send/${phone}#Intent;scheme=whatsapp;package=com.whatsapp;S.browser_fallback_url=https%3A%2F%2Fwa.me%2F${phone};end;`;
-    } else {
-      waLink.href = `https://wa.me/${phone}`;
-      waLink.target = '_blank';
-    }
+    // WhatsApp deep link: JS onclick fires whatsapp:// scheme (works in Brave+Chrome on Android)
+    // Link href is wa.me fallback for long-press "open in new tab"
+    waLink.href = `https://wa.me/${phone}`;
+    waLink.target = '_blank';
+    waLink.onclick = (e) => {
+      e.preventDefault();
+      // Try whatsapp:// scheme via hidden iframe (doesn't navigate away if app opens)
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = `whatsapp://send?phone=${phone}`;
+      document.body.appendChild(iframe);
+      // Fallback: if app didn't open in 1.5s, use wa.me
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        if (!document.hidden) window.open(`https://wa.me/${phone}`, '_blank');
+      }, 1500);
+    };
     waBar.style.display = 'block';
   }
 
