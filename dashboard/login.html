@@ -191,9 +191,18 @@ window.doSignUp = async () => {
   if (password.length < 8) { showErr('Password must be at least 8 characters'); return; }
   const btn = document.getElementById('btn-signup');
   btn.disabled = true; btn.textContent = 'Creating account…';
-  const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+  const { data: signUpData, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
   btn.disabled = false; btn.textContent = 'Create Account';
   if (error) { showErr(error.message); return; }
+  // Also register in retena_users (for tenant isolation + workspace)
+  try {
+    await fetch('https://dashboard-api.voz-clara.com/api/onboard/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, name, company: '' }),
+      credentials: 'include',
+    });
+  } catch {}
   showOk('Account created! Check your email to confirm, then sign in.');
 };
 
