@@ -23,9 +23,19 @@ const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
     location.href = `/dashboard/login.html?next=${encodeURIComponent(location.pathname + location.search)}`;
     return;
   }
+
+  // Proactively refresh if token expires in < 5 minutes (handles mobile/PWA restored tabs)
+  const expiresAt = session.expires_at || 0; // unix seconds
+  const nowSec = Math.floor(Date.now() / 1000);
+  let activeSession = session;
+  if (expiresAt - nowSec < 300) {
+    const { data: refreshed } = await client.auth.refreshSession();
+    if (refreshed?.session) activeSession = refreshed.session;
+  }
+
   // Store JWT for API calls
-  window._retenaJWT = session.access_token;
-  window._retenaUser = session.user;
+  window._retenaJWT = activeSession.access_token;
+  window._retenaUser = activeSession.user;
   window._supabaseClient = client;
   // Cache account ID for instant display in settings
   if (session.user?.id) localStorage.setItem('retena_account_id', session.user.id);
