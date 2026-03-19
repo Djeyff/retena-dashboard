@@ -365,11 +365,8 @@ async function selectConversation(chatId) {
   const phone = conv.real_phone || (isLid ? '' : rawDigits);
   const isValidPhone = phone && phone.length >= 7 && phone.length <= 15 && !/^\d{15,}$/.test(phone);
   if (isValidPhone && waBar && waLink) {
-    waLink.href = `whatsapp://send?phone=${phone}`;
-    waLink.onclick = (e) => {
-      e.preventDefault();
-      openWA(phone);
-    };
+    waLink.href = `https://wa.me/${phone}`;
+    waLink.target = '_blank';
     waBar.style.display = 'block';
   }
 
