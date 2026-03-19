@@ -33,6 +33,7 @@
         <div class="settings-tab" data-tab="data" onclick="showTab('data')">Data & Privacy</div>
         <div class="settings-tab" data-tab="vozclara" onclick="showTab('vozclara')">VozClara Perk</div>
         <div class="settings-tab" data-tab="reconciliation" onclick="showTab('reconciliation')">Reconciliation</div>
+        <div class="settings-tab" data-tab="chats" onclick="showTab('chats');loadChats()">Chats</div>
       </div>
 
       <!-- Workspace -->
@@ -634,6 +635,52 @@
             As a Retena subscriber, you get VozClara Basic for free ($4.99/mo value). Transcribe personal voice notes from WhatsApp and Telegram.
           </p>
           <a class="btn btn-primary" href="https://voz-clara.com" target="_blank">Activate VozClara →</a>
+        </div>
+      </div>
+
+      <!-- Chats -->
+      <div class="settings-section" id="tab-chats">
+        <div class="card animate-in">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div class="section-title" style="margin:0">Chat Tracking</div>
+              <p style="font-size:12px;color:var(--text-muted);margin-top:4px">Choose which chats show in your feed and get voice note transcription.</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-sm" style="background:rgba(230,126,34,.12);color:var(--accent);border:1px solid rgba(230,126,34,.3)" onclick="batchEnableAll('group')">✅ Enable all groups</button>
+              <button class="btn btn-sm" style="background:rgba(255,255,255,.06);color:var(--text-secondary);border:1px solid var(--border)" onclick="batchEnableAll('all')">Enable all</button>
+              <button class="btn btn-sm" style="background:rgba(255,255,255,.06);color:var(--text-muted);border:1px solid var(--border)" onclick="batchDisableAll()">Disable all</button>
+            </div>
+          </div>
+
+          <!-- Filter bar -->
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <input id="chats-search" type="text" placeholder="Search chats..." oninput="filterChats()" style="flex:1;min-width:140px;padding:7px 10px;background:var(--bg-input,rgba(255,255,255,.06));border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;font-family:inherit">
+            <select id="chats-type-filter" onchange="filterChats()" style="padding:7px 10px;background:var(--bg-input,rgba(255,255,255,.06));border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;font-family:inherit">
+              <option value="">All types</option>
+              <option value="group">Groups only</option>
+              <option value="personal">Personal only</option>
+            </select>
+          </div>
+
+          <!-- New contacts alert -->
+          <div id="chats-new-alert" style="display:none;background:rgba(230,126,34,.08);border:1px solid rgba(230,126,34,.25);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+              <span>🆕 <strong id="chats-new-count">0</strong> new chats since you connected — configure their tracking below</span>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-sm" style="background:var(--accent);color:#fff" onclick="batchEnableNew()">Enable all new</button>
+                <button class="btn btn-sm" style="background:transparent;color:var(--text-muted);border:1px solid var(--border)" onclick="dismissNew()">Dismiss</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat list -->
+          <div id="chats-list" style="display:flex;flex-direction:column;gap:4px">
+            <div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Loading chats...</div>
+          </div>
+          <div id="chats-empty" style="display:none;text-align:center;padding:32px;color:var(--text-muted);font-size:13px">
+            No chats found. Connect your WhatsApp and send a message to get started.
+          </div>
         </div>
       </div>
 
@@ -2152,6 +2199,153 @@ function showToast(msg, type) {
 function authHeaders() {
   const token = window._retenaJWT || localStorage.getItem('retena_token') || '';
   return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+// ── CHATS TAB ────────────────────────────────────────────────────────────────
+let _allChats = [];
+let _chatsLoaded = false;
+
+async function loadChats() {
+  if (_chatsLoaded) { filterChats(); return; }
+  const list = document.getElementById('chats-list');
+  list.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:13px">Loading chats...</div>';
+  try {
+    const r = await fetch(`${RC_API}/api/chats`, { headers: authHeaders() });
+    const data = await r.json();
+    _allChats = data.items || [];
+    _chatsLoaded = true;
+    const newCount = data.new_count || 0;
+    if (newCount > 0) {
+      document.getElementById('chats-new-count').textContent = newCount;
+      document.getElementById('chats-new-alert').style.display = '';
+    }
+    filterChats();
+  } catch (e) {
+    list.innerHTML = `<div style="text-align:center;padding:32px;color:#fca5a5;font-size:13px">Failed to load chats: ${e.message}</div>`;
+  }
+}
+
+function filterChats() {
+  const q = (document.getElementById('chats-search')?.value || '').toLowerCase();
+  const type = document.getElementById('chats-type-filter')?.value || '';
+  const filtered = _allChats.filter(c => {
+    if (q && !(c.chat_name || '').toLowerCase().includes(q)) return false;
+    if (type && c.chat_type !== type) return false;
+    return true;
+  });
+  const list = document.getElementById('chats-list');
+  const empty = document.getElementById('chats-empty');
+  if (!filtered.length) {
+    list.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+  // Sort: new first, then groups, then by name
+  filtered.sort((a, b) => {
+    if (a.is_new !== b.is_new) return a.is_new ? -1 : 1;
+    if (a.chat_type !== b.chat_type) return a.chat_type === 'group' ? -1 : 1;
+    return (a.chat_name || '').localeCompare(b.chat_name || '');
+  });
+  list.innerHTML = filtered.map(c => renderChatRow(c)).join('');
+}
+
+function renderChatRow(c) {
+  const emoji = c.chat_type === 'group' ? '👥' : '👤';
+  const isNew = c.is_new;
+  const msgs = c.message_count > 0 ? `<span style="color:var(--text-muted);font-size:11px">${c.message_count} msg${c.message_count > 1 ? 's' : ''}</span>` : '';
+  const newBadge = isNew ? `<span style="background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:6px">NEW</span>` : '';
+  const chatIdEnc = encodeURIComponent(c.chat_id);
+  return `<div id="chat-row-${chatIdEnc}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid ${isNew ? 'rgba(230,126,34,.25)' : 'var(--border)'};transition:border .2s">
+    <div style="font-size:20px;flex-shrink:0">${emoji}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.chat_name || c.chat_id)}${newBadge}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:2px">${msgs}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;flex-shrink:0">
+      <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
+        <span style="font-size:10px;color:var(--text-muted)">Feed</span>
+        <div class="sw-track ${c.feed_enabled ? 'sw-on' : ''}" id="sw-feed-${chatIdEnc}" onclick="toggleChat('${c.chat_id}','feed',${!c.feed_enabled})"></div>
+      </label>
+      <label style="display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer">
+        <span style="font-size:10px;color:var(--text-muted)">Transcript</span>
+        <div class="sw-track ${c.transcript_enabled ? 'sw-on' : ''}" id="sw-tr-${chatIdEnc}" onclick="toggleChat('${c.chat_id}','transcript',${!c.transcript_enabled})"></div>
+      </label>
+    </div>
+  </div>`;
+}
+
+async function toggleChat(chatId, field, val) {
+  const chatIdEnc = encodeURIComponent(chatId);
+  const swId = field === 'feed' ? `sw-feed-${chatIdEnc}` : `sw-tr-${chatIdEnc}`;
+  const sw = document.getElementById(swId);
+  if (sw) { sw.classList.toggle('sw-on', val); }
+  // Update local state
+  const chat = _allChats.find(c => c.chat_id === chatId);
+  if (chat) { chat[field === 'feed' ? 'feed_enabled' : 'transcript_enabled'] = val; if (chat.is_new) { chat.is_new = false; markRowSeen(chatIdEnc); } }
+  const body = { is_new: false };
+  if (field === 'feed') body.feed_enabled = val;
+  if (field === 'transcript') body.transcript_enabled = val;
+  await fetch(`${RC_API}/api/chats/${encodeURIComponent(chatId)}`, {
+    method: 'PATCH', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch(() => {});
+}
+
+function markRowSeen(chatIdEnc) {
+  const row = document.getElementById(`chat-row-${chatIdEnc}`);
+  if (row) { row.style.border = '1px solid var(--border)'; row.querySelector('.sw-track + .sw-track, [style*="NEW"]')?.remove?.(); }
+  const badge = row?.querySelector?.('span[style*="NEW"]');
+  if (badge) badge.remove();
+}
+
+async function batchEnableAll(type) {
+  const targets = type === 'all' ? _allChats : _allChats.filter(c => c.chat_type === type);
+  const ids = targets.map(c => c.chat_id);
+  if (!ids.length) return;
+  targets.forEach(c => { c.feed_enabled = true; c.transcript_enabled = true; });
+  filterChats();
+  await fetch(`${RC_API}/api/chats/batch`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_ids: ids, feed_enabled: true, transcript_enabled: true }),
+  }).catch(() => {});
+}
+
+async function batchDisableAll() {
+  const ids = _allChats.map(c => c.chat_id);
+  if (!ids.length) return;
+  _allChats.forEach(c => { c.feed_enabled = false; c.transcript_enabled = false; });
+  filterChats();
+  await fetch(`${RC_API}/api/chats/batch`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_ids: ids, feed_enabled: false, transcript_enabled: false }),
+  }).catch(() => {});
+}
+
+async function batchEnableNew() {
+  const newChats = _allChats.filter(c => c.is_new);
+  const ids = newChats.map(c => c.chat_id);
+  if (!ids.length) return;
+  newChats.forEach(c => { c.feed_enabled = true; c.transcript_enabled = true; c.is_new = false; });
+  document.getElementById('chats-new-alert').style.display = 'none';
+  filterChats();
+  await fetch(`${RC_API}/api/chats/batch`, {
+    method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_ids: ids, feed_enabled: true, transcript_enabled: true, is_new: false }),
+  }).catch(() => {});
+}
+
+async function dismissNew() {
+  const ids = _allChats.filter(c => c.is_new).map(c => c.chat_id);
+  _allChats.forEach(c => { c.is_new = false; });
+  document.getElementById('chats-new-alert').style.display = 'none';
+  filterChats();
+  if (ids.length) {
+    await fetch(`${RC_API}/api/chats/batch`, {
+      method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_ids: ids, is_new: false }),
+    }).catch(() => {});
+  }
 }
 </script>
 </body>

@@ -1047,3 +1047,32 @@ html, body {
   .sidebar { display: none !important; }
   .mobile-drawer-panel .sidebar-meters { margin: 0; }
 }
+
+/* Chat config toggles */
+.sw-track {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--bg-input, rgba(255,255,255,.08));
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.sw-track.sw-on {
+  background: var(--accent, #e67e22);
+  border-color: var(--accent, #e67e22);
+}
+.sw-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 0.2s;
+}
+.sw-track.sw-on::after { transform: translateX(16px); }
