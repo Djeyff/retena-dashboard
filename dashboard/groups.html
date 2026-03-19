@@ -282,24 +282,27 @@ function renderGroupDetail(g) {
   }
 }
 
-function openGroupInWA(jid, btn) {
+async function openGroupInWA(jid, btn) {
   if (!jid) return;
-  const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
   const isBrave = navigator.brave || /Brave/i.test(navigator.userAgent);
+  const origHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span>⏳</span> Opening…';
 
-  // whatsapp://chat?jid=... opens the group directly on mobile
-  // On desktop fall back to web.whatsapp.com (can't deep-link to groups without invite)
-  const waUrl = isMobile
-    ? `whatsapp://chat?jid=${encodeURIComponent(jid)}`
-    : `https://web.whatsapp.com/`;
-
-  window.open(waUrl, '_blank');
-
-  // Show Brave tip if needed
-  const tip = document.getElementById('group-brave-tip');
-  if (isBrave && !localStorage.getItem('brave_wa_tip_dismissed') && tip) {
-    tip.style.display = 'block';
+  try {
+    const data = await api(`/api/rt/group-invite/${encodeURIComponent(jid)}`);
+    // chat.whatsapp.com/CODE → opens group directly (no join prompt if already a member)
+    window.open(data.invite_url, '_blank');
+    const tip = document.getElementById('group-brave-tip');
+    if (isBrave && !localStorage.getItem('brave_wa_tip_dismissed') && tip) {
+      tip.style.display = 'block';
+    }
+  } catch (e) {
+    showToast('Could not open group — Retena must be a group admin to get the link');
   }
+
+  btn.disabled = false;
+  btn.innerHTML = origHtml;
 }
 
 function backToList() {
