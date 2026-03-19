@@ -130,8 +130,21 @@
             Continue in WhatsApp
           </a>
           <div id="brave-wa-tip" style="display:none;margin-top:6px;padding:8px 10px;background:rgba(230,126,34,0.1);border-radius:8px;font-size:11px;color:var(--text-muted);line-height:1.4">
-            ⚠️ <b>Brave users:</b> If WhatsApp doesn't open, <a href="brave://settings/shields" style="color:inherit;text-decoration:underline;font-weight:600">open Brave Settings</a> → Brave Shields &amp; Privacy → Allow app links to open in apps outside of Brave
+            ⚠️ <b>Brave users:</b> If WhatsApp doesn't open, <span onclick="document.getElementById('brave-steps-modal').style.display='flex'" style="color:#e67e22;text-decoration:underline;font-weight:600;cursor:pointer">tap here to fix it</span>
             <span onclick="localStorage.setItem('brave_wa_tip_dismissed','1');this.parentElement.style.display='none'" style="cursor:pointer;float:right;font-size:13px">✕</span>
+          </div>
+          <!-- Brave fix modal -->
+          <div id="brave-steps-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:24px" onclick="if(event.target===this)this.style.display='none'">
+            <div style="background:var(--bg-card,#1e1e2e);border-radius:14px;padding:20px 18px;max-width:340px;width:100%;color:var(--text-primary,#fff);font-size:13px;line-height:1.6;box-shadow:0 8px 32px rgba(0,0,0,.5)">
+              <div style="font-size:15px;font-weight:700;margin-bottom:12px">🦁 Enable app links in Brave</div>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="background:#e67e22;color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">1</span><span>Tap the <b>⋮ menu</b> in Brave (top right)</span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="background:#e67e22;color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">2</span><span>Go to <b>Settings → Brave Shields &amp; Privacy</b></span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="background:#e67e22;color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">3</span><span>Enable <b>"Allow app links to open in apps outside of Brave"</b></span></div>
+                <div style="display:flex;gap:10px;align-items:flex-start"><span style="background:#25D366;color:#fff;border-radius:50%;width:22px;height:22px;min-width:22px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px">✓</span><span>Come back and tap <b>Continue in WhatsApp</b> again</span></div>
+              </div>
+              <button onclick="document.getElementById('brave-steps-modal').style.display='none'" style="margin-top:16px;width:100%;padding:10px;border:none;border-radius:10px;background:#e67e22;color:#fff;font-weight:600;font-size:13px;cursor:pointer">Got it</button>
+            </div>
           </div>
 
         </div>
