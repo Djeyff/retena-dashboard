@@ -157,8 +157,8 @@ window.addEventListener('retena:newData', async (e) => {
   // Refresh conversation list (unread counts, last message preview)
   try {
     let data;
-    try { data = await api('/api/data/personal?limit=200'); }
-    catch { data = await api('/api/rt/personal?limit=200'); }
+    data = await api('/api/rt/personal?limit=200');
+    
     if (data?.conversations?.length) {
       conversations = data.conversations;
       renderConversationList(document.getElementById('conv-search')?.value?.toLowerCase() || '');
@@ -173,7 +173,7 @@ window.addEventListener('retena:newData', async (e) => {
       .reduce((max, m) => (m.timestamp > max ? m.timestamp : max), '');
     const since = lastTs ? `&since=${encodeURIComponent(lastTs)}` : '';
     let data;
-    try { data = await api(`/api/data/personal?chat=${encodeURIComponent(selectedChatId)}&limit=50${since}`); }
+    try { data = await api(`/api/rt/personal?chat=${encodeURIComponent(selectedChatId)}&limit=50${since}`); }
     catch { data = await api(`/api/rt/personal?chat=${encodeURIComponent(selectedChatId)}&limit=50${since}`); }
 
     const newMsgs = (data?.items || []).filter(m => !allMessages.find(x => x.id === m.id));
@@ -230,7 +230,7 @@ async function loadPersonal() {
     // Try the new endpoint first (returns chat_id, from_me, conversations)
     let data;
     try {
-      data = await api('/api/data/personal');
+      data = await api('/api/rt/personal');
     } catch (e1) {
       // Fallback to old endpoint
       data = await api('/api/rt/personal');
@@ -383,7 +383,7 @@ async function selectConversation(chatId) {
     thread.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Loading messages...</div>';
     try {
       let data;
-      try { data = await api(`/api/data/personal?chat=${encodeURIComponent(chatId)}&limit=500`); }
+      try { data = await api(`/api/rt/personal?chat=${encodeURIComponent(chatId)}&limit=500`); }
       catch { data = await api(`/api/rt/personal?chat=${encodeURIComponent(chatId)}&limit=500`); }
       if (data.items && data.items.length > 0) {
         msgs = data.items;
