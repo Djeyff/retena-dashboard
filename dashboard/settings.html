@@ -722,11 +722,18 @@ function showTab(tabId) {
 }
 
 async function loadSettings() {
+  // Show workspace ID immediately from cached user (no round-trip needed)
+  const cachedId = window._retenaUser?.id || localStorage.getItem('retena_account_id');
+  if (cachedId) document.getElementById('ws-id').value = cachedId;
+
   try {
     const data = await api('/api/rt/settings');
     if (data.name) document.getElementById('ws-name').value = data.name;
     if (data.timezone) document.getElementById('ws-timezone').value = data.timezone;
-    if (data.id) document.getElementById('ws-id').value = data.id;
+    if (data.id) {
+      document.getElementById('ws-id').value = data.id;
+      localStorage.setItem('retena_account_id', data.id);
+    }
   } catch (e) {}
 }
 

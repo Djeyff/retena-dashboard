@@ -27,6 +27,8 @@ const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
   window._retenaJWT = session.access_token;
   window._retenaUser = session.user;
   window._supabaseClient = client;
+  // Cache account ID for instant display in settings
+  if (session.user?.id) localStorage.setItem('retena_account_id', session.user.id);
 
   // Auto-refresh JWT when token changes (expiry, refresh, etc.)
   client.auth.onAuthStateChange((event, newSession) => {
