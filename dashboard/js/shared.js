@@ -56,12 +56,22 @@ if (!document.querySelector('link[rel="manifest"]')) {
   meta('apple-mobile-web-app-status-bar-style', 'black-translucent');
   meta('theme-color', '#E67E22');
   const icon = document.createElement('link');
-  icon.rel = 'apple-touch-icon'; icon.href = '/dashboard/icons/icon-192.png';
+  icon.rel = 'apple-touch-icon'; icon.href = '/dashboard/icons/apple-touch-icon.png';
   document.head.appendChild(icon);
+  // Favicon
+  const fav = document.createElement('link');
+  fav.rel = 'icon'; fav.type = 'image/x-icon'; fav.href = '/dashboard/icons/favicon.ico';
+  document.head.appendChild(fav);
+  const fav32 = document.createElement('link');
+  fav32.rel = 'icon'; fav32.type = 'image/png'; fav32.sizes = '32x32'; fav32.href = '/dashboard/icons/icon-32.png';
+  document.head.appendChild(fav32);
+  const fav16 = document.createElement('link');
+  fav16.rel = 'icon'; fav16.type = 'image/png'; fav16.sizes = '16x16'; fav16.href = '/dashboard/icons/icon-16.png';
+  document.head.appendChild(fav16);
 }
 
 // ── Logo ──
-const RT_LOGO = `<svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#1E3A5F"/><text x="14" y="19" text-anchor="middle" fill="white" font-family="DM Sans" font-weight="700" font-size="16">R</text></svg>`;
+const RT_LOGO = `<svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="rl-iris" cx="40%" cy="35%" r="60%"><stop offset="0%" stop-color="#f5a623"/><stop offset="60%" stop-color="#e67e22"/><stop offset="100%" stop-color="#c0621a"/></radialGradient></defs><path d="M 12 50 Q 50 18 88 50 Q 50 82 12 50 Z" fill="none" stroke="#e67e22" stroke-width="3.5" stroke-linejoin="round"/><circle cx="50" cy="50" r="14" fill="url(#rl-iris)"/><circle cx="50" cy="50" r="6" fill="#0a0a0a"/><path d="M 44 46 Q 42 50 44 54" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.2" stroke-linecap="round"/><path d="M 40 43 Q 37 50 40 57" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="55.5" cy="43.5" rx="3" ry="2" fill="rgba(255,255,255,0.28)" transform="rotate(-20,55.5,43.5)"/></svg>`;
 
 // ── Nav Items ──
 const RT_NAV = [
