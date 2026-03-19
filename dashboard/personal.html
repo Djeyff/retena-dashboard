@@ -369,6 +369,8 @@ async function selectConversation(chatId) {
   const phone = conv.real_phone || (isLid ? '' : rawDigits);
   // Valid phone: 7-13 digits (real international numbers max 13). LID numbers are 14+ digits.
   const isValidPhone = phone && phone.length >= 7 && phone.length <= 13;
+  // Always hide first, then show if valid — prevents stale phone from previous chat
+  if (waBar) waBar.style.display = 'none';
   if (isValidPhone && waBar && waLink) {
     // Mobile: api.whatsapp.com (triggers app intent on Android/iOS)
     // Desktop: web.whatsapp.com (opens WhatsApp Web)
