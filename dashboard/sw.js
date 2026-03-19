@@ -1,4 +1,4 @@
-const CACHE_NAME = 'retena-v6';
+const CACHE_NAME = 'retena-v7';
 const STATIC_ASSETS = [
   '/dashboard/',
   '/dashboard/styles.css',
@@ -32,7 +32,7 @@ self.addEventListener('push', (e) => {
   let data = {};
   try { data = e.data.json(); } catch { data = { title: 'Retena', body: e.data.text() }; }
 
-  const { title = 'Retena', body = '', icon = '/dashboard/icons/icon-192.png', badge = '/dashboard/icons/badge-72.png', tag, data: notifData = {} } = data;
+  const { title = 'Retena', body = '', icon = '/dashboard/icons/icon-192.png', badge = '/dashboard/icons/badge-72.png', tag, actions = [], data: notifData = {} } = data;
 
   e.waitUntil(
     self.registration.showNotification(title, {
@@ -42,6 +42,7 @@ self.addEventListener('push', (e) => {
       tag: tag || 'retena-general',
       renotify: true,
       vibrate: [200, 100, 200],
+      actions,           // ← pass action buttons to the notification
       data: notifData,
     })
   );
@@ -53,9 +54,10 @@ self.addEventListener('notificationclick', (e) => {
   const action = e.action || '';
 
   e.waitUntil((async () => {
-    // Action: "open_wa" → open WhatsApp app via whatsapp:// scheme (works in Brave + Chrome)
+    // Action: "open_wa" → open WhatsApp chat
+    // wa.me/PHONE opens the WA app on mobile, WhatsApp Web on desktop
     if (action === 'open_wa' && data.whatsapp_phone) {
-      await clients.openWindow(`whatsapp://send?phone=${data.whatsapp_phone}`);
+      await clients.openWindow(`https://wa.me/${data.whatsapp_phone}`);
       return;
     }
 
