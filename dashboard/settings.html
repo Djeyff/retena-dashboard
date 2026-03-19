@@ -1001,42 +1001,16 @@ async function importGoogleContacts() {
   btn.textContent = 'Connecting…';
 
   try {
-    // Step 1: Get Google OAuth URL from our API
+    // Step 1: Get Google OAuth URL from our API (redirect-based, no popup)
     const { auth_url } = await api('/api/contacts/google/auth-url');
     if (!auth_url) throw new Error('Could not get auth URL');
 
-    // Step 2: Open Google OAuth in popup
-    const popup = window.open(auth_url, 'google-contacts', 'width=500,height=600,left=200,top=100');
-
-    // Step 3: Listen for redirect via URL check (redirect-based flow)
+    // Step 2: Redirect the main page to Google OAuth (avoids COOP popup issues)
     status.style.display = 'block';
     status.style.background = 'rgba(230,126,34,0.1)';
     status.style.color = 'var(--accent)';
-    status.textContent = '⏳ Waiting for Google authorization… (check the popup window)';
-
-    // Use a timer to check if popup closed (COOP-safe: just catch errors)
-    let popupDone = false;
-    const checkPopup = setInterval(async () => {
-      if (popupDone) return;
-      try {
-        // This may throw due to COOP — that's OK, means popup is still on Google
-        if (popup.closed) {
-          clearInterval(checkPopup);
-          if (!popupDone) {
-            status.textContent = '❌ Authorization cancelled';
-            status.style.color = 'var(--red)';
-            btn.disabled = false;
-            btn.textContent = 'Import from Google Contacts';
-          }
-          return;
-        }
-      } catch (e) {
-        // COOP blocks access — popup is still open on cross-origin, keep waiting
-      }
-    }, 1500);
-
-    // Also listen for the redirect callback (page will reload with ?code=)
-    // The checkGoogleCallback() function below handles this case
+    status.textContent = '⏳ Redirecting to Google…';
+    window.location.href = auth_url;
 
   } catch (e) {
     status.style.display = 'block';
@@ -1045,9 +1019,9 @@ async function importGoogleContacts() {
     status.textContent = e.message === 'Google OAuth not configured'
       ? '⚠️ Google Contacts import is not yet configured for this workspace. Contact names can be added manually.'
       : `❌ ${e.message}`;
+    btn.disabled = false;
+    btn.textContent = 'Import from Google Contacts';
   }
-  btn.disabled = false;
-  btn.textContent = 'Import from Google Contacts';
 }
 
 // Load contacts when tab is shown
@@ -1197,9 +1171,13 @@ function loadImportHistory() {
       status.textContent = `✅ Imported ${result.imported} contacts`;
       window.history.replaceState({}, '', window.location.pathname);
       loadContacts();
-    }).catch(e => {
+    }).catch(async e => {
       status.style.color = 'var(--red)';
-      status.textContent = `❌ Import failed: ${e.message}`;
+      // Try to show more detail from the error response
+      let detail = e.message;
+      try { if (e.body) { const b = JSON.parse(e.body); detail = b.description || b.detail || b.error || detail; } } catch {}
+      status.textContent = `❌ Import failed: ${detail}`;
+      console.error('[google-import] Error:', e);
     });
   }
 })();
