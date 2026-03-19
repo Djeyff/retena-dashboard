@@ -307,6 +307,8 @@
             <button class="btn" style="background:var(--bg-tertiary);color:var(--text-primary)" onclick="showAddContactModal()">+ Add manually</button>
           </div>
           <div id="google-import-status" style="display:none;font-size:13px;padding:10px;border-radius:8px;margin-bottom:16px"></div>
+          <!-- Search bar -->
+          <input id="contacts-search" type="text" placeholder="Search by name or phone…" oninput="filterContacts()" style="width:100%;box-sizing:border-box;padding:8px 12px;background:var(--bg-input,rgba(255,255,255,.06));border:1px solid var(--border);border-radius:8px;color:var(--text-primary);font-size:13px;font-family:inherit;margin-bottom:12px">
           <div id="contacts-list" style="font-size:13px;color:var(--text-muted)">Loading contacts…</div>
         </div>
       </div>
@@ -1020,12 +1022,17 @@ function loadNotifPrefs() {
 }
 
 async function sendInvite() {
-  const email = document.getElementById('invite-email').value;
+  const email = document.getElementById('invite-email').value.trim();
   const role = document.getElementById('invite-role').value;
   if (!email) { showToast('Enter an email'); return; }
-  showToast(`Invite sent to ${email}`);
-  closeModal('invite-modal');
-  document.getElementById('invite-email').value = '';
+  try {
+    const r = await api('/api/team/invite', { method: 'POST', body: JSON.stringify({ email, role }) });
+    showToast(`✅ Invite sent to ${email}`);
+    closeModal('invite-modal');
+    document.getElementById('invite-email').value = '';
+  } catch (e) {
+    showToast(`❌ Failed to send invite: ${e.message}`, 'error');
+  }
 }
 
 function confirmDelete() {
@@ -1038,6 +1045,35 @@ function confirmDelete() {
 
 // ── Contacts Management ──
 let allContacts = [];
+
+function renderContactList(contacts) {
+  const el = document.getElementById('contacts-list');
+  if (!contacts.length) {
+    el.innerHTML = `<div style="padding:20px 0;text-align:center;color:var(--text-muted)">No contacts found</div>`;
+    return;
+  }
+  el.innerHTML = `<div style="margin-bottom:8px;color:var(--text-secondary)">${contacts.length} contacts</div>` +
+    contacts.map(c => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:10px">
+          ${renderAvatar(c.display_name)}
+          <div>
+            <div style="font-weight:600;font-size:13px">${esc(c.display_name)}</div>
+            <div style="font-size:11px;color:var(--text-muted)">+${c.phone}</div>
+          </div>
+        </div>
+        <button class="btn" style="background:var(--bg-tertiary);color:var(--text-secondary);font-size:11px;padding:4px 10px" onclick="editContact('${c.phone}','${esc(c.display_name)}')">Edit</button>
+      </div>`).join('');
+}
+
+function filterContacts() {
+  const q = (document.getElementById('contacts-search')?.value || '').toLowerCase().trim();
+  if (!q) { renderContactList(allContacts); return; }
+  const filtered = allContacts.filter(c =>
+    (c.display_name || '').toLowerCase().includes(q) || (c.phone || '').includes(q)
+  );
+  renderContactList(filtered);
+}
 
 async function loadContacts() {
   const el = document.getElementById('contacts-list');
@@ -1052,18 +1088,7 @@ async function loadContacts() {
       </div>`;
       return;
     }
-    el.innerHTML = `<div style="margin-bottom:8px;color:var(--text-secondary)">${allContacts.length} contacts</div>` +
-      allContacts.map(c => `
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="display:flex;align-items:center;gap:10px">
-            ${renderAvatar(c.display_name)}
-            <div>
-              <div style="font-weight:600;font-size:13px">${esc(c.display_name)}</div>
-              <div style="font-size:11px;color:var(--text-muted)">+${c.phone}</div>
-            </div>
-          </div>
-          <button class="btn" style="background:var(--bg-tertiary);color:var(--text-secondary);font-size:11px;padding:4px 10px" onclick="editContact('${c.phone}','${esc(c.display_name)}')">Edit</button>
-        </div>`).join('');
+    renderContactList(allContacts);
   } catch (e) {
     el.innerHTML = '<div style="color:var(--text-muted)">Failed to load contacts</div>';
   }
@@ -1716,7 +1741,9 @@ function updateKeywordUI() {
   const tags = document.getElementById('keyword-tags');
   if (!section || !tags) return;
   const enabled = _pushPrefs.keyword_alerts;
-  section.style.display = enabled ? '' : 'none';
+  section.style.display = ''; // Always visible
+  const inp = document.getElementById('keyword-input');
+  if (inp) inp.placeholder = enabled ? 'Add a keyword…' : 'Enable keyword alerts to add keywords…';
   if (!enabled) return;
   const keywords = _pushPrefs.keywords || [];
   tags.innerHTML = keywords.map(kw => `
