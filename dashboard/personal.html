@@ -365,15 +365,13 @@ async function selectConversation(chatId) {
   const phone = conv.real_phone || (isLid ? '' : rawDigits);
   const isValidPhone = phone && phone.length >= 7 && phone.length <= 15 && !/^\d{15,}$/.test(phone);
   if (isValidPhone && waBar && waLink) {
-    // Desktop: open WhatsApp Web directly | Mobile: use whatsapp:// scheme
+    // Mobile: api.whatsapp.com (triggers app intent on Android/iOS)
+    // Desktop: web.whatsapp.com (opens WhatsApp Web)
     const isMobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
-    if (isMobile) {
-      waLink.href = `whatsapp://send?phone=${phone}`;
-      waLink.target = '_self';
-    } else {
-      waLink.href = `https://web.whatsapp.com/send?phone=${phone}`;
-      waLink.target = '_blank';
-    }
+    waLink.href = isMobile
+      ? `https://api.whatsapp.com/send?phone=${phone}`
+      : `https://web.whatsapp.com/send?phone=${phone}`;
+    waLink.target = '_blank';
     waBar.style.display = 'block';
   }
 
