@@ -280,7 +280,7 @@ function showNotifReplyBanner() {
   banner.innerHTML = `
     <span>🎤 New voice note</span>
     <div style="display:flex;gap:8px">
-      <button onclick="openWhatsApp()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">↩️ Reply in WA</button>
+      <button onclick="(document.getElementById('chat-wa-link')||{click:openWhatsApp}).click()" style="background:rgba(255,255,255,0.25);border:none;color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">↩️ Reply in WA</button>
       <button onclick="document.getElementById('notif-reply-banner').remove()" style="background:none;border:none;color:rgba(255,255,255,0.7);font-size:18px;cursor:pointer;padding:0 4px">&times;</button>
     </div>`;
   header.insertAdjacentElement('afterend', banner);
