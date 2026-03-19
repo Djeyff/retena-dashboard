@@ -32,7 +32,7 @@
         <div class="settings-tab" data-tab="import" onclick="showTab('import')">Import</div>
         <div class="settings-tab" data-tab="data" onclick="showTab('data')">Data & Privacy</div>
         <div class="settings-tab" data-tab="vozclara" onclick="showTab('vozclara')">VozClara Perk</div>
-        <div class="settings-tab" data-tab="reconciliation" onclick="showTab('reconciliation')">Reconciliation</div>
+        <div class="settings-tab" data-tab="reconciliation" onclick="showTab('reconciliation')" id="tab-btn-reconciliation">Reconciliation <span id="reconcile-badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px;vertical-align:middle"></span></div>
         <div class="settings-tab" data-tab="chats" onclick="showTab('chats');loadChats()">Chats</div>
       </div>
 
@@ -686,6 +686,17 @@
 
       <!-- Reconciliation -->
       <div class="settings-section" id="tab-reconciliation">
+        <div class="card animate-in" style="background:linear-gradient(135deg,rgba(245,158,11,0.08),transparent);border:1px solid rgba(245,158,11,0.2);margin-bottom:16px;padding:16px 20px;border-radius:12px">
+          <div style="display:flex;gap:12px;align-items:flex-start">
+            <div style="font-size:24px;line-height:1">🔗</div>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:4px">Why do some contacts need review?</div>
+              <div style="font-size:12px;color:var(--text-secondary);line-height:1.6">
+                WhatsApp uses internal IDs (LIDs) instead of phone numbers for privacy. For most contacts, Retena resolves them automatically. A small number — typically contacts saved under a nickname different from their phonebook name — can't be matched automatically. <strong style="color:var(--text-primary)">Only you know that "Coco" = "Corinne Jean".</strong> Enter their number below and it's resolved permanently — no further action needed.
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="card animate-in">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
             <div>
@@ -2002,6 +2013,20 @@ window.showTab = function(tab) {
 document.addEventListener('DOMContentLoaded', () => {
   const activeTab = document.querySelector('.tab-btn.active')?.dataset?.tab;
   if (!activeTab || activeTab === 'workspace') startWAQR();
+
+  // Silently load reconciliation badge count on page load
+  setTimeout(async () => {
+    try {
+      const r = await fetch(`${window._API_BASE || 'https://dashboard-api.voz-clara.com'}/api/lid-reconciliation`, { headers: authHeaders() });
+      const data = await r.json();
+      const count = (data.pending || []).length;
+      const badge = document.getElementById('reconcile-badge');
+      if (badge && count > 0) {
+        badge.textContent = count;
+        badge.style.display = 'inline-block';
+      }
+    } catch {}
+  }, 1500);
 });
 
 // ── Reconciliation Tab ──────────────────────────────────────────────────────
@@ -2029,6 +2054,17 @@ async function loadReconciliation() {
     // Count unresolved (pending review items)
     document.getElementById('rc-resolved').textContent = resolved;
     document.getElementById('rc-pending').textContent = pending.length;
+
+    // Update tab badge
+    const badge = document.getElementById('reconcile-badge');
+    if (badge) {
+      if (pending.length > 0) {
+        badge.textContent = pending.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
 
     // Fetch unresolved count from audit
     try {
