@@ -1740,7 +1740,7 @@ async function startWAQR() {
 async function pollWAQR() {
   _waQrAttempts++;
   try {
-    const res = await fetch('/api/onboard/qr', { credentials: 'include' });
+    const res = await fetch('/api/onboard/qr', { credentials: 'include', headers: authHeaders() });
     const d = await res.json();
     if (d.status === 'connected') {
       clearInterval(_waQrTimer);
@@ -1811,7 +1811,7 @@ async function requestWACode() {
   try {
     const resp = await fetch('/api/onboard/request-code', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
       credentials: 'include',
       body: JSON.stringify({ phoneNumber: phone }),
       signal: controller.signal,
@@ -1900,7 +1900,7 @@ function startWACodeCountdown(phone) {
       if (refEl) refEl.style.display = 'inline';
       try {
         const resp = await fetch('/api/onboard/request-code', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() },
           credentials: 'include', body: JSON.stringify({ phoneNumber: phone }),
           signal: AbortSignal.timeout(130000),
         });
@@ -2146,7 +2146,7 @@ function showToast(msg, type) {
 }
 
 function authHeaders() {
-  const token = localStorage.getItem('retena_token') || '';
+  const token = window._retenaJWT || localStorage.getItem('retena_token') || '';
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 </script>
