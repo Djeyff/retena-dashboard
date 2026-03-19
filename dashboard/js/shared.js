@@ -26,6 +26,17 @@ const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
   // Store JWT for API calls
   window._retenaJWT = session.access_token;
   window._retenaUser = session.user;
+  window._supabaseClient = client;
+
+  // Auto-refresh JWT when token changes (expiry, refresh, etc.)
+  client.auth.onAuthStateChange((event, newSession) => {
+    if (newSession?.access_token) {
+      window._retenaJWT = newSession.access_token;
+    } else if (event === 'SIGNED_OUT') {
+      window._retenaJWT = null;
+      location.href = '/dashboard/login.html';
+    }
+  });
 })();
 
 // ── PWA: Register service worker + inject manifest ──
@@ -222,7 +233,7 @@ function updateSidebarMeters(usage) {
 // ── API Helper ──
 async function api(path, opts = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
     const authHeader = window._retenaJWT ? { 'Authorization': `Bearer ${window._retenaJWT}` } : {};
     const res = await fetch(path, {
@@ -232,6 +243,27 @@ async function api(path, opts = {}) {
       credentials: 'include',
     });
     clearTimeout(timeout);
+
+    // On 401: try refreshing the token once, then retry
+    if (res.status === 401 && window._supabaseClient) {
+      try {
+        const { data } = await window._supabaseClient.auth.refreshSession();
+        if (data?.session?.access_token) {
+          window._retenaJWT = data.session.access_token;
+          // Retry the request with new token
+          const retryRes = await fetch(path, {
+            ...opts,
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window._retenaJWT}`, ...(opts.headers || {}) },
+            credentials: 'include',
+          });
+          if (retryRes.ok) return await retryRes.json();
+        }
+      } catch {}
+      // If refresh failed, redirect to login
+      location.href = `/dashboard/login.html?next=${encodeURIComponent(location.pathname)}`;
+      return;
+    }
+
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.json();
   } catch (e) {
