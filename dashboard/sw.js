@@ -1,4 +1,4 @@
-const CACHE_NAME = 'retena-v7';
+const CACHE_NAME = 'retena-v8';
 const STATIC_ASSETS = [
   '/dashboard/',
   '/dashboard/styles.css',
@@ -32,7 +32,21 @@ self.addEventListener('push', (e) => {
   let data = {};
   try { data = e.data.json(); } catch { data = { title: 'Retena', body: e.data.text() }; }
 
-  const { title = 'Retena', body = '', icon = '/dashboard/icons/icon-192.png', badge = '/dashboard/icons/badge-72.png', tag, actions = [], data: notifData = {} } = data;
+  const {
+    title = 'Retena',
+    body = '',
+    icon = '/dashboard/icons/icon-192.png',
+    badge = '/dashboard/icons/badge-72.png',
+    tag,
+    data: notifData = {},
+  } = data;
+
+  // Always provide Reply + View buttons for voice transcription notifications
+  const isVoice = notifData?.type === 'voice_transcribed';
+  const actions = isVoice ? [
+    { action: 'view_chat', title: '💬 View' },
+    ...(notifData?.whatsapp_phone ? [{ action: 'open_wa', title: '↩️ Reply' }] : []),
+  ] : (data.actions || []);
 
   e.waitUntil(
     self.registration.showNotification(title, {
@@ -42,7 +56,7 @@ self.addEventListener('push', (e) => {
       tag: tag || 'retena-general',
       renotify: true,
       vibrate: [200, 100, 200],
-      actions,           // ← pass action buttons to the notification
+      actions,
       data: notifData,
     })
   );
@@ -50,31 +64,33 @@ self.addEventListener('push', (e) => {
 
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
-  const data = e.notification.data || {};
+  const notifData = e.notification.data || {};
   const action = e.action || '';
 
   e.waitUntil((async () => {
-    // Action: "open_wa" → open WhatsApp chat
-    // wa.me/PHONE opens the WA app on mobile, WhatsApp Web on desktop
-    if (action === 'open_wa' && data.whatsapp_phone) {
-      await clients.openWindow(`https://wa.me/${data.whatsapp_phone}`);
+    // "Reply in WhatsApp" action
+    if (action === 'open_wa' && notifData.whatsapp_phone) {
+      await clients.openWindow(`https://wa.me/${notifData.whatsapp_phone}`);
       return;
     }
 
-    // Default: open Retena dashboard (use absolute URL — client.navigate requires it)
-    const relUrl = data.url || '/dashboard/';
-    const targetUrl = relUrl.startsWith('http') ? relUrl : (self.location.origin + relUrl);
+    // "View chat" action OR default tap → open the specific chat
+    const relUrl = notifData.url || '/dashboard/';
+    const targetUrl = relUrl.startsWith('http')
+      ? relUrl
+      : (self.location.origin + relUrl);
+
     const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
 
-    // If a Retena tab is already open, focus + navigate it
+    // If a Retena tab is already open, navigate it to the specific chat
     for (const client of windowClients) {
-      if (client.url.includes('/dashboard') && 'navigate' in client) {
+      if (client.url.includes(self.location.origin) && 'navigate' in client) {
         await client.focus();
         await client.navigate(targetUrl);
         return;
       }
     }
-    // Otherwise open new tab
+    // No tab open → open a new one at the specific chat URL
     if (clients.openWindow) await clients.openWindow(targetUrl);
   })());
 });
