@@ -421,12 +421,13 @@
                 </div>
                 <div class="toggle" id="pref-keyword_alerts" onclick="togglePushPref('keyword_alerts')"></div>
               </div>
-              <div id="keyword-section" style="display:none">
+              <div id="keyword-section" style="margin-top:10px">
                 <div id="keyword-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
                 <div style="display:flex;gap:8px">
-                  <input class="input" id="keyword-input" placeholder="Add a keyword…" style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter')addKeyword()">
+                  <input class="input" id="keyword-input" placeholder="Add a keyword… (press Enter)" style="flex:1;font-size:13px" onkeydown="if(event.key==='Enter')addKeyword()">
                   <button class="btn btn-secondary btn-sm" onclick="addKeyword()">Add</button>
                 </div>
+                <div id="keyword-empty" style="font-size:12px;color:var(--text-muted);margin-top:6px;display:none">No keywords yet — add one above</div>
               </div>
             </div>
 
@@ -795,6 +796,11 @@ async function loadSettings() {
     if (data.id) {
       document.getElementById('ws-id').value = data.id;
       localStorage.setItem('retena_account_id', data.id);
+    }
+    // Load keywords (independent of push subscription)
+    if (Array.isArray(data.keywords)) {
+      _keywords = data.keywords;
+      updateKeywordUI();
     }
   } catch (e) {}
 }
@@ -1736,40 +1742,48 @@ function applyPushPrefs() {
   updateKeywordUI();
 }
 
+// _keywords is the source of truth for keyword list — independent of push subscription
+let _keywords = [];
+
 function updateKeywordUI() {
-  const section = document.getElementById('keyword-section');
   const tags = document.getElementById('keyword-tags');
-  if (!section || !tags) return;
-  const enabled = _pushPrefs.keyword_alerts;
-  section.style.display = ''; // Always visible
-  const inp = document.getElementById('keyword-input');
-  if (inp) inp.placeholder = enabled ? 'Add a keyword…' : 'Enable keyword alerts to add keywords…';
-  if (!enabled) return;
-  const keywords = _pushPrefs.keywords || [];
+  const empty = document.getElementById('keyword-empty');
+  if (!tags) return;
+  const keywords = _keywords;
   tags.innerHTML = keywords.map(kw => `
     <span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:12px">
       ${esc(kw)}
       <button onclick="removeKeyword('${esc(kw)}')" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;line-height:1;padding:0 2px">&times;</button>
     </span>`).join('');
+  if (empty) empty.style.display = keywords.length === 0 ? '' : 'none';
+  // Sync to push prefs if subscribed
+  if (_pushPrefs) _pushPrefs.keywords = keywords;
 }
 
 async function addKeyword() {
   const input = document.getElementById('keyword-input');
   const kw = input.value.trim();
   if (!kw) return;
-  if (!_pushPrefs.keywords) _pushPrefs.keywords = [];
-  if (_pushPrefs.keywords.includes(kw)) { showToast('Already added'); return; }
-  _pushPrefs.keywords.push(kw);
+  if (_keywords.includes(kw)) { showToast('Already added'); return; }
+  _keywords.push(kw);
   input.value = '';
   updateKeywordUI();
-  await savePushPrefs();
+  await saveKeywords();
   showToast(`"${kw}" added`);
 }
 
 async function removeKeyword(kw) {
-  if (!_pushPrefs.keywords) return;
-  _pushPrefs.keywords = _pushPrefs.keywords.filter(k => k !== kw);
+  _keywords = _keywords.filter(k => k !== kw);
   updateKeywordUI();
+  await saveKeywords();
+}
+
+async function saveKeywords() {
+  // Always save to user settings (works without push subscription)
+  try {
+    await api('/api/settings', { method: 'POST', body: JSON.stringify({ keywords: _keywords }) });
+  } catch {}
+  // Also sync to push prefs if subscribed
   await savePushPrefs();
 }
 
