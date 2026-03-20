@@ -87,8 +87,9 @@ async function loadUsageCounter() {
   try {
     const data = await api('/api/rt/usage');
     const plan = PLAN_LIMITS[data.plan || 'starter'];
-    const used = data.ai_queries || 0;
-    const total = plan.ai_queries === Infinity ? '∞' : plan.ai_queries;
+    const used = data.ai_queries?.used ?? (typeof data.ai_queries === 'number' ? data.ai_queries : 0);
+    const limit = data.ai_queries?.limit ?? plan.ai_queries;
+    const total = limit === Infinity ? '∞' : limit;
     document.getElementById('usage-counter').textContent = `${used} of ${total} AI queries this month`;
   } catch (e) {}
 }

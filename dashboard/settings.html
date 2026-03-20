@@ -934,8 +934,8 @@ async function loadBilling() {
 
     // Usage meters
     el.innerHTML = `
-      ${largeMeter('Voice minutes', data.voice_minutes || 0, plan.voice_min)}
-      ${largeMeter('AI queries', data.ai_queries || 0, plan.ai_queries)}
+      ${largeMeter('Voice minutes', data.voice_minutes?.used ?? (typeof data.voice_minutes === 'number' ? data.voice_minutes : 0), data.voice_minutes?.limit ?? plan.voice_min)}
+      ${largeMeter('AI queries', data.ai_queries?.used ?? (typeof data.ai_queries === 'number' ? data.ai_queries : 0), data.ai_queries?.limit ?? plan.ai_queries)}
       ${largeMeter('Groups', data.groups || 0, plan.groups)}
       ${largeMeter('Storage', data.storage_gb || 0, plan.storage_gb, 'GB')}
       ${largeMeter('Seats', data.seats || 1, plan.seats)}
@@ -949,8 +949,8 @@ async function loadBilling() {
 }
 
 function loadVoiceMinutePanel(data, plan) {
-  const used = data.voice_minutes || 0;
-  const limit = plan.voice_min || 100;
+  const used = data.voice_minutes?.used ?? (typeof data.voice_minutes === 'number' ? data.voice_minutes : 0);
+  const limit = data.voice_minutes?.limit ?? plan.voice_min ?? 100;
   const packBal = data.pack_mins_balance || 0;
   const overageMins = data.overage_mins_used || 0;
   const overageEnabled = data.overage_enabled || false;
@@ -1342,7 +1342,7 @@ async function loadVoiceCredits() {
     const planKey = data.plan || 'starter';
     const plan = PLAN_META[planKey] || PLAN_META.starter;
     document.getElementById('vh-plan-name').textContent = plan.name;
-    document.getElementById('vh-mins-used').textContent = data.voice_minutes || 0;
+    document.getElementById('vh-mins-used').textContent = data.voice_minutes?.used ?? (typeof data.voice_minutes === 'number' ? data.voice_minutes : 0);
     document.getElementById('vh-mins-limit').textContent = plan.voice_min;
   } catch (e) { console.warn('[vh] credits load:', e.message); }
 }
