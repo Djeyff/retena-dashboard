@@ -25,6 +25,8 @@
         <div class="metric-card"><div class="metric-value" id="m-messages">0</div><div class="metric-label">Messages Captured</div></div>
         <div class="metric-card"><div class="metric-value" id="m-voice">0</div><div class="metric-label">Voice Minutes</div></div>
         <div class="metric-card"><div class="metric-value" id="m-queries">0</div><div class="metric-label">AI Queries</div></div>
+        <div class="metric-card"><div class="metric-value" id="m-avg-day">–</div><div class="metric-label">Avg Voice / Day</div></div>
+        <div class="metric-card"><div class="metric-value" id="m-avg-len">–</div><div class="metric-label">Avg Length</div></div>
       </div>
 
       <!-- Today's Briefing -->
@@ -73,7 +75,7 @@ async function loadHome() {
 
   try {
     const data = await api('/api/rt/home');
-    renderMetrics(data.metrics || {});
+    renderMetrics(data.metrics || {}, data.voiceStats);
     renderBriefings(data.briefings || []);
     renderActivity(data.recentActivity || data.recent_activity || []);
   } catch (e) {
@@ -83,11 +85,19 @@ async function loadHome() {
   }
 }
 
-function renderMetrics(m) {
+function renderMetrics(m, voiceStats) {
   document.getElementById('m-groups').textContent = m.groups || 0;
   document.getElementById('m-messages').textContent = m.messages || 0;
   document.getElementById('m-voice').textContent = m.voice_minutes ? `${m.voice_minutes} min` : '0';
   document.getElementById('m-queries').textContent = m.ai_queries || 0;
+  // Voice averages
+  if (voiceStats) {
+    document.getElementById('m-avg-day').textContent = voiceStats.avg_per_day || '–';
+    const avgSec = voiceStats.avg_length_sec || 0;
+    document.getElementById('m-avg-len').textContent = avgSec > 0
+      ? (avgSec >= 60 ? `${Math.floor(avgSec/60)}m${avgSec%60 ? (avgSec%60)+'s' : ''}` : `${avgSec}s`)
+      : '–';
+  }
 }
 
 function renderBriefings(items) {
