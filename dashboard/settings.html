@@ -2319,7 +2319,7 @@ async function viewLidMessages(lid, lidName) {
   modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
 
   try {
-    const data = await api(`/api/personal?chat_id=${encodeURIComponent(lid + '@lid')}&limit=10`);
+    const data = await api(`/api/rt/personal?chat=${encodeURIComponent(lid + '@lid')}&limit=10`);
     const msgs = data.messages || data.items || [];
     const el = document.getElementById(`lid-msgs-${lid}`);
     if (!el) return;
