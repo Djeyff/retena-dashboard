@@ -137,7 +137,6 @@ function renderSidebar(activeId) {
         ${usageMeter('AI queries', '🤖', 0, 300)}
         ${usageMeter('Groups', '👥', 0, 15)}
       </div>
-      <a class="sidebar-crosssell" href="https://voz-clara.com" target="_blank">🎤 Personal use → VozClara</a>
       <div style="margin-top:12px;padding-top:8px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between">
         <span id="sidebar-user-email" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px">${window._retenaUser?.email || ''}</span>
         <button onclick="signOut()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:2px 6px;border-radius:4px;transition:.2s" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='var(--text-muted)'">Sign out</button>
@@ -198,7 +197,6 @@ function renderMobileTabs(activeId) {
         <div class="mobile-drawer-footer">
           <div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:8px">PRO PLAN</div>
           <div id="mobile-meters" class="sidebar-meters"></div>
-          <a class="sidebar-crosssell" href="https://voz-clara.com" target="_blank" style="margin-top:8px">🎤 Personal use → VozClara</a>
         </div>
       </div>
     `;
