@@ -123,7 +123,7 @@ function renderSidebar(activeId) {
       navHtml += '<div class="nav-separator"></div>';
     } else {
       const cls = item.id === activeId ? 'nav-item active' : 'nav-item';
-      navHtml += `<a class="${cls}" href="${item.href}">${item.icon}<span>${item.label}</span></a>`;
+      navHtml += `<a class="${cls}" href="${item.href}" onclick="sessionStorage.setItem('retena_nav','1')">${item.icon}<span>${item.label}</span></a>`;
     }
   }
 
@@ -175,7 +175,7 @@ function renderMobileTabs(activeId) {
     if (t.id === 'more') {
       return `<a class="mobile-tab${isMoreActive ? ' active' : ''}" href="#" onclick="toggleMobileMenu(event)">${t.icon}<span>${t.label}</span></a>`;
     }
-    return `<a class="mobile-tab${t.id === activeId ? ' active' : ''}" href="${t.href}">${t.icon}<span>${t.label}</span></a>`;
+    return `<a class="mobile-tab${t.id === activeId ? ' active' : ''}" href="${t.href}" onclick="sessionStorage.setItem('retena_nav','1')">${t.icon}<span>${t.label}</span></a>`;
   }).join('');
 
   // Add slide-up drawer for "More" menu
@@ -189,7 +189,7 @@ function renderMobileTabs(activeId) {
         <div class="mobile-drawer-handle" onclick="closeMobileMenu()"><div class="handle-bar"></div></div>
         <nav class="mobile-drawer-nav">
           ${RT_NAV.filter(n => n.type !== 'separator').map(n =>
-            `<a class="mobile-drawer-item${n.id === activeId ? ' active' : ''}" href="${n.href}">
+            `<a class="mobile-drawer-item${n.id === activeId ? ' active' : ''}" href="${n.href}" onclick="sessionStorage.setItem('retena_nav','1')">
               ${n.icon}<span>${n.label}</span>
             </a>`
           ).join('')}

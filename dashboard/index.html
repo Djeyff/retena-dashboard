@@ -52,9 +52,15 @@
 <nav class="mobile-tabs"><div class="mobile-tabs-inner" id="mobile-tabs"></div></nav>
 
 <script>
-  // Redirect to user's preferred landing page (before anything loads)
+  // Redirect to user's preferred landing page — ONLY on app entry (login/bookmark)
+  // Skip redirect when user explicitly clicks "Home" in sidebar navigation
   (function() {
     const landing = localStorage.getItem('retena_landing');
+    const isNavClick = sessionStorage.getItem('retena_nav');
+    if (isNavClick) {
+      sessionStorage.removeItem('retena_nav'); // consume the flag
+      return; // user explicitly navigated here — don't redirect
+    }
     if (landing && window.location.pathname !== landing) {
       window.location.replace(landing);
     }
