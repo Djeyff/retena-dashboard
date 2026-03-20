@@ -102,11 +102,11 @@ function renderTranscripts() {
               ${t.sender || t.sender_name ? `<span style="font-weight:600;font-size:13px">${t.sender || t.sender_name}</span>` : ''}
               ${isPersonal ? personalPill() : groupPill(t.group_name || 'Group')}
               <span class="pill pill-voice">🎤 ${formatDuration(t.duration || t.voice_duration_sec || 0)}</span>
-              ${t.language ? `<span style="font-size:11px">${langFlag(t.language)}</span>` : ''}
+              ${t.language_flag || t.language ? `<span style="font-size:13px" title="${t.language || ''}">${t.language_flag || langFlag(t.language)}</span>` : ''}
             </div>
             <div style="font-size:13px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="preview-${i}">${truncate(text, 120)}</div>
           </div>
-          <span class="activity-time">${timeAgo(t.created_at || t.timestamp)}</span>
+          <span class="activity-time" title="${new Date(t.timestamp || t.created_at).toLocaleString()}">${formatTransTime(t.timestamp || t.created_at)}</span>
         </div>
         <div id="expanded-${i}" style="display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
           ${summary ? `<div class="summary-card${isPersonal ? ' personal-summary' : ''}" style="margin-bottom:12px"><div style="font-size:12px;font-weight:600;color:var(--text-muted);margin-bottom:4px">Summary</div><div style="font-size:13px;color:var(--text-secondary);line-height:1.6">${formatSummaryObj(summary)}</div></div>` : ''}
@@ -134,6 +134,24 @@ function formatSummaryObj(s) {
   }
   if (!bullets.length) return typeof s === 'string' ? s : JSON.stringify(s);
   return bullets.map(b => `<div style="display:flex;gap:6px;padding:3px 0"><span style="color:var(--accent);font-weight:700;flex-shrink:0">•</span><span>${b}</span></div>`).join('');
+}
+
+function formatTransTime(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffH = diffMs / 3600000;
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // Today: show "2:30 PM"
+  if (d.toDateString() === now.toDateString()) return time;
+  // Yesterday: show "Yesterday 2:30 PM"
+  const yesterday = new Date(now); yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return `Yesterday ${time}`;
+  // This week: show "Mon 2:30 PM"
+  if (diffH < 168) return d.toLocaleDateString([], { weekday: 'short' }) + ' ' + time;
+  // Older: show "Mar 15, 2:30 PM"
+  return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ', ' + time;
 }
 
 function langFlag(lang) {
