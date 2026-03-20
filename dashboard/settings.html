@@ -784,6 +784,9 @@ document.addEventListener('DOMContentLoaded', () => {
   renderMobileTabs('settings');
   loadSettings();
   loadNotifPrefs();
+  // Handle ?tab= parameter (e.g. from home reconciliation banner)
+  const tabParam = new URLSearchParams(window.location.search).get('tab');
+  if (tabParam) setTimeout(() => showTab(tabParam), 200);
 });
 
 function showTab(tabId) {
@@ -2234,7 +2237,8 @@ async function showContactPicker(lid, lidName) {
     try {
       const r = await fetch(`${RC_API}/api/contacts?limit=2000`, { headers: authHeaders() });
       const data = await r.json();
-      _pickerAllContacts = (data.contacts || data || []).filter(c => c.name || c.display_name).sort((a,b) => (a.name||a.display_name||'').localeCompare(b.name||b.display_name||''));
+      const raw = data.items || data.contacts || (Array.isArray(data) ? data : []);
+      _pickerAllContacts = raw.filter(c => (c.name || c.display_name) && /^\d{7,15}$/.test(c.phone || '')).sort((a,b) => (a.name||a.display_name||'').localeCompare(b.name||b.display_name||''));
     } catch(e) {
       document.getElementById('picker-list').innerHTML = '<div style="padding:20px;text-align:center;color:#ef4444">Failed to load contacts</div>';
       return;
@@ -2248,14 +2252,14 @@ function filterPickerContacts() {
   const list = document.getElementById('picker-list');
   if (!list) return;
   const filtered = q
-    ? _pickerAllContacts.filter(c => (c.name||c.display_name||'').toLowerCase().includes(q) || (c.phone||'').includes(q))
+    ? _pickerAllContacts.filter(c => (c.display_name||c.name||'').toLowerCase().includes(q) || (c.phone||'').includes(q))
     : _pickerAllContacts.slice(0, 80);
   if (filtered.length === 0) {
     list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">No contacts found</div>';
     return;
   }
   list.innerHTML = filtered.slice(0, 100).map(c => {
-    const name = c.name || c.display_name || c.phone;
+    const name = c.display_name || c.name || c.phone;
     const phone = c.phone || '';
     return `<div onclick="pickContact('${phone}','${esc(name)}')"
       style="padding:10px 14px;cursor:pointer;border-radius:8px;display:flex;justify-content:space-between;align-items:center"
