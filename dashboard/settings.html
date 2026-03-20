@@ -1609,6 +1609,19 @@ async function initPushUI() {
   const sections = ['push-unsupported', 'push-blocked', 'push-enable-section', 'push-prefs-section'];
   const show = (id) => sections.forEach(s => document.getElementById(s).style.display = s === id ? '' : 'none');
 
+  // Check if running inside Retena Android app (WebView with JS interface)
+  if (window.RetenaApp || navigator.userAgent.includes('RetenaApp')) {
+    show('push-unsupported');
+    document.getElementById('push-unsupported').innerHTML = '✅ Push notifications are handled natively by the Retena app. No setup needed here.';
+    document.getElementById('push-unsupported').style.background = 'rgba(34,197,94,0.08)';
+    document.getElementById('push-unsupported').style.borderColor = 'rgba(34,197,94,0.2)';
+    document.getElementById('push-unsupported').style.color = '#22c55e';
+    badge.textContent = 'Native app';
+    badge.style.background = 'rgba(34,197,94,0.15)';
+    badge.style.color = '#22c55e';
+    return;
+  }
+
   // Check support
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
     show('push-unsupported');
