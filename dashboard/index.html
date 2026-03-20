@@ -19,6 +19,20 @@
         <h1 class="page-title">Home</h1>
       </div>
 
+      <!-- Reconciliation Banner -->
+      <div id="recon-banner" class="animate-in" style="display:none;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);border:1px solid var(--accent);border-radius:12px;padding:16px 20px;margin-bottom:20px;cursor:pointer" onclick="window.location='/dashboard/settings.html?tab=reconciliation'">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:24px">🔗</span>
+            <div>
+              <div style="font-weight:600;font-size:15px;color:var(--text-primary)">Contacts Need Your Help</div>
+              <div style="font-size:13px;color:var(--text-muted);margin-top:2px"><span id="recon-count">0</span> unmatched contacts — only you know who they are</div>
+            </div>
+          </div>
+          <div style="color:var(--accent);font-size:13px;font-weight:600;white-space:nowrap">Review →</div>
+        </div>
+      </div>
+
       <!-- Metric Grid -->
       <div class="card-grid animate-in animate-in-d1" id="metrics">
         <div class="metric-card"><div class="metric-value" id="m-groups">0</div><div class="metric-label">Groups Connected</div></div>
@@ -73,6 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderMobileTabs('home');
   if (localStorage.getItem('vc-tip-dismissed')) document.getElementById('vc-tip').style.display = 'none';
   loadHome();
+  loadReconBanner();
 });
 
 async function loadHome() {
@@ -126,6 +141,17 @@ function renderBriefings(items) {
       <a href="/dashboard/groups.html" style="font-size:12px;color:var(--accent);margin-top:8px;display:inline-block">View full summary →</a>
     </div>
   `).join('');
+}
+
+async function loadReconBanner() {
+  try {
+    const data = await api('/api/lid-reconciliation');
+    const pending = (data.items || data.pending || []).filter(i => i.status === 'pending' || !i.status);
+    if (pending.length > 0) {
+      document.getElementById('recon-count').textContent = pending.length;
+      document.getElementById('recon-banner').style.display = 'block';
+    }
+  } catch (e) { /* silent — banner just stays hidden */ }
 }
 
 function renderActivity(items) {

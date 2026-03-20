@@ -50,6 +50,25 @@ const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
     }
   });
 
+  // Periodic proactive refresh every 10 min — prevents 401s on mobile/PWA where
+  // onAuthStateChange doesn't fire reliably after JS suspension
+  setInterval(async () => {
+    try {
+      const { data } = await client.auth.refreshSession();
+      if (data?.session?.access_token) window._retenaJWT = data.session.access_token;
+    } catch {}
+  }, 10 * 60 * 1000);
+
+  // Also refresh on visibility change (user returns to tab/app after being away)
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && client) {
+      try {
+        const { data } = await client.auth.refreshSession();
+        if (data?.session?.access_token) window._retenaJWT = data.session.access_token;
+      } catch {}
+    }
+  });
+
   // Prefetch personal + groups data (warm cache before user navigates)
   if (activeSession.access_token && !location.pathname.includes('login')) {
     const prefetchHeaders = { 'Authorization': `Bearer ${activeSession.access_token}`, 'Content-Type': 'application/json' };
@@ -274,6 +293,23 @@ function updateSidebarMeters(usage) {
 }
 
 // ── API Helper ──
+// Debounced 401 refresh — prevents multiple concurrent API calls from all refreshing at once
+let _refreshPromise = null;
+async function _refreshToken() {
+  if (_refreshPromise) return _refreshPromise;
+  _refreshPromise = (async () => {
+    try {
+      const { data } = await window._supabaseClient.auth.refreshSession();
+      if (data?.session?.access_token) {
+        window._retenaJWT = data.session.access_token;
+        return true;
+      }
+    } catch {} finally { _refreshPromise = null; }
+    return false;
+  })();
+  return _refreshPromise;
+}
+
 async function api(path, opts = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -287,21 +323,17 @@ async function api(path, opts = {}) {
     });
     clearTimeout(timeout);
 
-    // On 401: try refreshing the token once, then retry
+    // On 401: debounced refresh + retry
     if (res.status === 401 && window._supabaseClient) {
-      try {
-        const { data } = await window._supabaseClient.auth.refreshSession();
-        if (data?.session?.access_token) {
-          window._retenaJWT = data.session.access_token;
-          // Retry the request with new token
-          const retryRes = await fetch(path, {
-            ...opts,
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window._retenaJWT}`, ...(opts.headers || {}) },
-            credentials: 'include',
-          });
-          if (retryRes.ok) return await retryRes.json();
-        }
-      } catch {}
+      const refreshed = await _refreshToken();
+      if (refreshed) {
+        const retryRes = await fetch(path, {
+          ...opts,
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${window._retenaJWT}`, ...(opts.headers || {}) },
+          credentials: 'include',
+        });
+        if (retryRes.ok) return await retryRes.json();
+      }
       // If refresh failed, redirect to login
       location.href = `/dashboard/login.html?next=${encodeURIComponent(location.pathname)}`;
       return;
