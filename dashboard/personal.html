@@ -311,10 +311,13 @@ async function loadPersonal() {
       showNotifReplyBanner();
     }
   } catch (e) {
+    // If api() returned undefined (401 → redirect to login in progress), don't show error
+    if (e.message?.includes('Cannot read') || e.message?.includes('undefined')) return;
     document.getElementById('conv-list').innerHTML = `
       <div class="panel-empty" style="padding:40px 20px">
         <p>Could not load messages</p>
         <p style="font-size:12px;color:var(--text-muted)">${e.message}</p>
+        <button class="btn btn-secondary" style="margin-top:12px" onclick="location.reload()">Retry</button>
       </div>`;
   }
 }

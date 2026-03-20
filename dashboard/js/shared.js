@@ -333,10 +333,11 @@ async function api(path, opts = {}) {
           credentials: 'include',
         });
         if (retryRes.ok) return await retryRes.json();
+        throw new Error(`HTTP ${retryRes.status} after token refresh`);
       }
       // If refresh failed, redirect to login
-      location.href = `/dashboard/login.html?next=${encodeURIComponent(location.pathname)}`;
-      return;
+      location.href = `/dashboard/login.html?next=${encodeURIComponent(location.pathname + location.search)}`;
+      throw new Error('Session expired — redirecting to login');
     }
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
