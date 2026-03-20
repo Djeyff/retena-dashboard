@@ -478,36 +478,65 @@ async function selectConversation(chatId) {
     }
   }
 
-  // Check if we already have messages for this chat in allMessages
-  let msgs = allMessages.filter(m => m.chat_id === chatId);
+  // ── BLAZING FAST: localStorage cache + background refresh ──
+  const chatCacheKey = `retena_chat_${chatId}`;
+  let msgs = [];
 
-  // If we have fewer messages than expected, lazy-load from API
-  if (msgs.length < conv.message_count && conv.message_count > msgs.length) {
-    const thread = document.getElementById('chat-thread');
+  // Layer 1: Instant render from localStorage cache (0ms perceived)
+  try {
+    const cached = localStorage.getItem(chatCacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed.items && parsed.ts && (Date.now() - parsed.ts) < 5 * 60 * 1000) {
+        msgs = parsed.items;
+        msgs.sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
+        renderThread(msgs);
+        const thread = document.getElementById('chat-thread');
+        setTimeout(() => thread.scrollTop = thread.scrollHeight, 50);
+        // Merge into allMessages for poll updates
+        const existingIds = new Set(allMessages.map(m => m.id));
+        for (const m of msgs) { if (!existingIds.has(m.id)) allMessages.push(m); }
+      }
+    }
+  } catch (e) { /* corrupt cache, ignore */ }
+
+  // Layer 2: Background refresh (or foreground if no cache)
+  const hadCache = msgs.length > 0;
+  const thread = document.getElementById('chat-thread');
+  if (!hadCache) {
     thread.style.display = 'flex';
     thread.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Loading messages...</div>';
-    try {
-      let data;
-      try { data = await api(`/api/rt/personal?chat=${encodeURIComponent(chatId)}&limit=500`); }
-      catch { data = await api(`/api/rt/personal?chat=${encodeURIComponent(chatId)}&limit=500`); }
-      if (data.items && data.items.length > 0) {
-        msgs = data.items;
-        // Merge into allMessages cache (avoid duplicates)
-        const existingIds = new Set(allMessages.map(m => m.id));
-        for (const m of msgs) {
-          if (!existingIds.has(m.id)) allMessages.push(m);
+  }
+
+  // Fetch from API (limit 100 — enough for recent context, fast)
+  try {
+    let data;
+    try { data = await api(`/api/rt/personal?chat=${encodeURIComponent(chatId)}&limit=100`); }
+    catch { data = await api(`/api/rt/personal?chat=${encodeURIComponent(chatId)}&limit=100`); }
+    if (data.items && data.items.length > 0) {
+      msgs = data.items;
+      // Save to localStorage cache
+      try {
+        localStorage.setItem(chatCacheKey, JSON.stringify({ items: msgs, ts: Date.now() }));
+      } catch (e) { /* storage full — evict oldest chat caches */
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('retena_chat_') && k !== chatCacheKey) { localStorage.removeItem(k); break; }
         }
       }
-    } catch (e) {
-      console.warn('Failed to lazy-load chat messages:', e);
+      // Merge into allMessages cache
+      const existingIds = new Set(allMessages.map(m => m.id));
+      for (const m of msgs) { if (!existingIds.has(m.id)) allMessages.push(m); }
     }
+  } catch (e) {
+    console.warn('Failed to load chat messages:', e);
+    if (!hadCache) { thread.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted)">Failed to load messages</div>'; return; }
   }
 
   msgs.sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
   renderThread(msgs);
 
   // Scroll to bottom
-  const thread = document.getElementById('chat-thread');
   setTimeout(() => thread.scrollTop = thread.scrollHeight, 50);
 }
 
