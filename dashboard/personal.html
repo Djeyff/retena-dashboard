@@ -186,9 +186,10 @@ window.addEventListener('retena:newData', async (e) => {
   // If a chat is open, fetch only new messages for that chat
   if (!selectedChatId) return;
   try {
+    const getTs = m => m.timestamp || m.created_at || '';
     const lastTs = allMessages
       .filter(m => m.chat_id === selectedChatId)
-      .reduce((max, m) => (m.timestamp > max ? m.timestamp : max), '');
+      .reduce((max, m) => (getTs(m) > max ? getTs(m) : max), '');
     const since = lastTs ? `&since=${encodeURIComponent(lastTs)}` : '';
     let data;
     try { data = await api(`/api/rt/personal?chat=${encodeURIComponent(selectedChatId)}&limit=50${since}`); }
@@ -206,13 +207,31 @@ window.addEventListener('retena:newData', async (e) => {
     if (!thread) return;
     const wasAtBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 60;
 
-    // Append new message bubbles
-    newMsgs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    newMsgs.forEach((m, idx) => {
+    // Sort by timestamp (ascending = oldest first) — FOOLPROOF: always use timestamp||created_at
+    newMsgs.sort((a, b) => new Date(getTs(a)) - new Date(getTs(b)));
+
+    // Find correct insertion point for each message (not just append)
+    // This prevents out-of-order rendering when messages arrive non-sequentially
+    const allBubbles = [...thread.querySelectorAll('[data-ts]')];
+    for (const m of newMsgs) {
+      const mTs = getTs(m);
       const wrap = document.createElement('div');
-      wrap.innerHTML = renderSingleBubble(m, idx);
-      while (wrap.firstChild) thread.appendChild(wrap.firstChild);
-    });
+      wrap.innerHTML = renderSingleBubble(m, 0);
+      const newEl = wrap.firstElementChild || wrap.firstChild;
+      if (!newEl) continue;
+
+      // Find the first existing bubble with a later timestamp
+      let inserted = false;
+      for (const existing of allBubbles) {
+        if (existing.dataset.ts && existing.dataset.ts > mTs) {
+          thread.insertBefore(newEl, existing);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) thread.appendChild(newEl);
+      allBubbles.push(newEl); // update for next iteration
+    }
 
     if (wasAtBottom) {
       thread.scrollTop = thread.scrollHeight;
@@ -504,7 +523,8 @@ function renderSingleBubble(m, idx) {
   const msgId = m.id || `msg-${idx}`;
   const senderLabel = isMe ? '' : `<div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:2px">${esc(m.sender_name || '')}</div>`;
 
-  let html = `<div class="msg-row ${side}"><div class="msg-bubble ${side}" id="card-${msgId}">`;
+  const tsAttr = m.timestamp || m.created_at || '';
+  let html = `<div class="msg-row ${side}" data-ts="${esc(tsAttr)}" data-id="${msgId}"><div class="msg-bubble ${side}" id="card-${msgId}">`;
   if (!isMe) html += senderLabel;
   if (isVoice) {
     const dur = m.duration || m.duration_seconds || 0;
