@@ -58,8 +58,10 @@ window.addEventListener('retena:newData', async (e) => {
   // Silently refresh the group list (message counts, last activity)
   try {
     const data = await api('/api/rt/groups');
-    if (Array.isArray(data?.groups || data)) {
-      allGroups = data?.groups || data;
+    const items = data?.items || data?.groups || data;
+    if (Array.isArray(items)) {
+      allGroups = items;
+      saveCachedGroups(allGroups);
       renderGroupList(document.getElementById('group-search')?.value?.toLowerCase() || '');
     }
   } catch (e) { /* silent */ }
@@ -90,14 +92,46 @@ window.addEventListener('retena:newData', async (e) => {
   } catch (e) { /* silent */ }
 });
 
+// ── localStorage cache for instant render ──
+const GROUPS_CACHE_KEY = 'retena_groups_list';
+const GROUPS_CACHE_MAX_AGE = 5 * 60 * 1000;
+
+function getCachedGroups() {
+  try {
+    const raw = localStorage.getItem(GROUPS_CACHE_KEY);
+    if (!raw) return null;
+    const { items, ts } = JSON.parse(raw);
+    if (!items || !ts || Date.now() - ts > GROUPS_CACHE_MAX_AGE) return null;
+    return items;
+  } catch { return null; }
+}
+
+function saveCachedGroups(items) {
+  try { localStorage.setItem(GROUPS_CACHE_KEY, JSON.stringify({ items, ts: Date.now() })); } catch {}
+}
+
 async function loadGroups() {
-  showLoading(document.getElementById('group-list'));
+  const groupList = document.getElementById('group-list');
+
+  // Phase 1: Instant render from localStorage cache
+  const cached = getCachedGroups();
+  if (cached && cached.length > 0) {
+    allGroups = cached;
+    renderGroupList(allGroups);
+  } else {
+    showLoading(groupList);
+  }
+
+  // Phase 2: Fetch fresh data in background
   try {
     const data = await api('/api/rt/groups');
     allGroups = data.items || data || [];
+    saveCachedGroups(allGroups);
     renderGroupList(allGroups);
   } catch (e) {
-    showEmpty(document.getElementById('group-list'), 'Could not load groups', 'Something went wrong. Try refreshing.');
+    if (!cached || !cached.length) {
+      showEmpty(groupList, 'Could not load groups', 'Something went wrong. Try refreshing.');
+    }
   }
 }
 

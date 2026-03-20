@@ -50,14 +50,20 @@ const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
     }
   });
 
-  // Prefetch personal inbox data (warm cache before user navigates there)
+  // Prefetch personal + groups data (warm cache before user navigates)
   if (activeSession.access_token && !location.pathname.includes('login')) {
-    fetch('/api/rt/personal', {
-      headers: { 'Authorization': `Bearer ${activeSession.access_token}`, 'Content-Type': 'application/json' },
-      credentials: 'include'
-    }).then(r => r.ok ? r.json() : null).then(data => {
+    const prefetchHeaders = { 'Authorization': `Bearer ${activeSession.access_token}`, 'Content-Type': 'application/json' };
+    const prefetchOpts = { headers: prefetchHeaders, credentials: 'include' };
+    // Personal inbox
+    fetch('/api/rt/personal', prefetchOpts).then(r => r.ok ? r.json() : null).then(data => {
       if (data?.conversations) {
         try { localStorage.setItem('retena_personal_convos', JSON.stringify({ conversations: data.conversations, ts: Date.now() })); } catch {}
+      }
+    }).catch(() => {});
+    // Groups
+    fetch('/api/rt/groups', prefetchOpts).then(r => r.ok ? r.json() : null).then(data => {
+      if (data?.items) {
+        try { localStorage.setItem('retena_groups_list', JSON.stringify({ items: data.items, ts: Date.now() })); } catch {}
       }
     }).catch(() => {});
   }
