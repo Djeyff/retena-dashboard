@@ -49,6 +49,18 @@ const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
       location.href = '/dashboard/login.html';
     }
   });
+
+  // Prefetch personal inbox data (warm cache before user navigates there)
+  if (activeSession.access_token && !location.pathname.includes('login')) {
+    fetch('/api/rt/personal', {
+      headers: { 'Authorization': `Bearer ${activeSession.access_token}`, 'Content-Type': 'application/json' },
+      credentials: 'include'
+    }).then(r => r.ok ? r.json() : null).then(data => {
+      if (data?.conversations) {
+        try { localStorage.setItem('retena_personal_convos', JSON.stringify({ conversations: data.conversations, ts: Date.now() })); } catch {}
+      }
+    }).catch(() => {});
+  }
 })();
 
 // ── PWA: Register service worker + inject manifest ──

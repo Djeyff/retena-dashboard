@@ -175,11 +175,10 @@ window.addEventListener('retena:newData', async (e) => {
   if (!e.detail?.hasNew) return;
   // Refresh conversation list (unread counts, last message preview)
   try {
-    let data;
-    data = await api('/api/rt/personal?limit=200');
-    
+    const data = await api('/api/rt/personal');
     if (data?.conversations?.length) {
       conversations = data.conversations;
+      saveCachedConversations(conversations);
       renderConversationList(document.getElementById('conv-search')?.value?.toLowerCase() || '');
     }
   } catch (e) { /* silent */ }
@@ -242,13 +241,47 @@ window.addEventListener('retena:transcribed', (e) => {
   if (cached) cached.transcription = m.transcription;
 });
 
-// ── Load Data ──
+// ── Load Data (stale-while-revalidate with localStorage cache) ──
+const CONV_CACHE_KEY = 'retena_personal_convos';
+const CONV_CACHE_MAX_AGE = 5 * 60 * 1000; // 5 min max staleness for localStorage
+
+function getCachedConversations() {
+  try {
+    const raw = localStorage.getItem(CONV_CACHE_KEY);
+    if (!raw) return null;
+    const { conversations: c, ts } = JSON.parse(raw);
+    if (!c || !ts) return null;
+    // Accept cache up to 5 min old
+    if (Date.now() - ts > CONV_CACHE_MAX_AGE) return null;
+    return c;
+  } catch { return null; }
+}
+
+function saveCachedConversations(convos) {
+  try {
+    localStorage.setItem(CONV_CACHE_KEY, JSON.stringify({ conversations: convos, ts: Date.now() }));
+  } catch { /* quota exceeded — ignore */ }
+}
+
 async function loadPersonal() {
-  showLoading(document.getElementById('conv-list'));
+  const convList = document.getElementById('conv-list');
+
+  // Phase 1: Show cached data INSTANTLY (0ms perceived load)
+  const cached = getCachedConversations();
+  if (cached && cached.length > 0) {
+    conversations = cached;
+    renderConversationList();
+  } else {
+    showLoading(convList);
+  }
+
+  // Phase 2: Fetch fresh data in background
   try {
     const data = await api('/api/rt/personal');
+    conversations = data.conversations || [];
     allMessages = data.items || [];
-    conversations = data.conversations || buildConversations(allMessages);
+    // Save to localStorage for next visit
+    saveCachedConversations(conversations);
     renderConversationList();
 
     // Auto-select chat if ?chat= param is set (e.g. opened from push notification)
