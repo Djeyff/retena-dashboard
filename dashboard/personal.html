@@ -382,12 +382,12 @@ function renderConversationList(filter = '') {
   }
 
   el.innerHTML = convs.map(c => {
-    const last = c.last_message;
+    const last = c.last_message || {};
     const text = last.transcription || last.text_content || last.text || last.body || last.content || '';
     const isVoice = last.message_type === 'voice' || last.message_type === 'audio';
     const prefix = last.from_me ? '<span style="color:var(--text-muted)">You: </span>' : '';
     const voiceIcon = isVoice ? '🎤 ' : '';
-    const t = timeAgo(last.timestamp || last.created_at);
+    const t = last.timestamp || last.created_at ? timeAgo(last.timestamp || last.created_at) : '';
     const sel = selectedChatId === c.chat_id ? ' selected' : '';
 
     return `
