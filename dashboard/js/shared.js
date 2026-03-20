@@ -109,7 +109,7 @@ const RT_MOBILE_TABS = [
 const PLAN_LIMITS = {
   starter:  { voice_min: 100, ai_queries: 50,       groups: 5,        seats: 1, storage_gb: 2 },
   pro:      { voice_min: 500, ai_queries: 300,      groups: 15,       seats: 3, storage_gb: 10 },
-  business: { voice_min: Infinity, ai_queries: Infinity, groups: Infinity, seats: 5, storage_gb: 50 },
+  business: { voice_min: 4000, ai_queries: Infinity, groups: Infinity, seats: 5, storage_gb: 50 },
 };
 
 // ── Render Sidebar ──
