@@ -1,4 +1,4 @@
-const CACHE_NAME = 'retena-v11';
+const CACHE_NAME = 'retena-v12';
 const STATIC_ASSETS = [
   '/dashboard/',
   '/dashboard/styles.css',
@@ -95,17 +95,32 @@ self.addEventListener('notificationclick', (e) => {
   })());
 });
 
-// ── Fetch: network-first for API, cache-first for static ──
+// ── Fetch: network-first for JS/HTML, cache-fallback for static assets ──
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
-  // API calls: always network
+  // API calls: always network (no SW interception)
   if (url.pathname.startsWith('/api/')) return;
 
   // Skip non-http(s) schemes (chrome-extension://, etc.)
   if (!url.protocol.startsWith('http')) return;
 
-  // Static assets: cache-first, then network
+  // JS and HTML files: NETWORK-FIRST (always get latest, cache as fallback)
+  // This prevents stale auth/logic code from being served after deploys
+  if (url.pathname.endsWith('.js') || url.pathname.endsWith('.html') || url.pathname.endsWith('/')) {
+    e.respondWith(
+      fetch(e.request).then(response => {
+        if (response.ok) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
+        }
+        return response;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Other static assets (CSS, images, fonts): cache-first, update in background
   e.respondWith(
     caches.match(e.request).then(cached => {
       const fetchPromise = fetch(e.request).then(response => {

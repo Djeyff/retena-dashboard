@@ -311,8 +311,26 @@ async function loadPersonal() {
       showNotifReplyBanner();
     }
   } catch (e) {
-    // If api() returned undefined (401 → redirect to login in progress), don't show error
-    if (e.message?.includes('Cannot read') || e.message?.includes('undefined')) return;
+    // Session expired / auth failure → redirect to login (don't show error)
+    if (e.message?.includes('Session expired') || e.message?.includes('Cannot read') || e.message?.includes('undefined')) return;
+    // For 401: try a hard refresh — might be stale SW cache
+    if (e.message?.includes('401')) {
+      document.getElementById('conv-list').innerHTML = `
+        <div class="panel-empty" style="padding:40px 20px">
+          <p>Session expired</p>
+          <p style="font-size:12px;color:var(--text-muted)">Refreshing session...</p>
+        </div>`;
+      // Force re-auth: clear JWT and reload
+      window._retenaJWT = null;
+      if (window._supabaseClient) {
+        try {
+          const { data } = await window._supabaseClient.auth.refreshSession();
+          if (data?.session?.access_token) { window._retenaJWT = data.session.access_token; location.reload(); return; }
+        } catch {}
+      }
+      location.href = '/dashboard/login.html?next=' + encodeURIComponent(location.pathname + location.search);
+      return;
+    }
     document.getElementById('conv-list').innerHTML = `
       <div class="panel-empty" style="padding:40px 20px">
         <p>Could not load messages</p>
