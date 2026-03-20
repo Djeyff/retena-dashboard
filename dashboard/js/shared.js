@@ -241,9 +241,14 @@ function usageMeter(label, emoji, used, total) {
 function updateSidebarMeters(usage) {
   if (!usage) return;
   const plan = PLAN_LIMITS[usage.plan || 'starter'];
+  // API returns {used, limit} objects for voice/ai — extract safely
+  const voiceUsed  = usage.voice_minutes?.used  ?? (typeof usage.voice_minutes  === 'number' ? usage.voice_minutes  : 0);
+  const voiceLimit = usage.voice_minutes?.limit ?? plan.voice_min;
+  const aiUsed     = usage.ai_queries?.used     ?? (typeof usage.ai_queries     === 'number' ? usage.ai_queries     : 0);
+  const aiLimit    = usage.ai_queries?.limit    ?? plan.ai_queries;
   const html =
-    usageMeter('Voice min', '🎙', usage.voice_minutes || 0, plan.voice_min) +
-    usageMeter('AI queries', '🤖', usage.ai_queries || 0, plan.ai_queries) +
+    usageMeter('Voice min', '🎙', voiceUsed, voiceLimit) +
+    usageMeter('AI queries', '🤖', aiUsed, aiLimit) +
     usageMeter('Groups', '👥', usage.groups || 0, plan.groups);
   // Update both sidebar and mobile drawer
   const el = document.getElementById('sidebar-meters');
