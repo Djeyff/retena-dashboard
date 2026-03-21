@@ -118,7 +118,7 @@ if (!document.querySelector('link[rel="manifest"]')) {
 }
 
 // ── Logo ──
-const RT_LOGO = `<svg width="28" height="28" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="rl-iris" cx="40%" cy="35%" r="60%"><stop offset="0%" stop-color="#f5a623"/><stop offset="60%" stop-color="#e67e22"/><stop offset="100%" stop-color="#c0621a"/></radialGradient></defs><path d="M 12 50 Q 50 18 88 50 Q 50 82 12 50 Z" fill="none" stroke="#e67e22" stroke-width="3.5" stroke-linejoin="round"/><circle cx="50" cy="50" r="14" fill="url(#rl-iris)"/><circle cx="50" cy="50" r="6" fill="#0a0a0a"/><path d="M 44 46 Q 42 50 44 54" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.2" stroke-linecap="round"/><path d="M 40 43 Q 37 50 40 57" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.2" stroke-linecap="round"/><ellipse cx="55.5" cy="43.5" rx="3" ry="2" fill="rgba(255,255,255,0.28)" transform="rotate(-20,55.5,43.5)"/></svg>`;
+const RT_LOGO = `<img src="/dashboard/icons/logo.svg" alt="Retena" width="28" height="28" style="border-radius:6px">`;
 
 // ── Nav Items ──
 const RT_NAV = [

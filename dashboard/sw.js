@@ -1,4 +1,4 @@
-const CACHE_NAME = 'retena-v13';
+const CACHE_NAME = 'retena-v14';
 const STATIC_ASSETS = [
   '/dashboard/',
   '/dashboard/styles.css',
