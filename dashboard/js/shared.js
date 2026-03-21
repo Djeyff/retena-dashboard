@@ -92,7 +92,17 @@ window._authReady = new Promise(resolve => { window._authResolve = resolve; });
 
 // ── PWA: Register service worker + inject manifest ──
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/dashboard/sw.js').catch(() => {});
+  navigator.serviceWorker.register('/dashboard/sw.js').then(async (reg) => {
+    // Register periodic background sync to keep Chrome's push connection alive
+    if ('periodicSync' in reg) {
+      try {
+        const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+        if (status.state === 'granted') {
+          await reg.periodicSync.register('retena-keepalive', { minInterval: 12 * 60 * 60 * 1000 }); // 12h
+        }
+      } catch {}
+    }
+  }).catch(() => {});
 }
 if (!document.querySelector('link[rel="manifest"]')) {
   const m = document.createElement('link');

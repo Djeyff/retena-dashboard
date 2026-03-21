@@ -1,4 +1,4 @@
-const CACHE_NAME = 'retena-v27';
+const CACHE_NAME = 'retena-v28';
 const STATIC_ASSETS = [
   '/dashboard/',
   '/dashboard/index.html',
@@ -130,6 +130,43 @@ self.addEventListener('notificationclick', (e) => {
     // No tab open → open a new one at the specific chat URL
     if (clients.openWindow) await clients.openWindow(targetUrl);
   })());
+});
+
+// ── Push Subscription Change (browser rotated endpoint → re-register with server) ──
+self.addEventListener('pushsubscriptionchange', (e) => {
+  console.log('[sw] pushsubscriptionchange fired — re-subscribing');
+  e.waitUntil((async () => {
+    try {
+      const newSub = e.newSubscription || await self.registration.pushManager.subscribe(
+        e.oldSubscription?.options || { userVisibleOnly: true }
+      );
+      if (!newSub) return;
+      const keys = newSub.toJSON().keys || {};
+      // Re-register with API server
+      await fetch('https://dashboard-api.voz-clara.com/api/push/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: newSub.endpoint,
+          keys: { p256dh: keys.p256dh, auth: keys.auth },
+          prefs: { voice_transcribed: true, review_required: true, new_group: true, daily_digest: false },
+          old_endpoint: e.oldSubscription?.endpoint || null,
+        }),
+      });
+      console.log('[sw] Re-subscribed after endpoint change');
+    } catch (err) {
+      console.error('[sw] pushsubscriptionchange re-subscribe failed:', err);
+    }
+  })());
+});
+
+// ── Periodic Sync (keep Chrome's GCM connection alive) ──
+self.addEventListener('periodicsync', (e) => {
+  if (e.tag === 'retena-keepalive') {
+    e.waitUntil(
+      fetch('https://dashboard-api.voz-clara.com/api/health', { method: 'HEAD' }).catch(() => {})
+    );
+  }
 });
 
 // ── Fetch: network-first for JS/HTML, cache-fallback for static assets ──
