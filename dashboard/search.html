@@ -138,24 +138,29 @@ async function doSearch() {
 
     // Sources
     const sourcesEl = document.getElementById('sources');
-    const sources = data.sources || [];
+    const sources = Array.isArray(data.sources) ? data.sources : (typeof data.sources === 'string' ? JSON.parse(data.sources) : []);
     if (sources.length) {
+      const esc = t => (t || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;');
       sourcesEl.innerHTML = sources.map(s => {
-        const isPersonal = !s.group_name || (s.is_group === false);
-        const chatId = s.chat_id || s.group_id || '';
-        const deepLink = isPersonal
-          ? '/dashboard/personal.html?chat=' + encodeURIComponent(chatId)
-          : '/dashboard/groups.html?group=' + encodeURIComponent(chatId);
-        return `
-          <div class="card" style="margin-bottom:10px;cursor:pointer" onclick="location.href='${deepLink}'">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-              ${renderAvatar(s.sender || s.sender_name || 'Unknown', 'sm')}
-              <span style="font-weight:600;font-size:13px">${s.sender || s.sender_name || 'Unknown'}</span>
-              ${isPersonal ? personalPill() : groupPill(s.group_name || 'Group')}
-              <span class="activity-time">${timeAgo(s.timestamp || s.created_at)}</span>
-            </div>
-            <div style="font-size:13px;color:var(--text-secondary);line-height:1.5">${truncate(s.text || s.message_text || s.content || s.transcription || '', 250)}</div>
-          </div>`;
+        try {
+          const isPersonal = !s.group_name || (s.is_group === false);
+          const chatId = s.chat_id || s.group_id || '';
+          const deepLink = isPersonal
+            ? '/dashboard/personal.html?chat=' + encodeURIComponent(chatId)
+            : '/dashboard/groups.html?group=' + encodeURIComponent(chatId);
+          const senderName = esc(s.sender || s.sender_name || 'Unknown');
+          const msgText = esc(truncate(s.text || s.message_text || s.content || s.transcription || '', 250));
+          return `
+            <div class="card" style="margin-bottom:10px;cursor:pointer" onclick="location.href='${deepLink}'">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                ${renderAvatar(s.sender || s.sender_name || 'Unknown', 'sm')}
+                <span style="font-weight:600;font-size:13px">${senderName}</span>
+                ${isPersonal ? personalPill() : groupPill(esc(s.group_name || 'Group'))}
+                <span class="activity-time">${timeAgo(s.timestamp || s.created_at)}</span>
+              </div>
+              <div style="font-size:13px;color:var(--text-secondary);line-height:1.5">${msgText}</div>
+            </div>`;
+        } catch (err) { return ''; }
       }).join('');
     } else {
       sourcesEl.innerHTML = '<div style="font-size:13px;color:var(--text-muted)">No specific sources found</div>';
