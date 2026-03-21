@@ -1,11 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
   <defs>
-    <mask id="pupil-cutout">
+    <mask id="eye-mask">
       <rect width="72" height="72" fill="white"/>
-      <circle cx="36" cy="36" r="7" fill="black"/>
+      <!-- Cut out iris ring (transparent donut) -->
+      <circle cx="36" cy="36" r="10" fill="black"/>
+      <!-- Put back pupil dot -->
+      <circle cx="36" cy="36" r="4.5" fill="white"/>
     </mask>
   </defs>
-  <!-- White eye shape with pupil hole (alpha-only for Android status bar) -->
-  <path fill="#FFFFFF" mask="url(#pupil-cutout)" d="M36 18C22 18 10 36 10 36s12 18 26 18 26-18 26-18S50 18 36 18z"/>
+  <!-- White eye shape with iris cutout + pupil dot -->
+  <path fill="#FFFFFF" mask="url(#eye-mask)" d="M36 18C22 18 10 36 10 36s12 18 26 18 26-18 26-18S50 18 36 18z"/>
 </svg>
