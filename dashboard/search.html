@@ -63,6 +63,9 @@
       <!-- Error -->
       <div id="search-error" style="display:none"></div>
 
+      <!-- Search History -->
+      <div id="search-history" class="animate-in animate-in-d3" style="margin-top:32px"></div>
+
     </div>
   </div>
 </div>
@@ -74,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderSidebar('search');
   renderMobileTabs('search');
   loadUsageCounter();
+  loadSearchHistory();
 
   // Auto-search from URL param
   const params = new URLSearchParams(location.search);
@@ -158,11 +162,39 @@ async function doSearch() {
     }
 
     loadUsageCounter();
+    loadSearchHistory();
   } catch (e) {
     document.getElementById('search-loading').style.display = 'none';
     document.getElementById('search-error').style.display = 'block';
     document.getElementById('search-error').innerHTML = `<div class="error-state"><p>Something went wrong. Try refreshing.</p><button class="btn btn-secondary" onclick="doSearch()">Retry</button></div>`;
   }
+}
+
+async function loadSearchHistory() {
+  try {
+    const data = await api('/api/rt/search/history?limit=20');
+    const history = data.history || [];
+    const el = document.getElementById('search-history');
+    if (!history.length) { el.innerHTML = ''; return; }
+    el.innerHTML = `
+      <div class="section-title">Recent Searches</div>
+      ${history.map(h => `
+        <div class="card" style="margin-bottom:8px;cursor:pointer;padding:12px 16px" onclick="replaySearch('${h.id}', ${JSON.stringify(h.query).replace(/'/g, "\\'")})" title="${new Date(h.created_at).toLocaleString()}">
+          <div style="display:flex;align-items:center;gap:10px">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <span style="font-size:13px;font-weight:500;flex:1">${h.query}</span>
+            <span class="activity-time">${timeAgo(h.created_at)}</span>
+          </div>
+          ${h.answer ? `<div style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.4">${truncate(h.answer, 120)}</div>` : ''}
+        </div>
+      `).join('')}
+    `;
+  } catch (e) {}
+}
+
+function replaySearch(id, query) {
+  document.getElementById('search-input').value = query;
+  doSearch();
 }
 </script>
 </body>
