@@ -4,9 +4,10 @@
 const _SUPA_URL = 'https://mfhdoiddbgpjqjukacnc.supabase.co';
 const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1maGRvaWRkYmdwanFqdWthY25jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4NjEyNTIsImV4cCI6MjA4ODQzNzI1Mn0.fSL2d0gFjqyFLEPwCrzFI-r49oqCZNJiq4LJS3C0m50';
 
+window._authReady = new Promise(resolve => { window._authResolve = resolve; });
 (async function checkAuth() {
   // Don't guard the login page itself
-  if (location.pathname.includes('login.html')) return;
+  if (location.pathname.includes('login.html')) { window._authResolve(); return; }
 
   // Lazy-load Supabase to check session
   await new Promise((resolve, reject) => {
@@ -37,6 +38,7 @@ const _SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIs
   window._retenaJWT = activeSession.access_token;
   window._retenaUser = activeSession.user;
   window._supabaseClient = client;
+  window._authResolve(); // Signal auth is ready
   // Cache account ID for instant display in settings
   if (session.user?.id) localStorage.setItem('retena_account_id', session.user.id);
 
@@ -311,6 +313,7 @@ async function _refreshToken() {
 }
 
 async function api(path, opts = {}) {
+  await window._authReady; // Wait for auth before any API call
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
