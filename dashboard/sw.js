@@ -136,6 +136,9 @@ self.addEventListener('notificationclick', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
 
+  // Only handle GET requests (POST/PUT/etc can't be cached)
+  if (e.request.method !== 'GET') return;
+
   // API calls: always network (no SW interception)
   if (url.pathname.startsWith('/api/')) return;
 
