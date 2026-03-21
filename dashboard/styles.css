@@ -1095,3 +1095,20 @@ html, body {
 .review-picker-item { padding: 7px 10px; font-size: 12px; cursor: pointer; color: var(--text-secondary, #94a3b8); display: flex; align-items: center; gap: 6px; }
 .review-picker-item:hover { background: rgba(230,126,34,0.12); color: var(--text-primary, #f1f5f9); }
 .review-status { font-size: 11px; margin-top: 4px; color: var(--text-muted, #64748b); min-height: 14px; }
+
+/* ── Settings language picker search (dark, matches theme) ──────────────── */
+.ws-lang-search {
+  background: #0d1926 !important;
+  color: #f1f5f9 !important;
+  border: none !important;
+  border-bottom: 1px solid #2a3a4a !important;
+  border-radius: 0 !important;
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  outline: none !important;
+  font-family: inherit !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+.ws-lang-search::placeholder { color: #64748b !important; }
+.ws-lang-search:focus { border-bottom-color: rgba(230,126,34,0.5) !important; }
