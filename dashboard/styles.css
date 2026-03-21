@@ -1112,3 +1112,65 @@ html, body {
 }
 .ws-lang-search::placeholder { color: #64748b !important; }
 .ws-lang-search:focus { border-bottom-color: rgba(230,126,34,0.5) !important; }
+
+/* ── Settings — desktop two-column layout ──────────────────────────────────── */
+.settings-layout {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+  min-height: 60vh;
+}
+
+/* Vertical sidenav — desktop only */
+.settings-sidenav {
+  display: none; /* hidden on mobile */
+  flex-direction: column;
+  width: 200px;
+  flex-shrink: 0;
+  padding-right: 24px;
+  border-right: 1px solid var(--border);
+  margin-right: 32px;
+  gap: 0;
+}
+
+.settings-sidenav-group {
+  margin-bottom: 20px;
+}
+
+.settings-sidenav-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding: 0 10px 6px;
+}
+
+.settings-navitem {
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 7px;
+  transition: all 0.12s;
+  margin-bottom: 1px;
+  white-space: nowrap;
+}
+.settings-navitem:hover { background: rgba(255,255,255,0.05); color: var(--text-secondary); }
+.settings-navitem.active { background: rgba(230,126,34,0.12); color: var(--accent); font-weight: 600; }
+
+/* Content area */
+.settings-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Mobile: horizontal scroll tabs visible, sidenav hidden */
+.settings-tabs-mobile { display: flex; }
+
+/* Desktop: hide mobile tabs, show sidenav */
+@media (min-width: 768px) {
+  .settings-tabs-mobile { display: none !important; }
+  .settings-sidenav { display: flex; }
+}

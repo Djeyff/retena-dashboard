@@ -13,14 +13,14 @@
 <div class="layout">
   <aside class="sidebar" id="sidebar"></aside>
   <div class="main">
-    <div class="page-content">
+    <div class="page-content settings-page-content">
 
       <div class="page-header animate-in">
         <h1 class="page-title">Settings</h1>
       </div>
 
-      <!-- Tabs -->
-      <div class="settings-tabs animate-in animate-in-d1">
+      <!-- Mobile: horizontal scroll tabs -->
+      <div class="settings-tabs settings-tabs-mobile animate-in animate-in-d1">
         <div class="settings-tab active" data-tab="workspace" onclick="showTab('workspace')">Workspace</div>
         <div class="settings-tab" data-tab="groups" onclick="showTab('groups')">Groups</div>
         <div class="settings-tab" data-tab="team" onclick="showTab('team')">Team</div>
@@ -32,9 +32,40 @@
         <div class="settings-tab" data-tab="import" onclick="showTab('import')">Import</div>
         <div class="settings-tab" data-tab="data" onclick="showTab('data')">Data & Privacy</div>
         <div class="settings-tab" data-tab="vozclara" onclick="showTab('vozclara')">VozClara Perk</div>
-        <div class="settings-tab" data-tab="reconciliation" onclick="showTab('reconciliation')" id="tab-btn-reconciliation">Reconciliation <span id="reconcile-badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px;vertical-align:middle"></span></div>
+        <div class="settings-tab" data-tab="reconciliation" onclick="showTab('reconciliation')" id="tab-btn-reconciliation-mobile">Reconciliation <span id="reconcile-badge-mobile" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;margin-left:4px;vertical-align:middle"></span></div>
         <div class="settings-tab" data-tab="chats" onclick="showTab('chats');loadChats()">Chats</div>
       </div>
+
+      <!-- Desktop: two-column layout -->
+      <div class="settings-layout">
+        <!-- Vertical nav (desktop only) -->
+        <nav class="settings-sidenav">
+          <div class="settings-sidenav-group">
+            <div class="settings-sidenav-label">Account</div>
+            <div class="settings-navitem active" data-tab="workspace" onclick="showTab('workspace')">⚙️ Workspace</div>
+            <div class="settings-navitem" data-tab="team" onclick="showTab('team')">👥 Team</div>
+            <div class="settings-navitem" data-tab="billing" onclick="showTab('billing')">💳 Billing</div>
+            <div class="settings-navitem" data-tab="security" onclick="showTab('security')">🔒 Security</div>
+          </div>
+          <div class="settings-sidenav-group">
+            <div class="settings-sidenav-label">Data</div>
+            <div class="settings-navitem" data-tab="groups" onclick="showTab('groups')">📡 Groups</div>
+            <div class="settings-navitem" data-tab="contacts" onclick="showTab('contacts')">📇 Contacts</div>
+            <div class="settings-navitem" data-tab="chats" onclick="showTab('chats');loadChats()">💬 Chats</div>
+            <div class="settings-navitem" data-tab="reconciliation" onclick="showTab('reconciliation')" id="tab-btn-reconciliation">🔗 Reconciliation <span id="reconcile-badge" style="display:none;background:#ef4444;color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:4px;vertical-align:middle;line-height:1.4"></span></div>
+          </div>
+          <div class="settings-sidenav-group">
+            <div class="settings-sidenav-label">Integrations</div>
+            <div class="settings-navitem" data-tab="api" onclick="showTab('api')">🔑 API Keys</div>
+            <div class="settings-navitem" data-tab="notifications" onclick="showTab('notifications')">🔔 Notifications</div>
+            <div class="settings-navitem" data-tab="import" onclick="showTab('import')">📥 Import</div>
+            <div class="settings-navitem" data-tab="data" onclick="showTab('data')">🛡️ Data & Privacy</div>
+            <div class="settings-navitem" data-tab="vozclara" onclick="showTab('vozclara')">⚡ VozClara Perk</div>
+          </div>
+        </nav>
+
+        <!-- Content -->
+        <div class="settings-body">
 
       <!-- Workspace -->
       <div class="settings-section active" id="tab-workspace">
@@ -743,6 +774,9 @@
         </div>
       </div>
 
+        </div><!-- end settings-body -->
+      </div><!-- end settings-layout -->
+
     </div>
   </div>
 </div>
@@ -785,8 +819,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function showTab(tabId) {
+  // Sync mobile tabs, desktop sidenav items, and section visibility
   document.querySelectorAll('.settings-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
+  document.querySelectorAll('.settings-navitem').forEach(t => t.classList.toggle('active', t.dataset.tab === tabId));
   document.querySelectorAll('.settings-section').forEach(s => s.classList.toggle('active', s.id === `tab-${tabId}`));
+  // Update URL hash for direct linking
+  history.replaceState(null, '', `?tab=${tabId}`);
   if (tabId === 'groups') loadSettingsGroups();
   if (tabId === 'team') loadTeam();
   if (tabId === 'billing') loadBilling();
