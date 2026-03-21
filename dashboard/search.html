@@ -137,9 +137,13 @@ async function doSearch() {
     const sources = data.sources || [];
     if (sources.length) {
       sourcesEl.innerHTML = sources.map(s => {
-        const isPersonal = !s.group_name && !s.chat_id;
+        const isPersonal = !s.group_name || (s.is_group === false);
+        const chatId = s.chat_id || s.group_id || '';
+        const deepLink = isPersonal
+          ? '/dashboard/personal.html?chat=' + encodeURIComponent(chatId)
+          : '/dashboard/groups.html?group=' + encodeURIComponent(chatId);
         return `
-          <div class="card" style="margin-bottom:10px;cursor:pointer" onclick="${isPersonal ? `location.href='/dashboard/personal.html'` : `location.href='/dashboard/groups.html'`}">
+          <div class="card" style="margin-bottom:10px;cursor:pointer" onclick="location.href='${deepLink}'">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
               ${renderAvatar(s.sender || s.sender_name || 'Unknown', 'sm')}
               <span style="font-weight:600;font-size:13px">${s.sender || s.sender_name || 'Unknown'}</span>
