@@ -251,17 +251,22 @@ window.addEventListener('retena:transcribed', (e) => {
   if (!m?.id || !m?.transcription) return;
   const card = document.getElementById(`card-${m.id}`);
   if (!card) return;
+  // Show translated version if available, else original
+  const displayText = m.transcription_translated || m.transcription;
   // Replace the "no transcription" placeholder with actual transcription
   const placeholder = card.querySelector('[style*="font-style:italic"]');
   if (placeholder) {
     const div = document.createElement('div');
     div.className = 'msg-bubble-text';
-    div.textContent = m.transcription;
+    div.textContent = displayText;
     placeholder.replaceWith(div);
   }
   // Update in allMessages cache
   const cached = allMessages.find(x => x.id === m.id);
-  if (cached) cached.transcription = m.transcription;
+  if (cached) {
+    cached.transcription = m.transcription;
+    cached.transcription_translated = m.transcription_translated || null;
+  }
 });
 
 // ── Load Data (stale-while-revalidate with localStorage cache) ──
@@ -593,8 +598,10 @@ function renderSingleBubble(m, idx) {
   const d = new Date(m.timestamp || m.created_at);
   const isMe = m.from_me === true;
   const side = isMe ? 'me' : 'them';
-  const text = m.transcription || m.text_content || m.text || m.body || m.content || '';
   const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
+  // Show translated transcription if available, fall back to original
+  const hasTranslation = isVoice && m.transcription_translated && !m.needs_review;
+  const text = (hasTranslation ? m.transcription_translated : m.transcription) || m.text_content || m.text || m.body || m.content || '';
   const timeStr = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
   const msgId = m.id || `msg-${idx}`;
   const senderLabel = isMe ? '' : `<div style="font-size:11px;font-weight:600;color:var(--accent);margin-bottom:2px">${esc(m.sender_name || '')}</div>`;
@@ -647,7 +654,10 @@ function renderSingleBubble(m, idx) {
   }
   const lang = m.language || (text ? detectLang(text) : '');
   const flag = m.language_flag || (lang ? langFlag(lang) : '');
-  html += `<div class="msg-bubble-time">${flag ? flag + ' ' : ''}${timeStr}${isMe ? ' ✓' : ''}</div>`;
+  const translatedBadge = hasTranslation
+    ? `<span title="Auto-translated from original" style="font-size:10px;opacity:0.6;margin-left:2px">🔤</span>`
+    : '';
+  html += `<div class="msg-bubble-time">${flag ? flag + ' ' : ''}${timeStr}${isMe ? ' ✓' : ''}${translatedBadge}</div>`;
   if (text && text.length > 5) {
     html += `<div class="translate-toggle" onclick="toggleTranslate('${msgId}')"><span id="arrow-${msgId}" style="font-size:9px">▼</span> Translate</div>`;
     html += `<div class="translate-panel" id="tpanel-${msgId}">`;
