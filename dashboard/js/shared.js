@@ -118,7 +118,7 @@ if (!document.querySelector('link[rel="manifest"]')) {
 }
 
 // ── Logo ──
-const RT_LOGO = `<img src="/dashboard/icons/logo.svg" alt="Retena" width="28" height="28" style="border-radius:6px">`;
+const RT_LOGO = `<img src="/dashboard/icons/logo.png" alt="Retena" width="28" height="28" style="border-radius:6px">`;
 
 // ── Nav Items ──
 const RT_NAV = [
