@@ -1888,6 +1888,20 @@ let _waQrTimer = null;
 let _waQrAttempts = 0;
 
 async function startWAQR() {
+  // Check if already connected via wa-status first (uses correct session ID from DB)
+  try {
+    const statusR = await api('/api/wa-status');
+    if (statusR && statusR.connected) {
+      if (_waQrTimer) clearInterval(_waQrTimer);
+      document.getElementById('wa-qr-block').style.display = 'none';
+      document.getElementById('wa-code-block').style.display = 'none';
+      document.getElementById('wa-tabs-row').style.display = 'none';
+      document.getElementById('wa-connected-block').style.display = 'block';
+      if (statusR.number) document.getElementById('wa-connected-number').textContent = `+${statusR.number}`;
+      return;
+    }
+  } catch {}
+
   _waQrAttempts = 0;
   document.getElementById('wa-qr-loading').style.display = 'block';
   document.getElementById('wa-qr-wrap').style.display = 'none';
