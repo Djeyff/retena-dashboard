@@ -1,7 +1,7 @@
 {
-  "name": "Retena — WhatsApp Dashboard",
+  "name": "Retena · Never Forget",
   "short_name": "Retena",
-  "description": "WhatsApp group intelligence dashboard",
+  "description": "Capture, transcribe and search your conversations with AI.",
   "start_url": "/dashboard/",
   "display": "standalone",
   "background_color": "#0a0a0a",
