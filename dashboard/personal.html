@@ -75,13 +75,22 @@
     .translation-result { margin-top: 6px; padding: 8px 10px; border-left: 3px solid #60a5fa; background: rgba(59,130,246,0.06); border-radius: 0 8px 8px 0; font-size: 12px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
 
     /* ── Needs Review Banner ── */
-    .review-banner { margin: 6px 0 4px; padding: 8px 10px; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35); border-radius: 8px; font-size: 12px; color: #fbbf24; }
-    .review-banner strong { display: block; margin-bottom: 4px; font-size: 11px; }
-    .review-lang-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-    .review-lang-btn { padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(251,191,36,0.4); background: rgba(251,191,36,0.1); color: #fbbf24; font-size: 11px; cursor: pointer; font-weight: 600; transition: background 0.15s; }
-    .review-lang-btn:hover { background: rgba(251,191,36,0.25); }
-    .review-lang-btn.loading { opacity: 0.5; pointer-events: none; }
-    .review-status { font-size: 11px; margin-top: 4px; color: var(--text-muted); }
+    .review-banner { margin: 6px 0 4px; padding: 8px 10px; background: rgba(251,191,36,0.10); border: 1px solid rgba(251,191,36,0.35); border-radius: 8px; font-size: 12px; color: #fbbf24; }
+    .review-banner strong { display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: 0.2px; }
+    .review-picker-quick { display: flex; gap: 5px; flex-wrap: wrap; }
+    .review-lang-btn { padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(251,191,36,0.4); background: rgba(251,191,36,0.1); color: #fbbf24; font-size: 11px; cursor: pointer; font-weight: 600; transition: background 0.15s; white-space: nowrap; font-family: inherit; }
+    .review-lang-btn:hover { background: rgba(251,191,36,0.28); }
+    .review-lang-btn--more { border-style: dashed; opacity: 0.8; }
+    .review-lang-btn--more:hover { opacity: 1; }
+    .review-lang-btn.loading { opacity: 0.45; pointer-events: none; }
+    .review-picker-full { margin-top: 8px; }
+    .review-picker-search { width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.25); border: 1px solid rgba(251,191,36,0.3); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: #f1f5f9; outline: none; font-family: inherit; }
+    .review-picker-search::placeholder { color: rgba(251,191,36,0.5); }
+    .review-picker-list { margin-top: 6px; max-height: 180px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 4px; }
+    .review-picker-item { padding: 3px 8px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-secondary); font-size: 11px; cursor: pointer; transition: background 0.12s; white-space: nowrap; }
+    .review-picker-item:hover { background: rgba(251,191,36,0.18); color: #fbbf24; border-color: rgba(251,191,36,0.4); }
+    .review-picker-item.dialect { border-color: rgba(251,191,36,0.3); color: #fbbf24; }
+    .review-status { font-size: 11px; margin-top: 6px; color: var(--text-muted); min-height: 14px; }
 
     /* ── Empty State ── */
     .panel-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); gap: 12px; }
@@ -619,25 +628,28 @@ function renderSingleBubble(m, idx) {
   }
   // ── needs_review banner — language selection required ──
   if (m.needs_review && isVoice) {
-    const reviewBtns = [
-      { code: 'es', label: '🇪🇸 Spanish' },
-      { code: 'fr', label: '🇫🇷 French' },
-      { code: 'en', label: '🇬🇧 English' },
-      { code: 'pt', label: '🇧🇷 Portuguese' },
-      { code: 'ht', label: '🇭🇹 Haitian Creole' },
-    ].map(l => `<button class="review-lang-btn" id="rlb-${msgId}-${l.code}" onclick="retranscribeMsg('${msgId}','${l.code}')">${l.label}</button>`).join('');
     html += `<div class="review-banner" id="review-${msgId}">
-      <strong>⚠️ Language not detected — pick the sender's language to transcribe</strong>
-      <div class="review-lang-btns">${reviewBtns}</div>
+      <strong>⚠️ Language not detected — select the sender's language</strong>
+      <div class="review-picker-wrap" id="rpw-${msgId}">
+        <div class="review-picker-quick">
+          <button class="review-lang-btn" id="rlb-${msgId}-es-do" onclick="retranscribeMsg('${msgId}','es-do')">🇩🇴 Dominican</button>
+          <button class="review-lang-btn" id="rlb-${msgId}-ht" onclick="retranscribeMsg('${msgId}','ht')">🇭🇹 Haitian Creole</button>
+          <button class="review-lang-btn" id="rlb-${msgId}-fr" onclick="retranscribeMsg('${msgId}','fr')">🇫🇷 French</button>
+          <button class="review-lang-btn" id="rlb-${msgId}-en" onclick="retranscribeMsg('${msgId}','en')">🇬🇧 English</button>
+          <button class="review-lang-btn review-lang-btn--more" onclick="toggleReviewPicker('${msgId}')">🌐 More…</button>
+        </div>
+        <div class="review-picker-full" id="rfull-${msgId}" style="display:none">
+          <input class="review-picker-search" id="rs-${msgId}" placeholder="Type language or code (FR, JM, creole…)" oninput="filterReviewLangs('${msgId}', this.value)" autocomplete="off">
+          <div class="review-picker-list" id="rl-${msgId}"></div>
+        </div>
+      </div>
       <div class="review-status" id="rstatus-${msgId}"></div>
     </div>`;
   }
   if (text && !m.needs_review) {
     html += `<div class="msg-bubble-text">${esc(text)}</div>`;
-  } else if (text && m.needs_review) {
-    // Show raw Whisper attempt (greyed out) so user knows what we got
-    const rawText = text.replace(/^⚠️ \[.*?\]\n/, '');
-    html += `<div class="msg-bubble-text" style="opacity:0.45;font-style:italic;font-size:11px">${esc(rawText)}</div>`;
+  } else if (!text && m.needs_review) {
+    // No text shown when needs_review — banner above explains what's needed
   } else if (!text && isVoice) {
     const dur = m.duration || m.duration_seconds || 0;
     html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🎤 Voice note${dur > 0 ? ' · ' + formatDuration(dur) : ''} — no transcription</div>`;
@@ -896,6 +908,154 @@ function detectLang(text) {
   // Require minimum score of 1 and clear winner (>= shared competitor)
   if (sorted[0][1] === 0) return '';
   return sorted[0][0];
+}
+
+// ── Full Whisper language list (99 official + regional dialects) ──
+// code = sent to /api/retranscribe | dialect:true = shown at top
+const WHISPER_LANGS = [
+  // ── Regional dialects (prominent — specific accents that fool Whisper) ──
+  { code: 'es-do', flag: '🇩🇴', name: 'Dominican Spanish',    aliases: ['dominican','do','rd','dominicano'], dialect: true },
+  { code: 'ht',    flag: '🇭🇹', name: 'Haitian Creole',       aliases: ['haitian','kreyol','creole','ht','hatien'], dialect: true },
+  { code: 'en-jm', flag: '🇯🇲', name: 'Jamaican Patois',      aliases: ['jamaican','patois','jm','yardie'], dialect: true },
+  { code: 'es-cu', flag: '🇨🇺', name: 'Cuban Spanish',        aliases: ['cuban','cuba','cu'], dialect: true },
+  { code: 'es-pr', flag: '🇵🇷', name: 'Puerto Rican',         aliases: ['puertorican','pr','boricua'], dialect: true },
+  { code: 'es-mx', flag: '🇲🇽', name: 'Mexican Spanish',      aliases: ['mexican','mx','mexico'], dialect: true },
+  { code: 'es-co', flag: '🇨🇴', name: 'Colombian Spanish',    aliases: ['colombian','co','colombia'], dialect: true },
+  { code: 'es-ve', flag: '🇻🇪', name: 'Venezuelan Spanish',   aliases: ['venezuelan','ve','venezuela'], dialect: true },
+  { code: 'pt-br', flag: '🇧🇷', name: 'Brazilian Portuguese', aliases: ['brazilian','br','brasil'], dialect: true },
+  { code: 'fr-ht', flag: '🇭🇹', name: 'Haitian French',       aliases: ['haiti','haitian french','fr-ht'], dialect: true },
+  { code: 'en-za', flag: '🇿🇦', name: 'South African English',aliases: ['south african','za'], dialect: true },
+  { code: 'en-ng', flag: '🇳🇬', name: 'Nigerian English',     aliases: ['nigerian','naija','ng'], dialect: true },
+  { code: 'fr-cm', flag: '🇨🇲', name: 'Cameroonian French',   aliases: ['cameroon','camerounais','cm'], dialect: true },
+  // ── All 99 official Whisper languages ──
+  { code: 'af',  flag: '🇿🇦', name: 'Afrikaans',         aliases: ['af','afrikaans'] },
+  { code: 'am',  flag: '🇪🇹', name: 'Amharic',           aliases: ['am','amharic'] },
+  { code: 'ar',  flag: '🇸🇦', name: 'Arabic',            aliases: ['ar','arabic','arabe'] },
+  { code: 'as',  flag: '🇮🇳', name: 'Assamese',          aliases: ['as','assamese'] },
+  { code: 'az',  flag: '🇦🇿', name: 'Azerbaijani',       aliases: ['az','azerbaijani'] },
+  { code: 'ba',  flag: '🌐', name: 'Bashkir',            aliases: ['ba','bashkir'] },
+  { code: 'be',  flag: '🇧🇾', name: 'Belarusian',        aliases: ['be','belarusian'] },
+  { code: 'bg',  flag: '🇧🇬', name: 'Bulgarian',         aliases: ['bg','bulgarian'] },
+  { code: 'bn',  flag: '🇧🇩', name: 'Bengali',           aliases: ['bn','bengali'] },
+  { code: 'bo',  flag: '🌐', name: 'Tibetan',            aliases: ['bo','tibetan'] },
+  { code: 'br',  flag: '🏴', name: 'Breton',             aliases: ['br','breton'] },
+  { code: 'bs',  flag: '🇧🇦', name: 'Bosnian',           aliases: ['bs','bosnian'] },
+  { code: 'ca',  flag: '🌐', name: 'Catalan',            aliases: ['ca','catalan'] },
+  { code: 'cs',  flag: '🇨🇿', name: 'Czech',             aliases: ['cs','czech','tcheque'] },
+  { code: 'cy',  flag: '🏴', name: 'Welsh',              aliases: ['cy','welsh'] },
+  { code: 'da',  flag: '🇩🇰', name: 'Danish',            aliases: ['da','danish','danois'] },
+  { code: 'de',  flag: '🇩🇪', name: 'German',            aliases: ['de','german','allemand'] },
+  { code: 'el',  flag: '🇬🇷', name: 'Greek',             aliases: ['el','greek','grec'] },
+  { code: 'en',  flag: '🇺🇸', name: 'English',           aliases: ['en','english','anglais'] },
+  { code: 'es',  flag: '🇪🇸', name: 'Spanish',           aliases: ['es','spanish','espanol','español'] },
+  { code: 'et',  flag: '🇪🇪', name: 'Estonian',          aliases: ['et','estonian'] },
+  { code: 'eu',  flag: '🌐', name: 'Basque',             aliases: ['eu','basque'] },
+  { code: 'fa',  flag: '🇮🇷', name: 'Persian',           aliases: ['fa','persian','farsi'] },
+  { code: 'fi',  flag: '🇫🇮', name: 'Finnish',           aliases: ['fi','finnish','finnois'] },
+  { code: 'fo',  flag: '🇫🇴', name: 'Faroese',           aliases: ['fo','faroese'] },
+  { code: 'fr',  flag: '🇫🇷', name: 'French',            aliases: ['fr','french','francais','français'] },
+  { code: 'gl',  flag: '🌐', name: 'Galician',           aliases: ['gl','galician'] },
+  { code: 'gu',  flag: '🇮🇳', name: 'Gujarati',          aliases: ['gu','gujarati'] },
+  { code: 'ha',  flag: '🇳🇬', name: 'Hausa',             aliases: ['ha','hausa'] },
+  { code: 'haw', flag: '🌺', name: 'Hawaiian',           aliases: ['haw','hawaiian'] },
+  { code: 'he',  flag: '🇮🇱', name: 'Hebrew',            aliases: ['he','hebrew','hébreu'] },
+  { code: 'hi',  flag: '🇮🇳', name: 'Hindi',             aliases: ['hi','hindi'] },
+  { code: 'hr',  flag: '🇭🇷', name: 'Croatian',          aliases: ['hr','croatian'] },
+  { code: 'hu',  flag: '🇭🇺', name: 'Hungarian',         aliases: ['hu','hungarian','hongrois'] },
+  { code: 'hy',  flag: '🇦🇲', name: 'Armenian',          aliases: ['hy','armenian'] },
+  { code: 'id',  flag: '🇮🇩', name: 'Indonesian',        aliases: ['id','indonesian','indonésien'] },
+  { code: 'is',  flag: '🇮🇸', name: 'Icelandic',         aliases: ['is','icelandic'] },
+  { code: 'it',  flag: '🇮🇹', name: 'Italian',           aliases: ['it','italian','italien'] },
+  { code: 'ja',  flag: '🇯🇵', name: 'Japanese',          aliases: ['ja','japanese','japonais'] },
+  { code: 'jw',  flag: '🇮🇩', name: 'Javanese',          aliases: ['jw','javanese'] },
+  { code: 'ka',  flag: '🇬🇪', name: 'Georgian',          aliases: ['ka','georgian'] },
+  { code: 'kk',  flag: '🇰🇿', name: 'Kazakh',            aliases: ['kk','kazakh'] },
+  { code: 'km',  flag: '🇰🇭', name: 'Khmer',             aliases: ['km','khmer','cambodian'] },
+  { code: 'kn',  flag: '🇮🇳', name: 'Kannada',           aliases: ['kn','kannada'] },
+  { code: 'ko',  flag: '🇰🇷', name: 'Korean',            aliases: ['ko','korean','coréen'] },
+  { code: 'la',  flag: '⛪', name: 'Latin',              aliases: ['la','latin'] },
+  { code: 'lb',  flag: '🇱🇺', name: 'Luxembourgish',     aliases: ['lb','luxembourgish','luxembourgeois'] },
+  { code: 'ln',  flag: '🇨🇩', name: 'Lingala',           aliases: ['ln','lingala'] },
+  { code: 'lo',  flag: '🇱🇦', name: 'Lao',               aliases: ['lo','lao','laotian'] },
+  { code: 'lt',  flag: '🇱🇹', name: 'Lithuanian',        aliases: ['lt','lithuanian'] },
+  { code: 'lv',  flag: '🇱🇻', name: 'Latvian',           aliases: ['lv','latvian'] },
+  { code: 'mg',  flag: '🇲🇬', name: 'Malagasy',          aliases: ['mg','malagasy','malgache'] },
+  { code: 'mi',  flag: '🇳🇿', name: 'Maori',             aliases: ['mi','maori'] },
+  { code: 'mk',  flag: '🇲🇰', name: 'Macedonian',        aliases: ['mk','macedonian'] },
+  { code: 'ml',  flag: '🇮🇳', name: 'Malayalam',         aliases: ['ml','malayalam'] },
+  { code: 'mn',  flag: '🇲🇳', name: 'Mongolian',         aliases: ['mn','mongolian'] },
+  { code: 'mr',  flag: '🇮🇳', name: 'Marathi',           aliases: ['mr','marathi'] },
+  { code: 'ms',  flag: '🇲🇾', name: 'Malay',             aliases: ['ms','malay','malais'] },
+  { code: 'mt',  flag: '🇲🇹', name: 'Maltese',           aliases: ['mt','maltese'] },
+  { code: 'my',  flag: '🇲🇲', name: 'Burmese',           aliases: ['my','burmese','myanmar'] },
+  { code: 'ne',  flag: '🇳🇵', name: 'Nepali',            aliases: ['ne','nepali'] },
+  { code: 'nl',  flag: '🇳🇱', name: 'Dutch',             aliases: ['nl','dutch','hollandais'] },
+  { code: 'nn',  flag: '🇳🇴', name: 'Norwegian Nynorsk', aliases: ['nn','nynorsk'] },
+  { code: 'no',  flag: '🇳🇴', name: 'Norwegian',         aliases: ['no','norwegian','norvégien'] },
+  { code: 'oc',  flag: '🌐', name: 'Occitan',            aliases: ['oc','occitan'] },
+  { code: 'pa',  flag: '🇮🇳', name: 'Punjabi',           aliases: ['pa','punjabi'] },
+  { code: 'pl',  flag: '🇵🇱', name: 'Polish',            aliases: ['pl','polish','polonais'] },
+  { code: 'ps',  flag: '🇦🇫', name: 'Pashto',            aliases: ['ps','pashto'] },
+  { code: 'pt',  flag: '🇵🇹', name: 'Portuguese',        aliases: ['pt','portuguese','portugais'] },
+  { code: 'ro',  flag: '🇷🇴', name: 'Romanian',          aliases: ['ro','romanian','roumain'] },
+  { code: 'ru',  flag: '🇷🇺', name: 'Russian',           aliases: ['ru','russian','russe'] },
+  { code: 'sa',  flag: '🌐', name: 'Sanskrit',           aliases: ['sa','sanskrit'] },
+  { code: 'sd',  flag: '🇵🇰', name: 'Sindhi',            aliases: ['sd','sindhi'] },
+  { code: 'si',  flag: '🇱🇰', name: 'Sinhala',           aliases: ['si','sinhala'] },
+  { code: 'sk',  flag: '🇸🇰', name: 'Slovak',            aliases: ['sk','slovak'] },
+  { code: 'sl',  flag: '🇸🇮', name: 'Slovenian',         aliases: ['sl','slovenian'] },
+  { code: 'sn',  flag: '🇿🇼', name: 'Shona',             aliases: ['sn','shona'] },
+  { code: 'so',  flag: '🇸🇴', name: 'Somali',            aliases: ['so','somali','somalien'] },
+  { code: 'sq',  flag: '🇦🇱', name: 'Albanian',          aliases: ['sq','albanian'] },
+  { code: 'sr',  flag: '🇷🇸', name: 'Serbian',           aliases: ['sr','serbian'] },
+  { code: 'su',  flag: '🇮🇩', name: 'Sundanese',         aliases: ['su','sundanese'] },
+  { code: 'sv',  flag: '🇸🇪', name: 'Swedish',           aliases: ['sv','swedish','suédois'] },
+  { code: 'sw',  flag: '🇰🇪', name: 'Swahili',           aliases: ['sw','swahili'] },
+  { code: 'ta',  flag: '🇮🇳', name: 'Tamil',             aliases: ['ta','tamil'] },
+  { code: 'te',  flag: '🇮🇳', name: 'Telugu',            aliases: ['te','telugu'] },
+  { code: 'tg',  flag: '🇹🇯', name: 'Tajik',             aliases: ['tg','tajik'] },
+  { code: 'th',  flag: '🇹🇭', name: 'Thai',              aliases: ['th','thai'] },
+  { code: 'tk',  flag: '🇹🇲', name: 'Turkmen',           aliases: ['tk','turkmen'] },
+  { code: 'tl',  flag: '🇵🇭', name: 'Filipino',          aliases: ['tl','filipino','tagalog'] },
+  { code: 'tr',  flag: '🇹🇷', name: 'Turkish',           aliases: ['tr','turkish','turc'] },
+  { code: 'tt',  flag: '🇷🇺', name: 'Tatar',             aliases: ['tt','tatar'] },
+  { code: 'uk',  flag: '🇺🇦', name: 'Ukrainian',         aliases: ['uk','ukrainian','ukrainien'] },
+  { code: 'ur',  flag: '🇵🇰', name: 'Urdu',              aliases: ['ur','urdu'] },
+  { code: 'uz',  flag: '🇺🇿', name: 'Uzbek',             aliases: ['uz','uzbek'] },
+  { code: 'vi',  flag: '🇻🇳', name: 'Vietnamese',        aliases: ['vi','vietnamese','vietnamien'] },
+  { code: 'yi',  flag: '🌐', name: 'Yiddish',            aliases: ['yi','yiddish'] },
+  { code: 'yo',  flag: '🇳🇬', name: 'Yoruba',            aliases: ['yo','yoruba'] },
+  { code: 'yue', flag: '🇭🇰', name: 'Cantonese',         aliases: ['yue','cantonese','cantonais'] },
+  { code: 'zh',  flag: '🇨🇳', name: 'Chinese',           aliases: ['zh','chinese','chinois','mandarin'] },
+];
+
+function toggleReviewPicker(msgId) {
+  const full = document.getElementById(`rfull-${msgId}`);
+  if (!full) return;
+  const isOpen = full.style.display !== 'none';
+  full.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) {
+    const input = document.getElementById(`rs-${msgId}`);
+    const list = document.getElementById(`rl-${msgId}`);
+    filterReviewLangs(msgId, '');
+    setTimeout(() => input?.focus(), 50);
+  }
+}
+
+function filterReviewLangs(msgId, query) {
+  const list = document.getElementById(`rl-${msgId}`);
+  if (!list) return;
+  const q = (query || '').toLowerCase().trim();
+  const matches = q
+    ? WHISPER_LANGS.filter(l =>
+        l.name.toLowerCase().includes(q) ||
+        l.code.toLowerCase().includes(q) ||
+        (l.aliases || []).some(a => a.includes(q))
+      )
+    : WHISPER_LANGS;
+  list.innerHTML = matches.slice(0, 60).map(l =>
+    `<div class="review-picker-item${l.dialect ? ' dialect' : ''}" onclick="retranscribeMsg('${msgId}','${l.code}')">${l.flag} ${l.name}</div>`
+  ).join('');
 }
 
 // ── Retranscribe (needs_review — user picks language) ──
