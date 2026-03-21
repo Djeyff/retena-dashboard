@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <!-- Retena notification icon: bold eye, solid fill, no fine detail -->
+  <!-- Orange background circle -->
+  <circle cx="48" cy="48" r="44" fill="#E67E22"/>
+  <!-- White eye shape -->
+  <path fill="#FFFFFF" d="M48 30C32 30 18 48 18 48s14 18 30 18 30-18 30-18S64 30 48 30z"/>
+  <!-- Dark pupil -->
+  <circle cx="48" cy="48" r="10" fill="#1E3A5F"/>
+</svg>

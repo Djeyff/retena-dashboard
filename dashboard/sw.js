@@ -1,4 +1,4 @@
-const CACHE_NAME = 'retena-v26';
+const CACHE_NAME = 'retena-v27';
 const STATIC_ASSETS = [
   '/dashboard/',
   '/dashboard/index.html',
@@ -46,7 +46,7 @@ self.addEventListener('push', (e) => {
   const {
     title = 'Retena',
     body = '',
-    icon = '/dashboard/icons/icon-192.png',
+    icon = '/dashboard/icons/notification-192.png',
     badge = '/dashboard/icons/badge-72.png',
     tag,
     data: notifData = {},
