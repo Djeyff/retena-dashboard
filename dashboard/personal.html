@@ -75,21 +75,7 @@
     .translation-result { margin-top: 6px; padding: 8px 10px; border-left: 3px solid #60a5fa; background: rgba(59,130,246,0.06); border-radius: 0 8px 8px 0; font-size: 12px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
 
     /* ── Needs Review Banner ── */
-    .review-banner { margin: 6px 0 4px; padding: 8px 10px; background: rgba(251,191,36,0.10); border: 1px solid rgba(251,191,36,0.35); border-radius: 8px; font-size: 12px; color: #fbbf24; }
-    .review-banner strong { display: block; margin-bottom: 6px; font-size: 11px; letter-spacing: 0.2px; }
-    .review-picker-quick { display: flex; gap: 5px; flex-wrap: wrap; }
-    .review-lang-btn { padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(251,191,36,0.4); background: rgba(251,191,36,0.1); color: #fbbf24; font-size: 11px; cursor: pointer; font-weight: 600; transition: background 0.15s; white-space: nowrap; font-family: inherit; }
-    .review-lang-btn:hover { background: rgba(251,191,36,0.28); }
-    .review-lang-btn--more { border-style: dashed; opacity: 0.8; }
-    .review-lang-btn--more:hover { opacity: 1; }
-    .review-lang-btn.loading { opacity: 0.45; pointer-events: none; }
-    .review-picker-full { margin-top: 8px; }
-    .review-picker-search { width: 100%; box-sizing: border-box; background: rgba(0,0,0,0.25); border: 1px solid rgba(251,191,36,0.3); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: #f1f5f9; outline: none; font-family: inherit; }
-    .review-picker-search::placeholder { color: rgba(251,191,36,0.5); }
-    .review-picker-list { margin-top: 6px; max-height: 180px; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 4px; }
-    .review-picker-item { padding: 3px 8px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05); color: var(--text-secondary); font-size: 11px; cursor: pointer; transition: background 0.12s; white-space: nowrap; }
-    .review-picker-item:hover { background: rgba(251,191,36,0.18); color: #fbbf24; border-color: rgba(251,191,36,0.4); }
-    .review-picker-item.dialect { border-color: rgba(251,191,36,0.3); color: #fbbf24; }
+    /* review-banner styles now in styles.css */
     .review-status { font-size: 11px; margin-top: 6px; color: var(--text-muted); min-height: 14px; }
 
     /* ── Empty State ── */
@@ -629,19 +615,16 @@ function renderSingleBubble(m, idx) {
   // ── needs_review banner — language selection required ──
   if (m.needs_review && isVoice) {
     html += `<div class="review-banner" id="review-${msgId}">
-      <strong>⚠️ Language not detected — select the sender's language</strong>
-      <div class="review-picker-wrap" id="rpw-${msgId}">
-        <div class="review-picker-quick">
-          <button class="review-lang-btn" id="rlb-${msgId}-es-do" onclick="retranscribeMsg('${msgId}','es-do')">🇩🇴 Dominican</button>
-          <button class="review-lang-btn" id="rlb-${msgId}-ht" onclick="retranscribeMsg('${msgId}','ht')">🇭🇹 Haitian Creole</button>
-          <button class="review-lang-btn" id="rlb-${msgId}-fr" onclick="retranscribeMsg('${msgId}','fr')">🇫🇷 French</button>
-          <button class="review-lang-btn" id="rlb-${msgId}-en" onclick="retranscribeMsg('${msgId}','en')">🇬🇧 English</button>
-          <button class="review-lang-btn review-lang-btn--more" onclick="toggleReviewPicker('${msgId}')">🌐 More…</button>
-        </div>
-        <div class="review-picker-full" id="rfull-${msgId}" style="display:none">
-          <input class="review-picker-search" id="rs-${msgId}" placeholder="Type language or code (FR, JM, creole…)" oninput="filterReviewLangs('${msgId}', this.value)" autocomplete="off">
-          <div class="review-picker-list" id="rl-${msgId}"></div>
-        </div>
+      <strong>⚠️ Language not detected — Whisper couldn't identify it. Select the sender's language:</strong>
+      <div class="review-picker-quick">
+        <button class="review-lang-btn" onclick="retranscribeMsg('${msgId}','es-do')">🇩🇴 Dominican</button>
+        <button class="review-lang-btn" onclick="retranscribeMsg('${msgId}','ht')">🇭🇹 Haitian Creole</button>
+        <button class="review-lang-btn" onclick="retranscribeMsg('${msgId}','fr')">🇫🇷 French</button>
+        <button class="review-lang-btn" onclick="retranscribeMsg('${msgId}','en')">🇬🇧 English</button>
+        <button class="review-lang-btn review-lang-btn--more" onclick="toggleReviewPicker('${msgId}')">🌐 All languages…</button>
+      </div>
+      <div class="review-picker-full" id="rfull-${msgId}" style="display:none">
+        <div id="rpicker-${msgId}"></div>
       </div>
       <div class="review-status" id="rstatus-${msgId}"></div>
     </div>`;
@@ -1035,27 +1018,16 @@ function toggleReviewPicker(msgId) {
   const isOpen = full.style.display !== 'none';
   full.style.display = isOpen ? 'none' : 'block';
   if (!isOpen) {
-    const input = document.getElementById(`rs-${msgId}`);
-    const list = document.getElementById(`rl-${msgId}`);
-    filterReviewLangs(msgId, '');
-    setTimeout(() => input?.focus(), 50);
+    // Build the full searchable picker on first open
+    const container = document.getElementById(`rpicker-${msgId}`);
+    if (container && !container._built) {
+      container._built = true;
+      window.buildWhisperPicker(container, (code) => retranscribeMsg(msgId, code), {
+        placeholder: 'Search: FR, JM, creole, dominicano, patois…',
+      });
+    }
+    setTimeout(() => container?.querySelector('input')?.focus(), 50);
   }
-}
-
-function filterReviewLangs(msgId, query) {
-  const list = document.getElementById(`rl-${msgId}`);
-  if (!list) return;
-  const q = (query || '').toLowerCase().trim();
-  const matches = q
-    ? WHISPER_LANGS.filter(l =>
-        l.name.toLowerCase().includes(q) ||
-        l.code.toLowerCase().includes(q) ||
-        (l.aliases || []).some(a => a.includes(q))
-      )
-    : WHISPER_LANGS;
-  list.innerHTML = matches.slice(0, 60).map(l =>
-    `<div class="review-picker-item${l.dialect ? ' dialect' : ''}" onclick="retranscribeMsg('${msgId}','${l.code}')">${l.flag} ${l.name}</div>`
-  ).join('');
 }
 
 // ── Retranscribe (needs_review — user picks language) ──

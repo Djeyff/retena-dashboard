@@ -57,13 +57,15 @@
           </div>
           <div style="margin-bottom:16px">
             <label style="font-size:13px;color:var(--text-secondary);display:block;margin-bottom:6px">Summary language</label>
-            <select class="input" id="ws-summary-lang">
-              <option value="auto">🔄 Auto (same as audio)</option>
-              <option value="english">🇬🇧 English</option>
-              <option value="spanish">🇪🇸 Spanish</option>
-              <option value="french">🇫🇷 French</option>
-              <option value="portuguese">🇧🇷 Portuguese</option>
-            </select>
+            <div id="ws-summary-lang-display" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--bg-sidebar,#1a2332);border:1px solid var(--border,#2a3a4a);border-radius:8px;cursor:pointer;font-size:13px;color:var(--text-primary,#f1f5f9)" onclick="toggleSummaryLangPicker()">
+              <span id="ws-sl-label">🔄 Auto (same as audio)</span>
+              <span style="margin-left:auto;color:var(--text-muted)">▾</span>
+            </div>
+            <input type="hidden" id="ws-summary-lang" value="auto">
+            <div id="ws-summary-lang-picker" style="display:none;margin-top:4px;background:var(--bg-sidebar,#1a2332);border:1px solid var(--border,#2a3a4a);border-radius:8px;overflow:hidden;z-index:10;max-height:260px;display:none;flex-direction:column">
+              <input id="ws-sl-search" class="review-picker-search" placeholder="Search language or code (FR, creole, dominicano…)" autocomplete="off" oninput="filterSummaryLangs(this.value)">
+              <div id="ws-sl-list" class="review-picker-list" style="max-height:200px;overflow-y:auto"></div>
+            </div>
             <span style="font-size:11px;color:var(--text-muted)">Language for AI-generated bullet summaries — transcription always stays in the original language</span>
           </div>
           <div style="margin-bottom:16px">
@@ -807,7 +809,7 @@ async function loadSettings() {
     const data = await api('/api/rt/settings');
     if (data.name) document.getElementById('ws-name').value = data.name;
     if (data.timezone) document.getElementById('ws-timezone').value = data.timezone;
-    if (data.summary_language) { const sl = document.getElementById('ws-summary-lang'); if (sl) sl.value = data.summary_language; }
+    if (data.summary_language) { setSummaryLang(data.summary_language); }
     if (data.id) {
       document.getElementById('ws-id').value = data.id;
       localStorage.setItem('retena_account_id', data.id);
@@ -2585,6 +2587,77 @@ async function dismissNew() {
     }).catch(() => {});
   }
 }
+
+// ── Summary language searchable picker ─────────────────────────────────────
+function setSummaryLang(code) {
+  document.getElementById('ws-summary-lang').value = code;
+  const langs = window.WHISPER_LANGS || [];
+  const found = langs.find(l => l.code === code);
+  const label = code === 'auto' ? '🔄 Auto (same as audio)' : found ? `${found.flag} ${found.name}` : code;
+  document.getElementById('ws-sl-label').textContent = label;
+}
+
+function toggleSummaryLangPicker() {
+  const picker = document.getElementById('ws-summary-lang-picker');
+  const isOpen = picker.style.display === 'flex';
+  picker.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen) {
+    renderSummaryLangList('');
+    document.getElementById('ws-sl-search').focus();
+  }
+}
+
+function filterSummaryLangs(q) { renderSummaryLangList(q); }
+
+function renderSummaryLangList(q) {
+  const list = document.getElementById('ws-sl-list');
+  const query = (q || '').toLowerCase().trim();
+  const langs = window.WHISPER_LANGS || [];
+  let items = langs;
+  if (query) {
+    items = langs.filter(l =>
+      l.name.toLowerCase().includes(query) ||
+      l.code.toLowerCase().includes(query) ||
+      l.whisper.toLowerCase().includes(query) ||
+      (l.country || '').toLowerCase() === query ||
+      (l.aliases || []).some(a => a.toLowerCase().includes(query))
+    );
+  }
+  list.innerHTML = '';
+  // Auto option always first (when no query)
+  if (!query) {
+    const autoEl = document.createElement('div');
+    autoEl.className = 'review-picker-item';
+    autoEl.textContent = '🔄 Auto (same as audio)';
+    autoEl.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--border,#2a3a4a)';
+    autoEl.onmouseenter = () => autoEl.style.background = 'rgba(230,126,34,0.15)';
+    autoEl.onmouseleave = () => autoEl.style.background = '';
+    autoEl.onclick = () => { setSummaryLang('auto'); document.getElementById('ws-summary-lang-picker').style.display = 'none'; saveWorkspace(); };
+    list.appendChild(autoEl);
+  }
+  items.slice(0, 80).forEach(l => {
+    const el = document.createElement('div');
+    el.className = 'review-picker-item';
+    el.textContent = `${l.flag} ${l.name}`;
+    el.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:13px;';
+    el.onmouseenter = () => el.style.background = 'rgba(230,126,34,0.15)';
+    el.onmouseleave = () => el.style.background = '';
+    el.onclick = () => {
+      setSummaryLang(l.code);
+      document.getElementById('ws-summary-lang-picker').style.display = 'none';
+      saveWorkspace();
+    };
+    list.appendChild(el);
+  });
+}
+
+// Close picker on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('#ws-summary-lang-display') && !e.target.closest('#ws-summary-lang-picker')) {
+    const p = document.getElementById('ws-summary-lang-picker');
+    if (p) p.style.display = 'none';
+  }
+});
 </script>
 </body>
 </html>

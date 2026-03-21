@@ -691,3 +691,188 @@ document.addEventListener('DOMContentLoaded', () => {
   loadUsage();
   startRealtimePush(); // WebSocket push; falls back to 30s poll if unavailable
 });
+
+// ── WHISPER_LANGS — All 99 Whisper languages + regional dialects ──────────────
+// code = value sent to backend, whisper = Whisper ISO param, country = prompt hint
+// aliases = search terms (codes, slang, alternate names)
+window.WHISPER_LANGS = [
+  // ── Regional dialects first (most common for DR context) ──
+  { code:'es-do', flag:'🇩🇴', name:'Dominican Spanish',      whisper:'es', country:'DO', aliases:['dominicano','dominican','do','quisqueya'] },
+  { code:'ht',    flag:'🇭🇹', name:'Haitian Creole',         whisper:'ht', country:'HT', aliases:['creole','kreyol','haitian','ayisyen'] },
+  { code:'en-jm', flag:'🇯🇲', name:'Jamaican Patois',        whisper:'en', country:'JM', aliases:['patois','jamaican','jm','yardie'] },
+  { code:'es-mx', flag:'🇲🇽', name:'Mexican Spanish',        whisper:'es', country:'MX', aliases:['mexicano','mexican','mx','chido'] },
+  { code:'es-pr', flag:'🇵🇷', name:'Puerto Rican Spanish',   whisper:'es', country:'PR', aliases:['boricua','pr','puertorican'] },
+  { code:'es-cu', flag:'🇨🇺', name:'Cuban Spanish',          whisper:'es', country:'CU', aliases:['cubano','cuban','cu'] },
+  { code:'es-co', flag:'🇨🇴', name:'Colombian Spanish',      whisper:'es', country:'CO', aliases:['colombiano','colombian','co','parcero'] },
+  { code:'es-ar', flag:'🇦🇷', name:'Argentine Spanish',      whisper:'es', country:'AR', aliases:['argentino','argentine','ar','che'] },
+  { code:'es-ve', flag:'🇻🇪', name:'Venezuelan Spanish',     whisper:'es', country:'VE', aliases:['venezolano','venezuelan','ve'] },
+  { code:'pt-br', flag:'🇧🇷', name:'Brazilian Portuguese',   whisper:'pt', country:'BR', aliases:['brasileiro','brazilian','br'] },
+  { code:'pt-pt', flag:'🇵🇹', name:'European Portuguese',    whisper:'pt', country:'PT', aliases:['portugues','european portuguese','pt-pt'] },
+  { code:'fr-ca', flag:'🇨🇦', name:'Quebec French',          whisper:'fr', country:'CA', aliases:['quebecois','canadien','qc','tabernac'] },
+  { code:'en-tt', flag:'🇹🇹', name:'Trinidadian English',    whisper:'en', country:'TT', aliases:['trini','trinidad','tt'] },
+  { code:'en-bb', flag:'🇧🇧', name:'Barbadian / Bajan',      whisper:'en', country:'BB', aliases:['bajan','barbados','bb'] },
+  { code:'en-gy', flag:'🇬🇾', name:'Guyanese Creole',        whisper:'en', country:'GY', aliases:['guyanese','guyana','gy'] },
+  { code:'zh-tw', flag:'🇹🇼', name:'Traditional Chinese',    whisper:'zh', country:'TW', aliases:['taiwanese','mandarin tw','tw'] },
+  { code:'yue',   flag:'🇭🇰', name:'Cantonese',              whisper:'yue',country:'HK', aliases:['cantonese','guangdong','hk'] },
+  // ── Standard Whisper languages (alphabetical) ──
+  { code:'af',  flag:'🇿🇦', name:'Afrikaans',       whisper:'af',  country:'ZA' },
+  { code:'am',  flag:'🇪🇹', name:'Amharic',         whisper:'am',  country:'ET' },
+  { code:'ar',  flag:'🇸🇦', name:'Arabic',          whisper:'ar',  country:'SA', aliases:['عربي','arabe'] },
+  { code:'as',  flag:'🇮🇳', name:'Assamese',        whisper:'as',  country:'IN' },
+  { code:'az',  flag:'🇦🇿', name:'Azerbaijani',     whisper:'az',  country:'AZ' },
+  { code:'ba',  flag:'🇷🇺', name:'Bashkir',         whisper:'ba',  country:'RU' },
+  { code:'be',  flag:'🇧🇾', name:'Belarusian',      whisper:'be',  country:'BY' },
+  { code:'bg',  flag:'🇧🇬', name:'Bulgarian',       whisper:'bg',  country:'BG' },
+  { code:'bn',  flag:'🇧🇩', name:'Bengali',         whisper:'bn',  country:'BD' },
+  { code:'bo',  flag:'🇨🇳', name:'Tibetan',         whisper:'bo',  country:'CN' },
+  { code:'br',  flag:'🏴', name:'Breton',           whisper:'br',  country:'FR' },
+  { code:'bs',  flag:'🇧🇦', name:'Bosnian',         whisper:'bs',  country:'BA' },
+  { code:'ca',  flag:'🏳️', name:'Catalan',          whisper:'ca',  country:'ES', aliases:['catala'] },
+  { code:'cs',  flag:'🇨🇿', name:'Czech',           whisper:'cs',  country:'CZ', aliases:['cestina'] },
+  { code:'cy',  flag:'🏴󠁧󠁢󠁷󠁬󠁳󠁿', name:'Welsh',     whisper:'cy',  country:'GB' },
+  { code:'da',  flag:'🇩🇰', name:'Danish',          whisper:'da',  country:'DK' },
+  { code:'de',  flag:'🇩🇪', name:'German',          whisper:'de',  country:'DE', aliases:['deutsch','aleman'] },
+  { code:'el',  flag:'🇬🇷', name:'Greek',           whisper:'el',  country:'GR', aliases:['ελληνικά','grec'] },
+  { code:'en',  flag:'🇬🇧', name:'English',         whisper:'en',  country:'US', aliases:['anglais','ingles'] },
+  { code:'es',  flag:'🇪🇸', name:'Spanish',         whisper:'es',  country:'ES', aliases:['español','espagnol','castillano'] },
+  { code:'et',  flag:'🇪🇪', name:'Estonian',        whisper:'et',  country:'EE' },
+  { code:'eu',  flag:'🏳️', name:'Basque',           whisper:'eu',  country:'ES', aliases:['euskera'] },
+  { code:'fa',  flag:'🇮🇷', name:'Persian / Farsi', whisper:'fa',  country:'IR', aliases:['farsi','persan','iran'] },
+  { code:'fi',  flag:'🇫🇮', name:'Finnish',         whisper:'fi',  country:'FI', aliases:['suomi'] },
+  { code:'fo',  flag:'🇫🇴', name:'Faroese',         whisper:'fo',  country:'FO' },
+  { code:'fr',  flag:'🇫🇷', name:'French',          whisper:'fr',  country:'FR', aliases:['français','francais','frances'] },
+  { code:'gl',  flag:'🏳️', name:'Galician',         whisper:'gl',  country:'ES' },
+  { code:'gu',  flag:'🇮🇳', name:'Gujarati',        whisper:'gu',  country:'IN' },
+  { code:'ha',  flag:'🇳🇬', name:'Hausa',           whisper:'ha',  country:'NG' },
+  { code:'haw', flag:'🌺', name:'Hawaiian',          whisper:'haw', country:'US' },
+  { code:'he',  flag:'🇮🇱', name:'Hebrew',          whisper:'he',  country:'IL', aliases:['ivrit','hebreu'] },
+  { code:'hi',  flag:'🇮🇳', name:'Hindi',           whisper:'hi',  country:'IN', aliases:['hindou','हिन्दी'] },
+  { code:'hr',  flag:'🇭🇷', name:'Croatian',        whisper:'hr',  country:'HR' },
+  { code:'hu',  flag:'🇭🇺', name:'Hungarian',       whisper:'hu',  country:'HU', aliases:['magyar'] },
+  { code:'hy',  flag:'🇦🇲', name:'Armenian',        whisper:'hy',  country:'AM' },
+  { code:'id',  flag:'🇮🇩', name:'Indonesian',      whisper:'id',  country:'ID', aliases:['bahasa'] },
+  { code:'is',  flag:'🇮🇸', name:'Icelandic',       whisper:'is',  country:'IS' },
+  { code:'it',  flag:'🇮🇹', name:'Italian',         whisper:'it',  country:'IT', aliases:['italiano'] },
+  { code:'ja',  flag:'🇯🇵', name:'Japanese',        whisper:'ja',  country:'JP', aliases:['japonais','japones','nihongo'] },
+  { code:'jw',  flag:'🇮🇩', name:'Javanese',        whisper:'jw',  country:'ID' },
+  { code:'ka',  flag:'🇬🇪', name:'Georgian',        whisper:'ka',  country:'GE' },
+  { code:'kk',  flag:'🇰🇿', name:'Kazakh',          whisper:'kk',  country:'KZ' },
+  { code:'km',  flag:'🇰🇭', name:'Khmer',           whisper:'km',  country:'KH', aliases:['cambodian','cambouge'] },
+  { code:'kn',  flag:'🇮🇳', name:'Kannada',         whisper:'kn',  country:'IN' },
+  { code:'ko',  flag:'🇰🇷', name:'Korean',          whisper:'ko',  country:'KR', aliases:['coreen','coreano','hangul'] },
+  { code:'la',  flag:'🏛️', name:'Latin',            whisper:'la',  country:null },
+  { code:'lb',  flag:'🇱🇺', name:'Luxembourgish',   whisper:'lb',  country:'LU' },
+  { code:'ln',  flag:'🇨🇩', name:'Lingala',         whisper:'ln',  country:'CD' },
+  { code:'lo',  flag:'🇱🇦', name:'Lao',             whisper:'lo',  country:'LA' },
+  { code:'lt',  flag:'🇱🇹', name:'Lithuanian',      whisper:'lt',  country:'LT' },
+  { code:'lv',  flag:'🇱🇻', name:'Latvian',         whisper:'lv',  country:'LV' },
+  { code:'mg',  flag:'🇲🇬', name:'Malagasy',        whisper:'mg',  country:'MG' },
+  { code:'mi',  flag:'🇳🇿', name:'Maori',           whisper:'mi',  country:'NZ' },
+  { code:'mk',  flag:'🇲🇰', name:'Macedonian',      whisper:'mk',  country:'MK' },
+  { code:'ml',  flag:'🇮🇳', name:'Malayalam',       whisper:'ml',  country:'IN' },
+  { code:'mn',  flag:'🇲🇳', name:'Mongolian',       whisper:'mn',  country:'MN' },
+  { code:'mr',  flag:'🇮🇳', name:'Marathi',         whisper:'mr',  country:'IN' },
+  { code:'ms',  flag:'🇲🇾', name:'Malay',           whisper:'ms',  country:'MY', aliases:['bahasa melayu'] },
+  { code:'mt',  flag:'🇲🇹', name:'Maltese',         whisper:'mt',  country:'MT' },
+  { code:'my',  flag:'🇲🇲', name:'Burmese',         whisper:'my',  country:'MM', aliases:['myanmar'] },
+  { code:'ne',  flag:'🇳🇵', name:'Nepali',          whisper:'ne',  country:'NP' },
+  { code:'nl',  flag:'🇳🇱', name:'Dutch',           whisper:'nl',  country:'NL', aliases:['flamand','holandes','flemish'] },
+  { code:'nn',  flag:'🇳🇴', name:'Norwegian Nynorsk',whisper:'nn', country:'NO' },
+  { code:'no',  flag:'🇳🇴', name:'Norwegian',       whisper:'no',  country:'NO', aliases:['norsk'] },
+  { code:'oc',  flag:'🏳️', name:'Occitan',          whisper:'oc',  country:'FR' },
+  { code:'pa',  flag:'🇮🇳', name:'Punjabi',         whisper:'pa',  country:'IN', aliases:['panjabi'] },
+  { code:'pl',  flag:'🇵🇱', name:'Polish',          whisper:'pl',  country:'PL', aliases:['polonais','polaco'] },
+  { code:'ps',  flag:'🇦🇫', name:'Pashto',          whisper:'ps',  country:'AF' },
+  { code:'pt',  flag:'🇵🇹', name:'Portuguese',      whisper:'pt',  country:'PT', aliases:['portugues','portugais'] },
+  { code:'ro',  flag:'🇷🇴', name:'Romanian',        whisper:'ro',  country:'RO', aliases:['rumano','roumain'] },
+  { code:'ru',  flag:'🇷🇺', name:'Russian',         whisper:'ru',  country:'RU', aliases:['russe','ruso','русский'] },
+  { code:'sa',  flag:'🕉️', name:'Sanskrit',         whisper:'sa',  country:null },
+  { code:'sd',  flag:'🇵🇰', name:'Sindhi',          whisper:'sd',  country:'PK' },
+  { code:'si',  flag:'🇱🇰', name:'Sinhala',         whisper:'si',  country:'LK' },
+  { code:'sk',  flag:'🇸🇰', name:'Slovak',          whisper:'sk',  country:'SK' },
+  { code:'sl',  flag:'🇸🇮', name:'Slovenian',       whisper:'sl',  country:'SI' },
+  { code:'sn',  flag:'🇿🇼', name:'Shona',           whisper:'sn',  country:'ZW' },
+  { code:'so',  flag:'🇸🇴', name:'Somali',          whisper:'so',  country:'SO' },
+  { code:'sq',  flag:'🇦🇱', name:'Albanian',        whisper:'sq',  country:'AL' },
+  { code:'sr',  flag:'🇷🇸', name:'Serbian',         whisper:'sr',  country:'RS' },
+  { code:'su',  flag:'🇮🇩', name:'Sundanese',       whisper:'su',  country:'ID' },
+  { code:'sv',  flag:'🇸🇪', name:'Swedish',         whisper:'sv',  country:'SE', aliases:['suedois','sueco','svenska'] },
+  { code:'sw',  flag:'🇰🇪', name:'Swahili',         whisper:'sw',  country:'KE', aliases:['kiswahili'] },
+  { code:'ta',  flag:'🇮🇳', name:'Tamil',           whisper:'ta',  country:'IN' },
+  { code:'te',  flag:'🇮🇳', name:'Telugu',          whisper:'te',  country:'IN' },
+  { code:'tg',  flag:'🇹🇯', name:'Tajik',           whisper:'tg',  country:'TJ' },
+  { code:'th',  flag:'🇹🇭', name:'Thai',            whisper:'th',  country:'TH', aliases:['thaï','tailandes'] },
+  { code:'tk',  flag:'🇹🇲', name:'Turkmen',         whisper:'tk',  country:'TM' },
+  { code:'tl',  flag:'🇵🇭', name:'Filipino / Tagalog',whisper:'tl',country:'PH', aliases:['tagalog','pilipino'] },
+  { code:'tr',  flag:'🇹🇷', name:'Turkish',         whisper:'tr',  country:'TR', aliases:['turc','turco'] },
+  { code:'tt',  flag:'🇷🇺', name:'Tatar',           whisper:'tt',  country:'RU' },
+  { code:'uk',  flag:'🇺🇦', name:'Ukrainian',       whisper:'uk',  country:'UA', aliases:['ukrainien','ucraniano'] },
+  { code:'ur',  flag:'🇵🇰', name:'Urdu',            whisper:'ur',  country:'PK' },
+  { code:'uz',  flag:'🇺🇿', name:'Uzbek',           whisper:'uz',  country:'UZ' },
+  { code:'vi',  flag:'🇻🇳', name:'Vietnamese',      whisper:'vi',  country:'VN', aliases:['vietnamien','vietnamita'] },
+  { code:'yi',  flag:'🌐', name:'Yiddish',           whisper:'yi',  country:null },
+  { code:'yo',  flag:'🇳🇬', name:'Yoruba',          whisper:'yo',  country:'NG' },
+  { code:'zh',  flag:'🇨🇳', name:'Chinese (Mandarin)',whisper:'zh', country:'CN', aliases:['mandarin','chinois','chino','普通话'] },
+];
+
+// ── Build a searchable lang picker inside a container element ─────────────────
+// onSelect(code) is called when user picks a language
+window.buildWhisperPicker = function(container, onSelect, opts = {}) {
+  const { placeholder = 'Search language or code…', showAuto = false } = opts;
+  container.innerHTML = '';
+  container.style.position = 'relative';
+
+  const input = document.createElement('input');
+  input.className = 'review-picker-search';
+  input.placeholder = placeholder;
+  input.autocomplete = 'off';
+  input.style.cssText = 'width:100%;box-sizing:border-box;';
+  container.appendChild(input);
+
+  const list = document.createElement('div');
+  list.className = 'review-picker-list';
+  container.appendChild(list);
+
+  function render(q) {
+    const query = (q || '').toLowerCase().trim();
+    let items = window.WHISPER_LANGS;
+    if (query) {
+      items = items.filter(l =>
+        l.name.toLowerCase().includes(query) ||
+        l.code.toLowerCase().includes(query) ||
+        l.whisper.toLowerCase().includes(query) ||
+        (l.country || '').toLowerCase() === query ||
+        (l.aliases || []).some(a => a.toLowerCase().includes(query))
+      );
+    }
+    if (showAuto && !query) {
+      // prepend Auto option
+      const autoEl = document.createElement('div');
+      autoEl.className = 'review-picker-item';
+      autoEl.textContent = '🔄 Auto (detect language)';
+      autoEl.onclick = () => { onSelect('auto'); input.value = ''; render(''); };
+      list.innerHTML = '';
+      list.appendChild(autoEl);
+      items.forEach(l => list.appendChild(makeItem(l)));
+    } else {
+      list.innerHTML = '';
+      items.slice(0, 60).forEach(l => list.appendChild(makeItem(l)));
+    }
+  }
+
+  function makeItem(l) {
+    const el = document.createElement('div');
+    el.className = 'review-picker-item';
+    el.textContent = `${l.flag} ${l.name}`;
+    el.dataset.code = l.code;
+    el.onclick = () => {
+      onSelect(l.code);
+      input.value = '';
+      render('');
+    };
+    return el;
+  }
+
+  input.addEventListener('input', () => render(input.value));
+  render('');
+};
