@@ -1,4 +1,4 @@
-const CACHE_NAME = 'retena-v23';
+const CACHE_NAME = 'retena-v24';
 const STATIC_ASSETS = [
   '/dashboard/',
   '/dashboard/index.html',
@@ -52,9 +52,13 @@ self.addEventListener('push', (e) => {
     data: notifData = {},
   } = data;
 
-  // Always provide Reply + View buttons for voice transcription notifications
+  // Build actions based on notification type
   const isVoice = notifData?.type === 'voice_transcribed';
-  const actions = isVoice ? [
+  const isReview = notifData?.type === 'review_required';
+  const actions = isReview ? [
+    { action: 'review_es', title: '🇪🇸 Spanish' },
+    { action: 'review_fr', title: '🇫🇷 French' },
+  ] : isVoice ? [
     { action: 'view_chat', title: '💬 View' },
     ...(notifData?.whatsapp_phone ? [{ action: 'open_wa', title: '↩️ Reply' }] : []),
   ] : (data.actions || []);
@@ -82,6 +86,28 @@ self.addEventListener('notificationclick', (e) => {
     // "Reply in WhatsApp" action
     if (action === 'open_wa' && notifData.whatsapp_phone) {
       await clients.openWindow(`https://wa.me/${notifData.whatsapp_phone}`);
+      return;
+    }
+
+    // Language quick-pick from review_required notification action buttons
+    // Fire-and-forget retranscription with the chosen language, then open chat
+    if ((action === 'review_es' || action === 'review_fr') && notifData.message_id) {
+      const lang = action === 'review_es' ? 'es' : 'fr';
+      // Attempt retranscription in background (best effort — no auth token in SW)
+      // We open the dashboard with ?review=ID&lang=XX so the page handles it with proper auth
+      const reviewUrl = (self.location.origin) +
+        (notifData.url || '/dashboard/personal.html') +
+        (notifData.url?.includes('?') ? '&' : '?') +
+        `review=${encodeURIComponent(notifData.message_id)}&lang=${lang}`;
+      const windowClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin) && 'navigate' in client) {
+          await client.focus();
+          await client.navigate(reviewUrl);
+          return;
+        }
+      }
+      if (clients.openWindow) await clients.openWindow(reviewUrl);
       return;
     }
 

@@ -74,6 +74,15 @@
     .translate-panel .btn-translate:hover { background: rgba(230,126,34,0.25); }
     .translation-result { margin-top: 6px; padding: 8px 10px; border-left: 3px solid #60a5fa; background: rgba(59,130,246,0.06); border-radius: 0 8px 8px 0; font-size: 12px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; }
 
+    /* ── Needs Review Banner ── */
+    .review-banner { margin: 6px 0 4px; padding: 8px 10px; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.35); border-radius: 8px; font-size: 12px; color: #fbbf24; }
+    .review-banner strong { display: block; margin-bottom: 4px; font-size: 11px; }
+    .review-lang-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+    .review-lang-btn { padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(251,191,36,0.4); background: rgba(251,191,36,0.1); color: #fbbf24; font-size: 11px; cursor: pointer; font-weight: 600; transition: background 0.15s; }
+    .review-lang-btn:hover { background: rgba(251,191,36,0.25); }
+    .review-lang-btn.loading { opacity: 0.5; pointer-events: none; }
+    .review-status { font-size: 11px; margin-top: 4px; color: var(--text-muted); }
+
     /* ── Empty State ── */
     .panel-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); gap: 12px; }
 
@@ -304,11 +313,33 @@ async function loadPersonal() {
     renderConversationList();
 
     // Auto-select chat if ?chat= param is set (e.g. opened from push notification)
-    const chatParam = new URLSearchParams(window.location.search).get('chat');
+    const params = new URLSearchParams(window.location.search);
+    const chatParam = params.get('chat');
+    const reviewParam = params.get('review');   // message ID that needs language review
+    const langParam = params.get('lang');        // pre-selected language from notification action button
+
     if (chatParam) {
       await selectConversation(decodeURIComponent(chatParam));
       // Show sticky "Reply in WhatsApp" banner — Brave doesn't support notification action buttons
       showNotifReplyBanner();
+    }
+    // Handle ?review=MSG_ID — auto-trigger retranscription if lang also provided, else scroll to banner
+    if (reviewParam) {
+      const msgId = decodeURIComponent(reviewParam);
+      if (langParam) {
+        // Language was pre-selected via notification action button — retranscribe immediately
+        setTimeout(() => retranscribeMsg(msgId, langParam, true), 600);
+      } else {
+        // Just scroll to the review banner so user can pick language
+        setTimeout(() => {
+          const banner = document.getElementById(`review-${msgId}`);
+          if (banner) {
+            banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            banner.style.outline = '2px solid #fbbf24';
+            setTimeout(() => banner.style.outline = '', 2000);
+          }
+        }, 800);
+      }
     }
   } catch (e) {
     // Session expired / auth failure → redirect to login (don't show error)
@@ -586,8 +617,27 @@ function renderSingleBubble(m, idx) {
     html += bullets.map(b => `<div class="bullet"><span>${esc(b)}</span></div>`).join('');
     html += `</div>`;
   }
-  if (text) {
+  // ── needs_review banner — language selection required ──
+  if (m.needs_review && isVoice) {
+    const reviewBtns = [
+      { code: 'es', label: '🇪🇸 Spanish' },
+      { code: 'fr', label: '🇫🇷 French' },
+      { code: 'en', label: '🇬🇧 English' },
+      { code: 'pt', label: '🇧🇷 Portuguese' },
+      { code: 'ht', label: '🇭🇹 Haitian Creole' },
+    ].map(l => `<button class="review-lang-btn" id="rlb-${msgId}-${l.code}" onclick="retranscribeMsg('${msgId}','${l.code}')">${l.label}</button>`).join('');
+    html += `<div class="review-banner" id="review-${msgId}">
+      <strong>⚠️ Language not detected — pick the sender's language to transcribe</strong>
+      <div class="review-lang-btns">${reviewBtns}</div>
+      <div class="review-status" id="rstatus-${msgId}"></div>
+    </div>`;
+  }
+  if (text && !m.needs_review) {
     html += `<div class="msg-bubble-text">${esc(text)}</div>`;
+  } else if (text && m.needs_review) {
+    // Show raw Whisper attempt (greyed out) so user knows what we got
+    const rawText = text.replace(/^⚠️ \[.*?\]\n/, '');
+    html += `<div class="msg-bubble-text" style="opacity:0.45;font-style:italic;font-size:11px">${esc(rawText)}</div>`;
   } else if (!text && isVoice) {
     const dur = m.duration || m.duration_seconds || 0;
     html += `<div style="font-size:12px;color:var(--text-muted);font-style:italic">🎤 Voice note${dur > 0 ? ' · ' + formatDuration(dur) : ''} — no transcription</div>`;
@@ -846,6 +896,74 @@ function detectLang(text) {
   // Require minimum score of 1 and clear winner (>= shared competitor)
   if (sorted[0][1] === 0) return '';
   return sorted[0][0];
+}
+
+// ── Retranscribe (needs_review — user picks language) ──
+async function retranscribeMsg(msgId, lang, silent = false) {
+  const banner = document.getElementById(`review-${msgId}`);
+  const statusEl = document.getElementById(`rstatus-${msgId}`);
+
+  // Disable all buttons to prevent double-tap
+  document.querySelectorAll(`[id^="rlb-${msgId}-"]`).forEach(b => b.classList.add('loading'));
+  if (statusEl) statusEl.textContent = '⏳ Transcribing…';
+
+  try {
+    const r = await api('/api/retranscribe', {
+      method: 'POST',
+      body: JSON.stringify({ message_id: msgId, language: lang }),
+    });
+
+    if (!r.ok) throw new Error(r.error || 'Retranscription failed');
+
+    // Update message bubble in place
+    const card = document.getElementById(`card-${msgId}`);
+    if (card) {
+      // Remove review banner
+      const reviewEl = document.getElementById(`review-${msgId}`);
+      if (reviewEl) reviewEl.remove();
+
+      // Update the text bubble (greyed raw → clean transcript)
+      const existingText = card.querySelector('.msg-bubble-text');
+      const newText = r.preview || '';
+      if (existingText) {
+        existingText.style.opacity = '1';
+        existingText.style.fontStyle = 'normal';
+        existingText.style.fontSize = '';
+        existingText.textContent = newText;
+      } else if (newText) {
+        // Insert text bubble before the time line
+        const timeLine = card.querySelector('.msg-bubble-time');
+        const textDiv = document.createElement('div');
+        textDiv.className = 'msg-bubble-text';
+        textDiv.textContent = newText;
+        if (timeLine) card.insertBefore(textDiv, timeLine);
+        else card.appendChild(textDiv);
+      }
+
+      // Update flag in time bubble
+      const timeEl = card.querySelector('.msg-bubble-time');
+      if (timeEl && r.flag) {
+        const flagSpan = timeEl.firstChild;
+        if (flagSpan && flagSpan.nodeType === 3) {
+          timeEl.textContent = `${r.flag} ${timeEl.textContent.replace(/^[\S]+ /, '')}`;
+        }
+      }
+    }
+
+    // Also update in allMessages cache
+    const idx = allMessages.findIndex(m => m.id === msgId);
+    if (idx >= 0) {
+      allMessages[idx].needs_review = false;
+      allMessages[idx].transcription = r.preview || '';
+      allMessages[idx].language_flag = r.flag || allMessages[idx].language_flag;
+    }
+
+    if (!silent && statusEl) statusEl.textContent = '✅ Done!';
+  } catch (e) {
+    document.querySelectorAll(`[id^="rlb-${msgId}-"]`).forEach(b => b.classList.remove('loading'));
+    if (statusEl) statusEl.textContent = `❌ ${e.message}`;
+    console.error('[retranscribe]', e);
+  }
 }
 
 // ── Translate ──
