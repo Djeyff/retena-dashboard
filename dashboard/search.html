@@ -8,6 +8,11 @@
   <link rel="stylesheet" href="/dashboard/styles.css">
   <meta property="og:image" content="/dashboard/icons/icon-512.png">
   <link rel="icon" href="/dashboard/icons/favicon.ico">
+  <script>
+  // Early stub — prevents "not defined" if main script hasn't loaded yet
+  window.doSearch = window.doSearch || function(){};
+  window.setQuery = window.setQuery || function(){};
+  </script>
   <style>
     .search-box{position:relative;max-width:560px;margin:0 auto}
     .search-box input{padding-left:44px;padding-right:80px;height:48px;font-size:15px;border-radius:14px;background:var(--card-bg);border:1px solid var(--border);width:100%}
