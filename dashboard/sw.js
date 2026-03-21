@@ -1,6 +1,17 @@
-const CACHE_NAME = 'retena-v22';
+const CACHE_NAME = 'retena-v23';
 const STATIC_ASSETS = [
   '/dashboard/',
+  '/dashboard/index.html',
+  '/dashboard/activity.html',
+  '/dashboard/exports.html',
+  '/dashboard/groups.html',
+  '/dashboard/personal.html',
+  '/dashboard/search.html',
+  '/dashboard/settings.html',
+  '/dashboard/summaries.html',
+  '/dashboard/transcripts.html',
+  '/dashboard/login.html',
+  '/dashboard/onboarding.html',
   '/dashboard/styles.css',
   '/dashboard/js/shared.js',
   '/dashboard/manifest.json',
