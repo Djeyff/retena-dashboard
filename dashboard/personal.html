@@ -623,6 +623,20 @@ async function selectConversation(chatId) {
 // ── Single message bubble (extracted for reuse in live poll) ──
 function renderSingleBubble(m, idx) {
   const d = new Date(m.timestamp || m.created_at);
+
+  // System messages (transcription paused/resumed) → centered divider
+  if (m.message_type === 'system') {
+    const isPaused = (m.text_content || m.text || m.body || '').includes('paused');
+    const bgColor = isPaused ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)';
+    const borderColor = isPaused ? 'rgba(239,68,68,0.25)' : 'rgba(34,197,94,0.25)';
+    const textColor = isPaused ? '#ef4444' : '#22c55e';
+    return `<div style="text-align:center;padding:10px 20px;margin:8px 0" data-ts="${m.timestamp || m.created_at || ''}">
+      <div style="display:inline-block;padding:6px 16px;border-radius:20px;background:${bgColor};border:1px solid ${borderColor};font-size:12px;font-weight:600;color:${textColor};letter-spacing:0.2px">
+        ${esc(m.text_content || m.text || m.body || '')}
+      </div>
+    </div>`;
+  }
+
   const isMe = m.from_me === true;
   const side = isMe ? 'me' : 'them';
   const isVoice = m.message_type === 'voice' || m.message_type === 'audio';
