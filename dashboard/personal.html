@@ -499,6 +499,33 @@ async function selectConversation(chatId) {
   document.getElementById('chat-meta').textContent =
     `${conv.message_count} messages · ${conv.voice_count} voice · ${conv.text_count} text`;
 
+  // Add transcription toggle to header
+  let headerRight = document.getElementById('chat-header-right');
+  if (!headerRight) {
+    headerRight = document.createElement('div');
+    headerRight.id = 'chat-header-right';
+    headerRight.style.cssText = 'margin-left:auto;display:flex;align-items:center;gap:8px';
+    document.getElementById('chat-header').appendChild(headerRight);
+  }
+
+  // Get current transcript status for this chat
+  let transcriptOn = true;
+  let disabledAt = null;
+  try {
+    const chatCfg = await api(`/api/chats/${encodeURIComponent(chatId)}/config`);
+    transcriptOn = chatCfg.transcript_enabled !== false;
+    disabledAt = chatCfg.transcribe_disabled_at || null;
+  } catch {}
+
+  headerRight.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:2px">
+      <span style="font-size:10px;color:var(--text-muted)">Transcribe</span>
+      <div class="toggle ${transcriptOn ? 'on' : ''}" id="chat-transcript-toggle"
+        onclick="toggleChatTranscript('${chatId}', ${!transcriptOn})"
+        style="transform:scale(0.85)"></div>
+    </div>
+  `;
+
   // WhatsApp deep link — iframe trick: fires custom scheme without navigating the page
   // Fallback: wa.me (works in all browsers including Brave)
   const waBar = document.getElementById('chat-wa-bar');
@@ -709,6 +736,94 @@ function esc(s) {
   const div = document.createElement('div');
   div.textContent = s;
   return div.innerHTML;
+}
+
+async function toggleChatTranscript(chatId, enable) {
+  const toggle = document.getElementById('chat-transcript-toggle');
+
+  if (!enable) {
+    // Turning OFF — show warning
+    const confirmed = await showTranscriptWarning('off');
+    if (!confirmed) return;
+  } else {
+    // Turning ON — check if there's a disabled_at timestamp
+    try {
+      const chatCfg = await api(`/api/chats/${encodeURIComponent(chatId)}/config`);
+      if (chatCfg.transcribe_disabled_at) {
+        await showTranscriptWarning('on', chatCfg.transcribe_disabled_at);
+      }
+    } catch {}
+  }
+
+  toggle.classList.toggle('on', enable);
+  // Update onclick for next click
+  toggle.setAttribute('onclick', `toggleChatTranscript('${chatId}', ${!enable})`);
+
+  try {
+    await fetch(`${window._API_BASE || 'https://dashboard-api.voz-clara.com'}/api/chats/${encodeURIComponent(chatId)}`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transcript_enabled: enable }),
+    });
+    showToast(enable ? '🎤 Transcription enabled' : '⏸ Transcription paused');
+  } catch { showToast('Failed to update'); }
+}
+
+function showTranscriptWarning(mode, disabledAt) {
+  return new Promise((resolve) => {
+    let modal = document.getElementById('transcript-warn-modal');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'transcript-warn-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+    if (mode === 'off') {
+      modal.innerHTML = `
+        <div style="background:var(--bg-secondary,#1a2035);border:1px solid var(--border);border-radius:14px;width:100%;max-width:420px;padding:24px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <span style="font-size:28px">⚠️</span>
+            <div style="font-size:16px;font-weight:700;color:var(--text-primary)">Disable transcription?</div>
+          </div>
+          <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px">
+            Voice notes received while transcription is off <strong style="color:#ef4444">cannot be transcribed later</strong>.
+            We don't keep audio files on our servers — once a voice note is skipped, it's gone permanently.
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button onclick="document.getElementById('transcript-warn-modal').remove();window._twResolve(false)"
+              style="padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);font-size:13px;cursor:pointer;font-family:inherit">Cancel</button>
+            <button onclick="document.getElementById('transcript-warn-modal').remove();window._twResolve(true)"
+              style="padding:8px 16px;border-radius:8px;border:none;background:#ef4444;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Yes, disable</button>
+          </div>
+        </div>`;
+    } else {
+      // mode === 'on' — re-enabling
+      const since = disabledAt ? new Date(disabledAt).toLocaleString() : 'unknown';
+      modal.innerHTML = `
+        <div style="background:var(--bg-secondary,#1a2035);border:1px solid var(--border);border-radius:14px;width:100%;max-width:420px;padding:24px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+            <span style="font-size:28px">ℹ️</span>
+            <div style="font-size:16px;font-weight:700;color:var(--text-primary)">Transcription resumed</div>
+          </div>
+          <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px">
+            Transcription was disabled since <strong style="color:var(--accent)">${since}</strong>.
+            Voice notes received between then and now <strong style="color:#ef4444">are not available</strong> — audio is not stored on our servers.
+            <br><br>
+            New voice notes from now on will be transcribed normally.
+          </div>
+          <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button onclick="document.getElementById('transcript-warn-modal').remove();window._twResolve(true)"
+              style="padding:8px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Got it, enable</button>
+          </div>
+        </div>`;
+    }
+
+    window._twResolve = resolve;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) { modal.remove(); resolve(false); }
+    });
+  });
 }
 
 function parseBullets(summary) {
