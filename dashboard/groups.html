@@ -359,10 +359,10 @@ async function toggleCapture(id, enable) {
     await api(`/api/rt/groups/${id}/toggle`, { method: 'POST', body: JSON.stringify({ capture_enabled: enable }) });
     const toggle = document.getElementById('capture-toggle');
     toggle.classList.toggle('on', enable);
-    showToast(enable ? 'Capture enabled' : 'Capture paused');
+    showToast(enable ? '🎤 Capture enabled' : '⏸ Capture paused', enable ? 'green' : 'red');
     loadGroups();
   } catch (e) {
-    showToast('Failed to update capture');
+    showToast('Failed to update capture', 'red');
   }
 }
 

@@ -2709,7 +2709,7 @@ async function toggleDefaultTranscribe() {
       method: 'POST',
       body: JSON.stringify({ default_auto_transcribe: newVal })
     });
-    showToast(newVal ? 'New chats will auto-transcribe' : 'New chats will NOT auto-transcribe');
+    showToast(newVal ? '🎤 New chats will auto-transcribe' : '⏸ New chats will NOT auto-transcribe', newVal ? 'green' : 'red');
   } catch { showToast('Failed to save'); }
 }
 

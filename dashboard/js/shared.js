@@ -435,7 +435,7 @@ function truncate(str, len = 120) {
   return str.length > len ? str.slice(0, len) + '…' : str;
 }
 
-function showToast(msg) {
+function showToast(msg, color) {
   let toast = document.getElementById('toast');
   if (!toast) {
     toast = document.createElement('div');
@@ -444,8 +444,13 @@ function showToast(msg) {
     document.body.appendChild(toast);
   }
   toast.textContent = msg;
+  // Color variants: 'green' = success, 'red' = danger/warning
+  toast.style.background = color === 'green' ? '#22c55e'
+    : color === 'red' ? '#ef4444'
+    : '';
+  toast.style.color = (color === 'green' || color === 'red') ? '#fff' : '';
   toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2500);
+  setTimeout(() => { toast.classList.remove('show'); toast.style.background = ''; toast.style.color = ''; }, 2500);
 }
 
 function showLoading(el) {

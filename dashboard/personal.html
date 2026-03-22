@@ -764,8 +764,8 @@ async function toggleChatTranscript(chatId, enable) {
       method: 'PATCH',
       body: JSON.stringify({ transcript_enabled: enable }),
     });
-    showToast(enable ? '🎤 Transcription enabled' : '⏸ Transcription paused');
-  } catch { showToast('Failed to update'); }
+    showToast(enable ? '🎤 Transcription enabled' : '⏸ Transcription paused', enable ? 'green' : 'red');
+  } catch { showToast('Failed to update', 'red'); }
 }
 
 function showTranscriptWarning(mode, disabledAt) {
