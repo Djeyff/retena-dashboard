@@ -261,6 +261,24 @@
           </div>
         </div>
 
+        <!-- Extra seats -->
+        <div class="card animate-in animate-in-d0" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div class="section-title" style="margin:0">Extra Seats</div>
+            <button class="btn btn-secondary btn-sm" onclick="showToast('Seat management coming soon')">Manage seats</button>
+          </div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:10px">
+            Need more seats? Add extra seats beyond your plan's included quota.
+          </div>
+          <div style="background:var(--bg-tertiary);border-radius:10px;padding:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:15px;font-weight:700">$19.99 <span style="font-size:12px;font-weight:400;color:var(--text-muted)">/extra seat/mo</span></div>
+              <div style="font-size:12px;color:var(--text-muted);margin-top:3px">Each extra seat includes <strong style="color:var(--text-secondary)">2,000 voice min</strong> + <strong style="color:var(--text-secondary)">1,000 AI queries</strong></div>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="showToast('Seat management coming soon')">+ Add seat</button>
+          </div>
+        </div>
+
         <!-- Usage meters -->
         <div class="card animate-in animate-in-d1" style="margin-bottom:16px">
           <div class="section-title">Usage this month</div>
@@ -307,7 +325,7 @@
               <label style="display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px;border-radius:8px;transition:background .15s" id="bv-opt-overage">
                 <input type="radio" name="overage-mode" value="overage" style="accent-color:var(--accent)" onchange="saveOverageMode('overage')">
                 <div>
-                  <div style="font-size:13px;font-weight:500">⚡ Auto-overage <span style="color:var(--accent);font-weight:700">$0.10/min</span></div>
+                  <div style="font-size:13px;font-weight:500">⚡ Auto-overage <span style="color:var(--accent);font-weight:700">$0.07/min</span></div>
                   <div style="font-size:11px;color:var(--text-muted)">Never miss a transcription. Billed at end of month.</div>
                 </div>
               </label>
@@ -326,17 +344,40 @@
               <div style="border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
                 <div style="font-weight:700;font-size:15px">Pack S</div>
                 <div style="font-size:22px;font-weight:800;color:var(--accent);margin:4px 0">$8</div>
-                <div style="font-size:12px;color:var(--text-secondary)">+100 minutes</div>
-                <div style="font-size:11px;color:var(--text-muted)">$0.08/min</div>
-                <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:12px" onclick="buyPack('S', 100, 8)">Buy Pack S</button>
+                <div style="font-size:12px;color:var(--text-secondary)">+150 minutes</div>
+                <div style="font-size:11px;color:var(--text-muted)">$0.053/min</div>
+                <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:12px" onclick="buyPack('S', 150, 8)">Buy Pack S</button>
               </div>
               <div style="border:2px solid var(--accent);border-radius:10px;padding:14px;text-align:center;position:relative">
                 <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px">BEST VALUE</div>
                 <div style="font-weight:700;font-size:15px">Pack L</div>
                 <div style="font-size:22px;font-weight:800;color:var(--accent);margin:4px 0">$35</div>
-                <div style="font-size:12px;color:var(--text-secondary)">+500 minutes</div>
-                <div style="font-size:11px;color:var(--text-muted)">$0.07/min</div>
-                <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:12px" onclick="buyPack('L', 500, 35)">Buy Pack L</button>
+                <div style="font-size:12px;color:var(--text-secondary)">+700 minutes</div>
+                <div style="font-size:11px;color:var(--text-muted)">$0.05/min</div>
+                <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:12px" onclick="buyPack('L', 700, 35)">Buy Pack L</button>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+              <div style="border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-weight:700;font-size:13px">Biz M</div>
+                <div style="font-size:20px;font-weight:800;color:var(--accent);margin:4px 0">$49</div>
+                <div style="font-size:12px;color:var(--text-secondary)">+1,000 minutes</div>
+                <div style="font-size:11px;color:var(--text-muted)">$0.049/min</div>
+                <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:12px" onclick="buyPack('BM', 1000, 49)">Buy Biz M</button>
+              </div>
+              <div style="border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-weight:700;font-size:13px">Biz L</div>
+                <div style="font-size:20px;font-weight:800;color:var(--accent);margin:4px 0">$89</div>
+                <div style="font-size:12px;color:var(--text-secondary)">+2,500 minutes</div>
+                <div style="font-size:11px;color:var(--text-muted)">$0.036/min</div>
+                <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:12px" onclick="buyPack('BL', 2500, 89)">Buy Biz L</button>
+              </div>
+              <div style="border:1px solid var(--border);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-weight:700;font-size:13px">Biz XL</div>
+                <div style="font-size:20px;font-weight:800;color:var(--accent);margin:4px 0">$149</div>
+                <div style="font-size:12px;color:var(--text-secondary)">+5,000 minutes</div>
+                <div style="font-size:11px;color:var(--text-muted)">$0.030/min</div>
+                <button class="btn btn-primary" style="width:100%;margin-top:10px;font-size:12px" onclick="buyPack('BXL', 5000, 149)">Buy Biz XL</button>
               </div>
             </div>
           </div>
@@ -972,9 +1013,9 @@ async function loadTeam() {
 }
 
 const PLAN_META = {
-  starter:  { name: 'Starter',  price: '$39/mo',  seats: 1,  groups: 5,  voice_min: 100,  ai_queries: 50,  storage_gb: 2,    label: '1 seat · 5 groups · 100 min/mo' },
-  pro:      { name: 'Pro',      price: '$79/mo',  seats: 3,  groups: 15, voice_min: 500,  ai_queries: 300, storage_gb: 10,   label: '3 seats · 15 groups · 500 min/mo' },
-  business: { name: 'Business', price: '$199/mo', seats: 5,  groups: Infinity, voice_min: 4000, ai_queries: Infinity, storage_gb: 50, label: '5 seats · Unlimited groups · 4,000 min/mo' },
+  starter:  { name: 'Starter',  price: '$39/mo',  seats: 1,  groups: 5,  voice_min: 250,   ai_queries: 50,   storage_gb: 2,    label: '1 seat · 5 groups · 250 min/mo' },
+  pro:      { name: 'Pro',      price: '$79/mo',  seats: 3,  groups: 15, voice_min: 1000,  ai_queries: 300,  storage_gb: 10,   label: '3 seats · 15 groups · 1,000 min/mo' },
+  business: { name: 'Business', price: '$199/mo', seats: 5,  groups: Infinity, voice_min: 10000, ai_queries: 5000, storage_gb: 50, label: '5 seats · Unlimited groups · 10,000 min/mo' },
 };
 
 async function loadBilling() {
@@ -1029,7 +1070,7 @@ function loadVoiceMinutePanel(data, plan) {
 
   // Overage cost
   if (overageMins > 0) {
-    const cost = (overageMins * 0.10).toFixed(2);
+    const cost = (overageMins * 0.07).toFixed(2);
     document.getElementById('bv-overage-cost').style.display = 'block';
     document.getElementById('bv-overage-cost').textContent = `⚡ ${overageMins} overage min = $${cost} this month`;
     document.getElementById('bv-overage-live').style.display = 'block';
@@ -1044,7 +1085,7 @@ function loadVoiceMinutePanel(data, plan) {
 async function saveOverageMode(mode) {
   try {
     await api('/api/billing/overage', { method: 'POST', body: JSON.stringify({ enabled: mode === 'overage' }) });
-    showToast(mode === 'overage' ? '⚡ Auto-overage enabled — $0.10/min' : '⏸ Transcription will pause at limit');
+    showToast(mode === 'overage' ? '⚡ Auto-overage enabled — $0.07/min' : '⏸ Transcription will pause at limit');
     if (mode === 'overage') {
       document.getElementById('bv-overage-live').style.display = 'block';
     } else {
