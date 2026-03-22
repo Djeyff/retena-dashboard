@@ -760,9 +760,8 @@ async function toggleChatTranscript(chatId, enable) {
   toggle.setAttribute('onclick', `toggleChatTranscript('${chatId}', ${!enable})`);
 
   try {
-    await fetch(`${window._API_BASE || 'https://dashboard-api.voz-clara.com'}/api/chats/${encodeURIComponent(chatId)}`, {
+    await api(`/api/chats/${encodeURIComponent(chatId)}`, {
       method: 'PATCH',
-      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ transcript_enabled: enable }),
     });
     showToast(enable ? '🎤 Transcription enabled' : '⏸ Transcription paused');
